@@ -156,8 +156,12 @@ class Runner:
             stats.seen += len(raws)
             seen_external |= {r.external_id for r in raws}
             if hasattr(src, "fetch_detail"):
+                wants = getattr(src, "wants_detail", lambda _r: True)
                 raws = [
-                    r if r.external_id in existing else src.fetch_detail(self.http, r) for r in raws
+                    src.fetch_detail(self.http, r)
+                    if r.external_id not in existing and wants(r)
+                    else r
+                    for r in raws
                 ]
             company_jobs = self._normalise_all(src, raws, ctx, stats)
             jobs += company_jobs

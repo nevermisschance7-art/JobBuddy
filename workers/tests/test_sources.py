@@ -183,3 +183,17 @@ def test_jooble_never_uses_updated_as_posted():
     assert job.date_source == "unknown"
     assert job.source_updated_at is not None
     assert job.countries == ["PL"]
+
+
+def test_smartrecruiters_only_fetches_details_for_tech_jobs():
+    src = EMPLOYER_SOURCES["smartrecruiters"]
+    intern = raws_for("smartrecruiters")[0]
+    assert not src.wants_detail(intern)
+    dev = RawJob(
+        "smartrecruiters",
+        "x",
+        {"name": "Senior Java Developer", "experienceLevel": {"id": "mid_senior_level"}},
+    )
+    assert src.wants_detail(dev)
+    sales = RawJob("smartrecruiters", "y", {"name": "Key Account Manager"})
+    assert not src.wants_detail(sales)

@@ -18,6 +18,7 @@ from ..normalize import (
     from_rfc822,
     html_to_text,
     is_internship,
+    is_tech_role,
     remote_type_from,
     seniority_from,
 )
@@ -289,6 +290,12 @@ class SmartRecruiters:
             if not items or offset >= data.get("totalFound", 0):
                 break
         return out
+
+    def wants_detail(self, raw: RawJob) -> bool:
+        """Details cost one request each, so only fetch them for jobs we would keep."""
+        title = raw.data.get("name") or ""
+        level = dig(raw.data, "experienceLevel", "id")
+        return is_tech_role(title) and level != "internship" and not is_internship(title)
 
     def fetch_detail(self, http: Http, raw: RawJob) -> RawJob:
         """The list lacks the description; fetch it (only done for jobs not stored yet)."""
