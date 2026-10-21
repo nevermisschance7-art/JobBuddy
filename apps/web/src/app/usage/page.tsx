@@ -41,7 +41,7 @@ export default async function UsagePage() {
       <main className="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-8 sm:px-6">
         <div>
           <h1 className="text-2xl font-semibold">AI usage</h1>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             Calls made with your keys. Only counts are stored, never what was sent.
           </p>
         </div>
@@ -81,13 +81,13 @@ export default async function UsagePage() {
                   <dd className="text-right tabular-nums">{mine.length}</dd>
                 </dl>
                 {key?.last_error ? (
-                  <p className="text-xs text-destructive">{key.last_error}</p>
+                  <p className="text-destructive text-xs">{key.last_error}</p>
                 ) : null}
               </Card>
             );
           })}
         </div>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-muted-foreground text-sm">
           Add or replace keys in{" "}
           <Link href="/settings#ai" className="underline">
             Settings

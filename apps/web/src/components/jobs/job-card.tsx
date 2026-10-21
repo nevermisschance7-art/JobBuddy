@@ -65,16 +65,16 @@ export function JobCard({
   const isHidden = match.status === "dismissed";
 
   return (
-    <article className="flex flex-col gap-4 rounded-xl border border-border bg-card p-4 sm:p-5">
+    <article className="border-border bg-card flex flex-col gap-4 rounded-xl border p-4 sm:p-5">
       <div className="flex items-start gap-4">
         <ScoreRing score={match.score} />
         <div className="min-w-0 flex-1">
-          <h3 className="text-base leading-snug font-semibold">
+          <h3 className="text-base font-semibold leading-snug">
             <a href={job.apply_url} target="_blank" rel="noreferrer" className="hover:underline">
               {job.title}
             </a>
           </h3>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             {job.company_name} · {locationLabel(job)}
             {job.remote_type ? ` · ${REMOTE_LABEL[job.remote_type] ?? job.remote_type}` : ""}
           </p>
@@ -107,9 +107,9 @@ export function JobCard({
       ) : null}
 
       {explanation ? (
-        <p className="rounded-lg bg-muted px-3 py-2 text-sm">{explanation}</p>
+        <p className="bg-muted rounded-lg px-3 py-2 text-sm">{explanation}</p>
       ) : explainError ? (
-        <p className="text-sm text-destructive">{explainError}</p>
+        <p className="text-destructive text-sm">{explainError}</p>
       ) : null}
 
       <div className="flex flex-wrap gap-2">
@@ -182,7 +182,7 @@ export function JobCard({
           href={job.apply_url}
           target="_blank"
           rel="noreferrer"
-          className="ml-auto inline-flex items-center gap-1 self-center text-sm text-muted-foreground hover:underline"
+          className="text-muted-foreground ml-auto inline-flex items-center gap-1 self-center text-sm hover:underline"
         >
           View job <ExternalLink size={13} />
         </a>

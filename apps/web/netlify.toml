@@ -1,0 +1,11 @@
+# Netlify builds and serves the Next.js app (OpenNext runtime is added automatically).
+# Deploys run only from the manual "Deploy web" GitHub workflow, never on every push,
+# because each production deploy costs Netlify credits.
+
+[build]
+  command = "pnpm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "22"
+  NEXT_TELEMETRY_DISABLED = "1"

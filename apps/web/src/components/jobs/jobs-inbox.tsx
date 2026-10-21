@@ -90,7 +90,7 @@ export function JobsInbox({ initial, minScore, hasCv }: Props) {
 
   return (
     <div className="flex flex-col gap-5">
-      <div role="tablist" aria-label="Job lists" className="flex gap-1 border-b border-border">
+      <div role="tablist" aria-label="Job lists" className="border-border flex gap-1 border-b">
         {(
           [
             ["inbox", "Matches"],
@@ -107,7 +107,7 @@ export function JobsInbox({ initial, minScore, hasCv }: Props) {
               "-mb-px border-b-2 px-4 py-2 text-sm",
               query.view === view
                 ? "border-foreground font-medium"
-                : "border-transparent text-muted-foreground hover:text-foreground",
+                : "text-muted-foreground hover:text-foreground border-transparent",
             )}
           >
             {label}
@@ -182,7 +182,7 @@ export function JobsInbox({ initial, minScore, hasCv }: Props) {
       </div>
 
       {error ? (
-        <p role="alert" className="text-sm text-destructive">
+        <p role="alert" className="text-destructive text-sm">
           {error}
         </p>
       ) : null}
@@ -211,7 +211,7 @@ export function JobsInbox({ initial, minScore, hasCv }: Props) {
       {loading ? (
         <div className="flex flex-col gap-3" aria-label="Loading jobs">
           {[0, 1].map((i) => (
-            <div key={i} className="h-40 animate-pulse rounded-xl bg-muted" />
+            <div key={i} className="bg-muted h-40 animate-pulse rounded-xl" />
           ))}
         </div>
       ) : null}

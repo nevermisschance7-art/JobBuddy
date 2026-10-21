@@ -28,7 +28,7 @@ function Card({ item }: { item: BoardItem }) {
   const [notes, setNotes] = useState(item.notes ?? "");
   const [pending, startTransition] = useTransition();
   return (
-    <li className="flex flex-col gap-2 rounded-lg border border-border bg-card p-3 text-sm">
+    <li className="border-border bg-card flex flex-col gap-2 rounded-lg border p-3 text-sm">
       <a
         href={item.jobs.apply_url}
         target="_blank"
@@ -39,7 +39,7 @@ function Card({ item }: { item: BoardItem }) {
       </a>
       <p className="text-muted-foreground">{item.jobs.company_name}</p>
       {item.applied_at ? (
-        <p className="text-xs text-muted-foreground">
+        <p className="text-muted-foreground text-xs">
           Applied {new Date(item.applied_at).toLocaleDateString()}
         </p>
       ) : null}
@@ -82,7 +82,7 @@ export function Board({ items }: { items: BoardItem[] }) {
             <section
               key={status}
               aria-label={label}
-              className="flex flex-col gap-2 rounded-xl bg-muted/50 p-2"
+              className="bg-muted/50 flex flex-col gap-2 rounded-xl p-2"
             >
               <h2 className="flex justify-between px-1 text-sm font-medium">
                 {label} <span className="text-muted-foreground">{col.length}</span>

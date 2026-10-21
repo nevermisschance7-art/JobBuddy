@@ -21,7 +21,7 @@ export default async function ApplicationsPage() {
       <main className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6">
         <div>
           <h1 className="text-2xl font-semibold">Applications</h1>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             Move a card when something changes. Reply tracking will move them for you later.
           </p>
         </div>

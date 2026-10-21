@@ -40,10 +40,10 @@ export function NotForMeDialog({
     <dialog
       ref={ref}
       onClose={() => onClose(false)}
-      className="m-auto w-[min(28rem,calc(100vw-2rem))] rounded-xl border border-border bg-card p-5 text-card-foreground backdrop:bg-black/40"
+      className="border-border bg-card text-card-foreground m-auto w-[min(28rem,calc(100vw-2rem))] rounded-xl border p-5 backdrop:bg-black/40"
     >
       <h2 className="mb-1 text-lg font-semibold">Not for me</h2>
-      <p className="mb-4 text-sm text-muted-foreground">Optional: tell me why, so I get better.</p>
+      <p className="text-muted-foreground mb-4 text-sm">Optional: tell me why, so I get better.</p>
       <div className="mb-4 flex flex-wrap gap-2">
         {(Object.keys(DISMISS_REASONS) as DismissReason[]).map((key) => (
           <button
@@ -51,7 +51,7 @@ export function NotForMeDialog({
             type="button"
             aria-pressed={reason === key}
             onClick={() => setReason(reason === key ? null : key)}
-            className="rounded-full border border-border px-3 py-1 text-sm aria-pressed:border-foreground aria-pressed:bg-muted"
+            className="border-border aria-pressed:border-foreground aria-pressed:bg-muted rounded-full border px-3 py-1 text-sm"
           >
             {DISMISS_REASONS[key]}
           </button>
@@ -78,7 +78,7 @@ export function NotForMeDialog({
         </label>
       ) : null}
       {hint ? (
-        <p className="mb-4 text-sm text-muted-foreground">
+        <p className="text-muted-foreground mb-4 text-sm">
           {hint}{" "}
           <Link href="/settings#filters" className="underline">
             Open filters
