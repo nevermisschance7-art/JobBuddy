@@ -28,6 +28,14 @@ def get(url: str, **kw: Any) -> httpx.Response:
     return res
 
 
+def scrub(text: str) -> str:
+    """Remove any env value (keys, app ids) that a source echoes back, before saving."""
+    for name, value in os.environ.items():
+        if len(value) >= 6 and any(w in name for w in ("KEY", "APP_ID", "TOKEN", "SECRET")):
+            text = text.replace(value, f"REDACTED_{name}")
+    return text
+
+
 def keep_first(data: Any, path: list[str] | None, n: int = 3) -> Any:
     """Trim the list at `path` (or the top-level list) to n items."""
     if path is None:
@@ -62,7 +70,7 @@ def probe_json(name: str, url: str, path: list[str] | None, **kw: Any) -> None:
     data = get(url, **kw).json()
     data = keep_first(data, path)
     (FIXTURES / f"{name}.json").write_text(
-        json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8"
+        scrub(json.dumps(data, indent=2, ensure_ascii=False)), encoding="utf-8"
     )
     print(f"\n== {name} ==  {url}")
     print(json.dumps(date_fields(first_item(data, path)), indent=2))
@@ -158,7 +166,7 @@ def main(only: list[str]) -> None:
             res.raise_for_status()
             data = keep_first(res.json(), ["jobs"])
             (FIXTURES / "jooble.json").write_text(
-                json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8"
+                scrub(json.dumps(data, indent=2, ensure_ascii=False)), encoding="utf-8"
             )
             print("\n== jooble ==")
             print(json.dumps(date_fields(first_item(data, ["jobs"])), indent=2))

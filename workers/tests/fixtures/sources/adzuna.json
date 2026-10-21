@@ -5,7 +5,7 @@
     {
       "description": "Forvis Mazars is a leading global professional services network providing audit & assurance, tax, and advisory services. Forvis Mazars in the UK spans 14 offices across the nation and has over 3,400 professionals, with 190 partners. We have a clear purpose and a shared commitment to shape a better future. You'll join a collaborative and inclusive team where you're supported to grow your skills, explore new opportunities, and contribute from day one. You'll work with a diverse client base, devel…",
       "__CLASS__": "Adzuna::API::Response::Job",
-      "redirect_url": "https://www.adzuna.co.uk/jobs/land/ad/5900980427?se=ILw8z3TN8RG8f8HyuNM3ow&utm_medium=api&utm_source=57edf0b0&v=02C3300C16DF6A74169C37AE26BE5774FAA81BBA",
+      "redirect_url": "https://www.adzuna.co.uk/jobs/land/ad/5900980427?se=ILw8z3TN8RG8f8HyuNM3ow&utm_medium=api&utm_source=REDACTED_ADZUNA_APP_ID&v=02C3300C16DF6A74169C37AE26BE5774FAA81BBA",
       "salary_max": 78848.14,
       "id": "5900980427",
       "category": {
@@ -62,7 +62,7 @@
       "description": "We have an exciting opportunity for a Salesforce Product Owner to join our IT Team , based in the A&O Shearman Belfast office. We are looking for an autonomous individual with excellent communication skills and confidence to engage with individuals at all levels of the organisation. As CRM Functional Administrator you will have a solid Salesforce Administration background, ideally ADM201 Certified, with the ability to understand business processes, objectives, driving adoption & process improve…",
       "__CLASS__": "Adzuna::API::Response::Job",
       "salary_max": 58926.99,
-      "redirect_url": "https://www.adzuna.co.uk/jobs/land/ad/5905876789?se=ILw8z3TN8RG8f8HyuNM3ow&utm_medium=api&utm_source=57edf0b0&v=936D39F77E33473C96086CDECDA4A6982A135D09",
+      "redirect_url": "https://www.adzuna.co.uk/jobs/land/ad/5905876789?se=ILw8z3TN8RG8f8HyuNM3ow&utm_medium=api&utm_source=REDACTED_ADZUNA_APP_ID&v=936D39F77E33473C96086CDECDA4A6982A135D09",
       "adref": "eyJhbGciOiJIUzI1NiJ9.eyJzIjoiSUx3OHozVE44Ukc4ZjhIeXVOTTNvdyIsImkiOiI1OTA1ODc2Nzg5In0.G8Y_jYfaTZVBGEw31JtkA4nZ158TxuN_tgJrJjZHT_U",
       "latitude": 54.569737,
       "longitude": -5.87395,
@@ -95,7 +95,7 @@
       },
       "description": "We have an exciting opportunity for a Salesforce Product Owner to join our IT Team , based in the A&O Shearman Belfast office. We are looking for an autonomous individual with excellent communication skills and confidence to engage with individuals at all levels of the organisation. As CRM Functional Administrator you will have a solid Salesforce Administration background, ideally ADM201 Certified, with the ability to understand business processes, objectives, driving adoption & process improve…",
       "__CLASS__": "Adzuna::API::Response::Job",
-      "redirect_url": "https://www.adzuna.co.uk/jobs/land/ad/5905876802?se=ILw8z3TN8RG8f8HyuNM3ow&utm_medium=api&utm_source=57edf0b0&v=C827CF98D2C2FCCD3F07C3047D2A59B482B9AB30",
+      "redirect_url": "https://www.adzuna.co.uk/jobs/land/ad/5905876802?se=ILw8z3TN8RG8f8HyuNM3ow&utm_medium=api&utm_source=REDACTED_ADZUNA_APP_ID&v=C827CF98D2C2FCCD3F07C3047D2A59B482B9AB30",
       "salary_max": 53420.82,
       "adref": "eyJhbGciOiJIUzI1NiJ9.eyJzIjoiSUx3OHozVE44Ukc4ZjhIeXVOTTNvdyIsImkiOiI1OTA1ODc2ODAyIn0.Umr5PUJuNrXaB4gqOiGULUXoowaxU9asxcKpr_6BYjw",
       "latitude": 54.595001,
