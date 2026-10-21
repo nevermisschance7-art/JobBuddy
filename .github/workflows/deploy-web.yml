@@ -27,4 +27,4 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - name: Build and deploy to Netlify
-        run: pnpm dlx netlify-cli@latest deploy --build --prod --filter web --message "Deploy ${{ github.sha }}"
+        run: pnpm --package=netlify-cli@latest dlx netlify deploy --build --prod --filter web --message "Deploy ${{ github.sha }}"
