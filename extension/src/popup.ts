@@ -1,2 +1,4 @@
-const status = document.getElementById("status");
-if (status) status.textContent = "Sign-in and alerts arrive in a later step.";
+const statusEl = document.getElementById("status");
+if (statusEl) statusEl.textContent = "Sign-in and alerts arrive in a later step.";
+
+export {};
