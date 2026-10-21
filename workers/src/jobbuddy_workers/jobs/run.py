@@ -6,7 +6,7 @@ import logging
 from collections.abc import Iterable
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from ..embed import Embedder, job_text, to_pgvector
@@ -19,7 +19,8 @@ from .store import Existing, JobStore
 
 log = logging.getLogger(__name__)
 
-EMPLOYER_CONCURRENCY = 4  # parallel companies per employer system
+EMPLOYER_CONCURRENCY = 16  # parallel companies per employer system (public, cached board APIs)
+MAX_AGE_DAYS = 45  # older postings are rarely still worth applying to; keeps the free DB small
 AGGREGATOR_STALE_DAYS = 14  # aggregator jobs close when not seen for this long
 
 
@@ -40,12 +41,15 @@ class RunState:
     urls: set[str]
 
 
-def is_relevant(job: Job, wanted: set[str]) -> bool:
-    """Tech roles that at least one user could take. With no users yet, keep all tech roles."""
+def is_relevant(job: Job, wanted: set[str], now: datetime | None = None) -> bool:
+    """Recent tech roles that at least one user could take. With no users yet, remote only."""
     if not is_tech_role(job.title):
         return False
+    now = now or datetime.now(UTC)
+    if job.posted_at and now - job.posted_at > timedelta(days=MAX_AGE_DAYS):
+        return False
     if not wanted:
-        return True
+        return job.remote_type == "remote"
     if wanted & set(job.countries):
         return True
     if any(region_covers(r, c) for r in job.remote_regions for c in wanted):

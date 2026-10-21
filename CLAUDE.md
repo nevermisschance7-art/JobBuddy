@@ -51,7 +51,7 @@ All LLM calls go through the router: [packages/shared/src/llm](packages/shared/s
 
 `uv run jobbuddy-workers fetch [--source NAME]` runs every 2 hours in [fetch-jobs.yml](.github/workflows/fetch-jobs.yml). Sources, their real date fields, schedules and closing rules are documented in [workers/SOURCES.md](workers/SOURCES.md); read it before touching an adapter.
 
-- Jobs are worldwide. Only tech roles where at least one user can work are stored (`is_relevant` in [run.py](workers/src/jobbuddy_workers/jobs/run.py)); locations are parsed to ISO countries plus remote regions (WORLDWIDE, EUROPE, EMEA, ...) in [geo.py](workers/src/jobbuddy_workers/geo.py).
+- Jobs are worldwide. Only tech roles posted in the last 45 days where at least one user can work are stored (remote only while there are no users) (`is_relevant` in [run.py](workers/src/jobbuddy_workers/jobs/run.py)); locations are parsed to ISO countries plus remote regions (WORLDWIDE, EUROPE, EMEA, ...) in [geo.py](workers/src/jobbuddy_workers/geo.py).
 - Employer systems (complete listings) close a job after 2 missed runs; aggregators (partial listings) close after 14 days unseen.
 - Employer companies come from the `companies` table. Seed or re-verify the starter list with the "Seed companies" workflow ([candidates.py](workers/src/jobbuddy_workers/seed/candidates.py)).
 - Weekly discovery (`jobbuddy-workers discover`, [discover-companies.yml](.github/workflows/discover-companies.yml)) adds companies found in stored job links and the Common Crawl URL index, after checking each board lists at least one job. Companies failing 5 fetch runs in a row are deactivated and re-checked monthly. Counts per system: the `company_stats` view.

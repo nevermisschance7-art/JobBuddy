@@ -104,3 +104,14 @@ def test_inactive_companies_are_retried_monthly():
     assert store.updates["old"]["fail_count"] == 0
     assert "recent" not in store.updates
     assert report.reactivated == 1
+
+
+def test_round_robin_mixes_systems():
+    from jobbuddy_workers.discover.run import _round_robin
+
+    new = {("greenhouse", f"g{i}"): "x" for i in range(5)} | {
+        ("lever", "l1"): "x",
+        ("ashby", "a1"): "x",
+    }
+    order = [k[0] for k, _ in _round_robin(new)[:3]]
+    assert set(order) == {"greenhouse", "lever", "ashby"}

@@ -1,6 +1,6 @@
 """The fetch pipeline end to end, with an in-memory store and fake sources."""
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -27,7 +27,7 @@ def make_job(source, ext, title="Backend Engineer", company="Acme", countries=("
         remote_type=kw.pop("remote_type", "onsite"),
         employment_type="full_time",
         seniority="unknown",
-        posted_at=datetime(2026, 10, 20, tzinfo=UTC),
+        posted_at=kw.pop("posted_at", datetime.now(UTC) - timedelta(days=1)),
         **kw,
     )
 
@@ -73,7 +73,7 @@ def setup(monkeypatch):
     aggregator = FakeAggregator([])
     monkeypatch.setattr(run_module, "EMPLOYER_SOURCES", {"greenhouse": employer})
     monkeypatch.setattr(run_module, "AGGREGATOR_SOURCES", {"remotive": aggregator})
-    store = MemoryStore(companies=[Company("c1", "Acme", "greenhouse", "acme")])
+    store = MemoryStore(companies=[Company("c1", "Acme", "greenhouse", "acme")], countries={"DE"})
     runner = Runner(store, http=None, embedder=FakeEmbedder(), env={})
     return store, runner, employer, aggregator
 
@@ -152,7 +152,8 @@ def test_aggregators_only_run_when_due(setup):
 
 def test_relevance_by_country_and_region():
     de = make_job("x", "1")
-    assert is_relevant(de, set())
+    assert not is_relevant(de, set())  # no users yet: remote only
+    assert is_relevant(make_job("x", "r", remote_type="remote"), set())
     assert is_relevant(de, {"DE"})
     assert not is_relevant(de, {"BR"})
     eu_remote = make_job("x", "2", countries=(), regions=["EUROPE"], remote_type="remote")
@@ -160,5 +161,7 @@ def test_relevance_by_country_and_region():
     assert not is_relevant(eu_remote, {"US"})
     anywhere = make_job("x", "3", countries=(), remote_type="remote")
     assert is_relevant(anywhere, {"US"})
-    sales = make_job("x", "4", title="Account Executive")
+    sales = make_job("x", "4", title="Account Executive", remote_type="remote")
     assert not is_relevant(sales, set())
+    old = make_job("x", "5", posted_at=datetime(2026, 8, 1, tzinfo=UTC))
+    assert not is_relevant(old, {"DE"}, now=datetime(2026, 10, 21, tzinfo=UTC))

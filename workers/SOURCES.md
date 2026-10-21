@@ -36,7 +36,8 @@ Re-record synthesised fixtures once keys are set: `uv run python scripts/probe_s
 
 ## What gets stored
 
-- **Tech roles only** (title match), and only where at least one user can work: their countries, a remote region covering them, or remote with no stated area. With no users yet, all tech roles are kept.
+- **Tech roles only** (title match), and only where at least one user can work: their countries, a remote region covering them, or remote with no stated area. With no users yet, only remote jobs are kept.
+- **Posted within 45 days** (unknown dates are kept). Open jobs posted more than 60 days ago are deleted daily (`prune_stale_jobs`) unless someone applied.
 - **Internships are dropped.**
 - **Salary only if stated** by the source, yearly.
 - **Duplicates:** same canonical URL, or same company + title + first country within 30 days. Employer systems run first, so their copy (and apply link) wins.

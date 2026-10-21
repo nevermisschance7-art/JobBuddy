@@ -126,6 +126,20 @@ class CommonCrawl:
 # ---------------------------------------------------------------- discovery run
 
 
+def _round_robin(new: dict[tuple[str, str], str]) -> list[tuple[tuple[str, str], str]]:
+    """Alternate between systems so a capped run doesn't spend everything on one."""
+    by_ats: dict[str, list[tuple[tuple[str, str], str]]] = {}
+    for item in new.items():
+        by_ats.setdefault(item[0][0], []).append(item)
+    out: list[tuple[tuple[str, str], str]] = []
+    queues = list(by_ats.values())
+    while any(queues):
+        for q in queues:
+            if q:
+                out.append(q.pop(0))
+    return out
+
+
 @dataclass
 class DiscoveryReport:
     candidates: dict[str, int] = field(default_factory=dict)
@@ -168,7 +182,7 @@ def discover(
         for c in known
         if not c.active and (c.checked_at is None or now - c.checked_at >= RECHECK_INACTIVE_AFTER)
     ]
-    to_check = list(new.items())[:MAX_NEW_CHECKS]
+    to_check = _round_robin(new)[:MAX_NEW_CHECKS]
     with ThreadPoolExecutor(CHECK_CONCURRENCY) as pool:
         new_results = list(pool.map(lambda kv: (kv, checker(*kv[0])), to_check))
         retry_results = list(pool.map(lambda c: (c, checker(c.ats, c.slug)), retry))
