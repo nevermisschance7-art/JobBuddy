@@ -33,7 +33,7 @@ export function ToneForm({ tone, next }: { tone: string; next?: string }) {
         {TONES.map((t) => (
           <label
             key={t.value}
-            className="flex cursor-pointer flex-col gap-3 rounded-xl border border-border p-4 has-[:checked]:border-foreground"
+            className="border-border has-[:checked]:border-foreground flex cursor-pointer flex-col gap-3 rounded-xl border p-4"
           >
             <span className="flex items-center gap-2 font-medium">
               <input type="radio" name="tone" value={t.value} defaultChecked={tone === t.value} />

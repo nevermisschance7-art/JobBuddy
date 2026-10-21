@@ -46,7 +46,7 @@ export function Mascot({
       viewBox="0 0 100 100"
       width={size}
       height={size}
-      className={cn("shrink-0 text-foreground", className)}
+      className={cn("text-foreground shrink-0", className)}
       fill="none"
       stroke="currentColor"
       strokeWidth="3"
@@ -69,7 +69,7 @@ export function MascotSays({ mood, children }: { mood?: Mood; children: React.Re
   return (
     <div className="flex items-center gap-4">
       <Mascot mood={mood} />
-      <div className="rounded-xl bg-muted px-4 py-3 text-sm">{children}</div>
+      <div className="bg-muted rounded-xl px-4 py-3 text-sm">{children}</div>
     </div>
   );
 }

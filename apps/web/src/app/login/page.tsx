@@ -14,7 +14,7 @@ export default function LoginPage() {
         <h1 className="mb-4 text-2xl font-semibold">JobBuddy</h1>
         <LoginForm />
       </Card>
-      <p className="text-center text-xs text-muted-foreground">
+      <p className="text-muted-foreground text-center text-xs">
         Anyone who knows your username can open your account, so pick one that isn&apos;t obvious.
       </p>
     </main>

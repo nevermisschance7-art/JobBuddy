@@ -15,12 +15,12 @@ export default async function DoneStep() {
       <Card className="flex flex-col gap-4">
         <h1 className="text-2xl font-semibold">All set</h1>
         {!cv?.confirmed ? (
-          <p className="text-sm text-destructive">
+          <p className="text-destructive text-sm">
             Your CV isn&apos;t confirmed yet. I can&apos;t match jobs until it is. You can do it
             later in Settings.
           </p>
         ) : null}
-        <p className="text-sm text-muted-foreground">
+        <p className="text-muted-foreground text-sm">
           You can change any of this later in Settings.
         </p>
         <form action={finishOnboarding}>

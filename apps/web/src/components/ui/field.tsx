@@ -34,7 +34,7 @@ export function Field({
     <div className="flex flex-col gap-1.5">
       <Label htmlFor={htmlFor}>{label}</Label>
       {children}
-      {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
+      {hint ? <p className="text-muted-foreground text-xs">{hint}</p> : null}
     </div>
   );
 }
@@ -42,7 +42,7 @@ export function Field({
 export function Card({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
-      className={cn("rounded-xl border border-border bg-card p-6 text-card-foreground", className)}
+      className={cn("border-border bg-card text-card-foreground rounded-xl border p-6", className)}
       {...props}
     />
   );
@@ -51,11 +51,11 @@ export function Card({ className, ...props }: React.ComponentProps<"div">) {
 export function FormMessage({ error, ok }: { error?: string; ok?: string }) {
   if (error) {
     return (
-      <p role="alert" className="text-sm text-destructive">
+      <p role="alert" className="text-destructive text-sm">
         {error}
       </p>
     );
   }
-  if (ok) return <p className="text-sm text-muted-foreground">{ok}</p>;
+  if (ok) return <p className="text-muted-foreground text-sm">{ok}</p>;
   return null;
 }

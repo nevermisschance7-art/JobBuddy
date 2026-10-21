@@ -19,7 +19,7 @@ export function CvUpload({ hasCv }: { hasCv: boolean }) {
         className="h-auto py-2"
         aria-label="CV file"
       />
-      <p className="text-xs text-muted-foreground">PDF or Word (.docx), up to 5 MB.</p>
+      <p className="text-muted-foreground text-xs">PDF or Word (.docx), up to 5 MB.</p>
       <FormMessage error={state.error} ok={state.message} />
       <Button
         type="submit"

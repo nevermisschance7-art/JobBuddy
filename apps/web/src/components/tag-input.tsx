@@ -51,13 +51,13 @@ export function TagInput({
           {values.map((v) => (
             <li
               key={v}
-              className="flex items-center gap-1 rounded-full bg-muted py-1 pr-1 pl-3 text-sm"
+              className="bg-muted flex items-center gap-1 rounded-full py-1 pl-3 pr-1 text-sm"
             >
               {labelOf(v)}
               <button
                 type="button"
                 aria-label={`Remove ${labelOf(v)}`}
-                className="rounded-full p-0.5 hover:bg-background"
+                className="hover:bg-background rounded-full p-0.5"
                 onClick={() => setValues(values.filter((x) => x !== v))}
               >
                 <X size={14} />

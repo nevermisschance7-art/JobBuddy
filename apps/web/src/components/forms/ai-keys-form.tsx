@@ -15,7 +15,7 @@ const INFO: Record<Provider, { name: string; required: boolean; steps: React.Rea
     name: "Google Gemini",
     required: true,
     steps: (
-      <ol className="list-decimal space-y-1 pl-5 text-sm text-muted-foreground">
+      <ol className="text-muted-foreground list-decimal space-y-1 pl-5 text-sm">
         <li>
           Open{" "}
           <a
@@ -37,7 +37,7 @@ const INFO: Record<Provider, { name: string; required: boolean; steps: React.Rea
     name: "Groq (optional backup)",
     required: false,
     steps: (
-      <p className="text-sm text-muted-foreground">
+      <p className="text-muted-foreground text-sm">
         Free key at{" "}
         <a
           className="underline"
@@ -55,7 +55,7 @@ const INFO: Record<Provider, { name: string; required: boolean; steps: React.Rea
     name: "OpenRouter (optional backup)",
     required: false,
     steps: (
-      <p className="text-sm text-muted-foreground">
+      <p className="text-muted-foreground text-sm">
         Free key at{" "}
         <a className="underline" href="https://openrouter.ai/keys" target="_blank" rel="noreferrer">
           openrouter.ai/keys
@@ -75,7 +75,7 @@ function ProviderKey({ status }: { status: KeyStatus }) {
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-lg font-semibold">{info.name}</h2>
         {status.saved ? (
-          <span className="rounded-full bg-muted px-3 py-1 text-xs">
+          <span className="bg-muted rounded-full px-3 py-1 text-xs">
             {status.lastError ? "Needs fixing" : "Saved ✓"}
           </span>
         ) : null}
@@ -116,7 +116,7 @@ export function AiKeysForm({ statuses }: { statuses: KeyStatus[] }) {
       {statuses.map((s) => (
         <ProviderKey key={s.provider} status={s} />
       ))}
-      <p className="text-xs text-muted-foreground">
+      <p className="text-muted-foreground text-xs">
         Keys are encrypted before they&apos;re stored and are only used on the server. They&apos;re
         never shown again, not even to you.
       </p>

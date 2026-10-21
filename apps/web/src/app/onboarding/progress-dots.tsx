@@ -22,12 +22,12 @@ export function ProgressDots() {
           aria-current={i === current ? "step" : undefined}
           className={cn(
             "h-2.5 rounded-full transition-all",
-            i === current ? "w-6 bg-foreground" : "w-2.5",
+            i === current ? "bg-foreground w-6" : "w-2.5",
             i < current ? "bg-foreground/60" : i > current ? "bg-muted-foreground/30" : "",
           )}
         />
       ))}
-      <span className="ml-2 text-xs text-muted-foreground">
+      <span className="text-muted-foreground ml-2 text-xs">
         Step {current + 1} of {STEPS.length}: {STEPS[current]?.label}
       </span>
     </nav>

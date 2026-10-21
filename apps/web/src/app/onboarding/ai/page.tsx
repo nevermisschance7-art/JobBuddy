@@ -19,7 +19,7 @@ export default async function AiStep() {
       <AiKeysForm statuses={statuses} />
       <Link
         href={next}
-        className="self-end rounded-md bg-primary px-6 py-2.5 text-sm font-medium text-primary-foreground"
+        className="bg-primary text-primary-foreground self-end rounded-md px-6 py-2.5 text-sm font-medium"
       >
         {hasGemini ? "Continue" : "Skip for now"}
       </Link>

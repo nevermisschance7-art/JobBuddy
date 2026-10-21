@@ -239,7 +239,7 @@ export function ResumeEditor({
         <Card key={section.key} className="flex flex-col gap-4">
           <h2 className="text-lg font-semibold">{section.title}</h2>
           {draft[section.key].map((row, i) => (
-            <div key={i} className="grid gap-3 rounded-lg border border-border p-4 sm:grid-cols-2">
+            <div key={i} className="border-border grid gap-3 rounded-lg border p-4 sm:grid-cols-2">
               {section.fields.map((f) => {
                 const id = `${section.key}-${i}-${f.key}`;
                 return (

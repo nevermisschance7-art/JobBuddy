@@ -60,7 +60,7 @@ export default async function SettingsPage() {
               <a
                 key={id}
                 href={`#${id}`}
-                className="rounded-full bg-muted px-3 py-1 hover:underline"
+                className="bg-muted rounded-full px-3 py-1 hover:underline"
               >
                 {label}
               </a>
@@ -109,7 +109,7 @@ export default async function SettingsPage() {
             </p>
             <a
               href="/api/export"
-              className="self-start rounded-md border border-border px-4 py-2 text-sm hover:bg-muted"
+              className="border-border hover:bg-muted self-start rounded-md border px-4 py-2 text-sm"
             >
               Export my data
             </a>
