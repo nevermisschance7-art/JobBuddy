@@ -406,6 +406,7 @@ export type Database = {
           company_id: string | null
           company_name: string
           content_hash: string | null
+          content_updated_at: string
           countries: string[]
           created_at: string
           date_source: string
@@ -439,6 +440,7 @@ export type Database = {
           company_id?: string | null
           company_name: string
           content_hash?: string | null
+          content_updated_at?: string
           countries?: string[]
           created_at?: string
           date_source?: string
@@ -472,6 +474,7 @@ export type Database = {
           company_id?: string | null
           company_name?: string
           content_hash?: string | null
+          content_updated_at?: string
           countries?: string[]
           created_at?: string
           date_source?: string
@@ -555,6 +558,7 @@ export type Database = {
           alert_settings: Json
           created_at: string
           display_name: string | null
+          matched_at: string | null
           min_score: number
           onboarded_at: string | null
           time_zone: string
@@ -567,6 +571,7 @@ export type Database = {
           alert_settings?: Json
           created_at?: string
           display_name?: string | null
+          matched_at?: string | null
           min_score?: number
           onboarded_at?: string | null
           time_zone?: string
@@ -579,6 +584,7 @@ export type Database = {
           alert_settings?: Json
           created_at?: string
           display_name?: string | null
+          matched_at?: string | null
           min_score?: number
           onboarded_at?: string | null
           time_zone?: string
@@ -698,6 +704,31 @@ export type Database = {
       close_stale_jobs: {
         Args: { p_days: number; p_source: string }
         Returns: number
+      }
+      jobs_for_matching: {
+        Args: {
+          p_cv: string
+          p_limit: number
+          p_offset: number
+          p_since: string
+        }
+        Returns: {
+          company_name: string
+          countries: string[]
+          description_text: string
+          employment_type: string
+          id: string
+          posted_at: string
+          remote_regions: string[]
+          remote_type: string
+          salary_currency: string
+          salary_max: number
+          salary_min: number
+          seniority: string
+          similarity: number
+          tags: string[]
+          title: string
+        }[]
       }
       mark_jobs_missed: { Args: { ids: string[] }; Returns: number }
       mark_jobs_seen: { Args: { ids: string[] }; Returns: undefined }

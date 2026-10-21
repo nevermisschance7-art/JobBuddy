@@ -58,6 +58,16 @@ All LLM calls go through the router: [packages/shared/src/llm](packages/shared/s
 - Embeddings: fastembed with all-MiniLM-L6-v2 (384 dims), only for new or changed jobs.
 - Adapter tests run against recorded fixtures in `workers/tests/fixtures/sources`; refresh them with `uv run python scripts/probe_sources.py`.
 
+## Matching (workers)
+
+`uv run jobbuddy-workers match` runs right after every fetch. No AI calls. Rules are pure functions in [match/rules.py](workers/src/jobbuddy_workers/match/rules.py), tested in `tests/test_match.py`.
+
+- Hard filters (reasons saved in `reasons_failed`): location (country, or a remote region covering one of the user's countries, or remote with no stated limits), sponsorship ("unable to sponsor", "must have the right to work"...), work style, office days, seniority, excluded skills and companies, job type. Commute distance is not checked yet (needs geocoding).
+- Score /100: technical 35 (CV/job cosine similarity computed in Postgres by `jobs_for_matching`, plus must-have or CV skills mentioned), seniority 20, eligibility 20, remote 10, freshness 10, compensation 5. Unknown info never gets full points. `breakdown.top_reasons` holds the 3 strongest one-liners for the job card.
+- Stored: every passing job scoring 30+, plus near misses that failed a filter but scored at least the user's `min_score`. Untouched matches (`new`/`seen`) for jobs that no longer qualify are removed; saved or dismissed ones are kept.
+- Full rescore when the CV embedding is cleared (the web app clears it whenever a CV is confirmed or edited) or filters changed after `profiles.matched_at`; otherwise only jobs with `content_updated_at` since the last matcher run.
+- Events: `hot_match` (score 85+, posted under 24 h, max 3 per user per local day) and one `daily_summary` per local day after the user's chosen time.
+
 ## Running locally
 
 Requirements: Node 20+, pnpm, uv, Supabase CLI. Docker is optional (only for a local Supabase); by default we use the cloud project.

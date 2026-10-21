@@ -8,6 +8,7 @@ dependencies = [
     "pydantic>=2.11",
     "python-dotenv>=1.1",
     "fastembed>=0.7",
+    "tzdata>=2025.2",
 ]
 
 [dependency-groups]

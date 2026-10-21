@@ -46,3 +46,7 @@ jobs:
           else
             uv run jobbuddy-workers fetch
           fi
+      - name: Match
+        # Scores new or changed jobs for every user right after fetching.
+        if: ${{ !cancelled() }}
+        run: uv run jobbuddy-workers match

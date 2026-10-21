@@ -80,6 +80,8 @@ def job_row(job: Job, h: str, key: str, embedding: list[float] | None) -> dict[s
         "content_hash": h,
         "dedupe_key": key,
         "last_seen_at": datetime.now(UTC).isoformat(),
+        # Only written for new or changed jobs; the matcher scores jobs changed since its last run.
+        "content_updated_at": datetime.now(UTC).isoformat(),
         "missed_runs": 0,
         "closed_at": None,
     }

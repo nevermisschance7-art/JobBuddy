@@ -104,7 +104,8 @@ export async function confirmResume(_prev: ActionState, formData: FormData): Pro
 
   const { error } = await supabase
     .from("cvs")
-    .update({ resume_json: parsed.data, confirmed: true })
+    // Clearing the embedding tells the matcher to re-embed the CV and rescore every job.
+    .update({ resume_json: parsed.data, confirmed: true, embedding: null })
     .eq("id", cvId)
     .eq("user_id", user.id);
   if (error) return failed("Saving failed. Try again.");

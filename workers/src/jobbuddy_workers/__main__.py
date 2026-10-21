@@ -73,6 +73,22 @@ def cmd_discover(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_match(args: argparse.Namespace) -> int:
+    from jobbuddy_workers.embed import FastEmbedder
+    from jobbuddy_workers.match.run import run_matcher
+    from jobbuddy_workers.match.store import SupabaseMatchStore
+
+    env = _env()
+    _require(env, "SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY")
+    store = SupabaseMatchStore(env["SUPABASE_URL"], env["SUPABASE_SERVICE_ROLE_KEY"])
+    report = run_matcher(store, FastEmbedder())
+    print(
+        f"users {report.users}  jobs scored {report.jobs_scored}  stored {report.stored}  "
+        f"hot {report.hot}  summaries {report.summaries}  errors {len(report.errors)}"
+    )
+    return 1 if report.users and len(report.errors) == report.users else 0
+
+
 def main(argv: list[str] | None = None) -> int:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
     parser = argparse.ArgumentParser(prog="jobbuddy-workers")
@@ -87,7 +103,8 @@ def main(argv: list[str] | None = None) -> int:
     seed.add_argument("--dry-run", action="store_true")
     seed.set_defaults(func=cmd_seed)
 
-    sub.add_parser("match", help="Score new jobs for every user (prompt 6)")
+    match = sub.add_parser("match", help="Score new or changed jobs for every user")
+    match.set_defaults(func=cmd_match)
     disc = sub.add_parser("discover", help="Find new companies on employer systems")
     disc.add_argument(
         "--no-common-crawl", action="store_true", help="Only use links in stored jobs"
