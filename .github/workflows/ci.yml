@@ -1,0 +1,88 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  js:
+    name: Web, shared and extension
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - name: Check lockfile
+        id: lock
+        run: |
+          if [ -f pnpm-lock.yaml ]; then echo "ok=true" >> "$GITHUB_OUTPUT";
+          else echo "::notice::No pnpm-lock.yaml yet. The Bootstrap workflow creates it and re-runs CI."; fi
+      - if: steps.lock.outputs.ok
+        uses: pnpm/action-setup@v4
+      - if: steps.lock.outputs.ok
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+      - if: steps.lock.outputs.ok
+        run: pnpm install --frozen-lockfile
+      - if: steps.lock.outputs.ok
+        run: pnpm format:check
+      - if: steps.lock.outputs.ok
+        run: pnpm lint
+      - if: steps.lock.outputs.ok
+        run: pnpm typecheck
+      - if: steps.lock.outputs.ok
+        run: pnpm test
+      - if: steps.lock.outputs.ok
+        run: pnpm --filter extension build
+
+  rls:
+    name: RLS isolation (live Supabase)
+    # Uses repo secrets and creates throwaway users, so only on main, never on PRs.
+    if: github.event_name != 'pull_request'
+    needs: js
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Check lockfile
+        id: lock
+        run: if [ -f pnpm-lock.yaml ]; then echo "ok=true" >> "$GITHUB_OUTPUT"; fi
+      - if: steps.lock.outputs.ok
+        uses: pnpm/action-setup@v4
+      - if: steps.lock.outputs.ok
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+      - if: steps.lock.outputs.ok
+        run: pnpm install --frozen-lockfile --filter db-tests
+      - if: steps.lock.outputs.ok
+        run: pnpm test:rls
+
+  workers:
+    name: Python workers
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: workers
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv sync --locked
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run pytest

@@ -1,0 +1,40 @@
+# deps
+node_modules/
+.pnpm-store/
+
+# env and secrets
+.env
+.env.*
+!.env.example
+*.pem
+
+# build output
+dist/
+build/
+.next/
+out/
+.netlify/
+*.tsbuildinfo
+next-env.d.ts
+extension/*.zip
+
+# python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# supabase
+supabase/.branches
+supabase/.temp
+
+# misc
+.DS_Store
+Thumbs.db
+*.log
+coverage/
+.vscode/*
+!.vscode/extensions.json
+.idea/
