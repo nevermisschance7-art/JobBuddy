@@ -8,9 +8,9 @@
   "scripts": {
     "dev": "pnpm --filter web dev",
     "build": "pnpm -r build",
-    "lint": "pnpm -r lint",
-    "typecheck": "pnpm -r typecheck",
-    "test": "pnpm -r test",
+    "lint": "pnpm -r --no-bail lint",
+    "typecheck": "pnpm -r --no-bail typecheck",
+    "test": "pnpm -r --no-bail test",
     "test:rls": "pnpm --filter db-tests test:rls",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

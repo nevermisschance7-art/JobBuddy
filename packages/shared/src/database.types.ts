@@ -744,4 +744,3 @@ export const Constants = {
     Enums: {},
   },
 } as const
-{"_tag":"Error","error":{"code":"UnknownError","message":"Timeout while shutting down PostHog. Some events may not have been sent."}}
