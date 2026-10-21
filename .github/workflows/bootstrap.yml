@@ -24,6 +24,8 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 22
+          # No lockfile yet, so the automatic pnpm cache would fail.
+          package-manager-cache: false
       - run: pnpm install --no-frozen-lockfile
       - run: pnpm format
       - name: Commit changes

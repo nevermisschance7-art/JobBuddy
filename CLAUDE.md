@@ -55,6 +55,12 @@ cd workers && uv run ruff check . && uv run ruff format --check . && uv run pyte
 
 CI runs the same on every push and PR ([.github/workflows/ci.yml](.github/workflows/ci.yml)).
 
+RLS isolation tests run against the live Supabase project with throwaway users: `pnpm test:rls` (reads keys from `apps/web/.env.local`; in CI from repo secrets, main only).
+
+After changing any `package.json`, the [Bootstrap workflow](.github/workflows/bootstrap.yml) regenerates `pnpm-lock.yaml` and Prettier formatting in the cloud, commits them and re-runs CI. Pull afterwards. (The dev machine's network is too slow for big npm installs.)
+
+Apply migrations with `supabase db push` (project is linked; no Docker needed). Regenerate types with `pnpm --filter @jobbuddy/shared gen:types`.
+
 ## Environment variables (names only)
 
 **apps/web** (`apps/web/.env.local`)
