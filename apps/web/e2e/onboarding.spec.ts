@@ -164,7 +164,7 @@ test("sign up, onboard, edit settings, delete account", async ({ page }, info) =
     await shot(page, "10e-usage");
 
     // Settings keep what onboarding saved.
-    await page.getByRole("link", { name: "Settings" }).click();
+    await page.locator("header").getByRole("link", { name: "Settings" }).click();
     await expect(page.getByLabel("Notice period")).toHaveValue("1 month");
     await expect(page.getByRole("button", { name: "Remove United Kingdom" })).toBeVisible();
     await shot(page, "11-settings");
