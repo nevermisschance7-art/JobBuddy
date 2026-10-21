@@ -2,9 +2,10 @@
 # Deploys run only from the manual "Deploy web" GitHub workflow, never on every push,
 # because each production deploy costs Netlify credits.
 
+# The CLI runs from the repo root (pnpm monorepo), so paths are root-relative.
 [build]
-  command = "pnpm run build"
-  publish = ".next"
+  command = "pnpm --filter web build"
+  publish = "apps/web/.next"
 
 [build.environment]
   NODE_VERSION = "22"
