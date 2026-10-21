@@ -1,9 +1,15 @@
 import { z } from "zod";
 
-export const matchStatusSchema = z.enum(["new", "seen", "saved", "dismissed", "preparing", "applied"]);
+export const matchStatusSchema = z.enum([
+  "new",
+  "seen",
+  "saved",
+  "dismissed",
+  "preparing",
+  "applied",
+]);
 
-const part = (max: number) =>
-  z.object({ points: z.number().min(0).max(max), reason: z.string() });
+const part = (max: number) => z.object({ points: z.number().min(0).max(max), reason: z.string() });
 
 // Score weights add up to 100. Unknown or unverified info never gets full points.
 export const matchBreakdownSchema = z.object({

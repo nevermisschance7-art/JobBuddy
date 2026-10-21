@@ -60,7 +60,9 @@ describe.skipIf(!configured)("RLS isolation", () => {
     // User A's personal data, written as A.
     const writes = await Promise.all([
       a.client.from("cvs").insert({ user_id: a.id, resume_json: { basics: { name: "A" } } }),
-      a.client.from("fixed_answers").insert({ user_id: a.id, key: "notice_period", value: "1 month" }),
+      a.client
+        .from("fixed_answers")
+        .insert({ user_id: a.id, key: "notice_period", value: "1 month" }),
       a.client.from("ai_keys").insert({ user_id: a.id, provider: "gemini", encrypted_key: "x" }),
       a.client.from("applications").insert({ user_id: a.id, job_id: jobId }),
       a.client.from("events").insert({ user_id: a.id, type: "test" }),

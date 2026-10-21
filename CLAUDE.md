@@ -64,6 +64,7 @@ Apply migrations with `supabase db push` (project is linked; no Docker needed). 
 ## Environment variables (names only)
 
 **apps/web** (`apps/web/.env.local`)
+
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY` (server only)
@@ -72,6 +73,7 @@ Apply migrations with `supabase db push` (project is linked; no Docker needed). 
 - `GEMINI_API_KEY` (dev testing only; users store their own keys encrypted in the database)
 
 **workers** (`workers/.env`, and GitHub repo secrets in CI)
+
 - `SUPABASE_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `APP_ENCRYPTION_KEY`
@@ -81,6 +83,7 @@ Apply migrations with `supabase db push` (project is linked; no Docker needed). 
 - `OPENROUTER_API_KEY` (optional)
 
 **extension** (`extension/.env`)
+
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_ANON_KEY`
 - `VITE_APP_URL`

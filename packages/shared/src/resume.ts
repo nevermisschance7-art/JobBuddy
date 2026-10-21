@@ -22,7 +22,9 @@ export const resumeBasicsSchema = z.object({
     })
     .optional(),
   profiles: z
-    .array(z.object({ network: z.string(), username: z.string().optional(), url: z.string().url() }))
+    .array(
+      z.object({ network: z.string(), username: z.string().optional(), url: z.string().url() }),
+    )
     .default([]),
 });
 
