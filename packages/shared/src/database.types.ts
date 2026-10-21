@@ -154,6 +154,8 @@ export type Database = {
           created_at: string
           fail_count: number
           id: string
+          jobs_open: number
+          last_error: string | null
           last_ok_at: string | null
           name: string
           slug: string
@@ -166,6 +168,8 @@ export type Database = {
           created_at?: string
           fail_count?: number
           id?: string
+          jobs_open?: number
+          last_error?: string | null
           last_ok_at?: string | null
           name: string
           slug: string
@@ -178,6 +182,8 @@ export type Database = {
           created_at?: string
           fail_count?: number
           id?: string
+          jobs_open?: number
+          last_error?: string | null
           last_ok_at?: string | null
           name?: string
           slug?: string
@@ -397,6 +403,7 @@ export type Database = {
           countries: string[]
           created_at: string
           date_source: string
+          dedupe_key: string | null
           description_text: string
           embedding: string | null
           employment_type: string
@@ -407,6 +414,7 @@ export type Database = {
           locations: Json
           missed_runs: number
           posted_at: string | null
+          remote_regions: string[]
           remote_type: string | null
           salary_currency: string | null
           salary_max: number | null
@@ -414,6 +422,7 @@ export type Database = {
           seniority: string
           source: string
           source_updated_at: string | null
+          tags: string[]
           title: string
           updated_at: string
         }
@@ -427,6 +436,7 @@ export type Database = {
           countries?: string[]
           created_at?: string
           date_source?: string
+          dedupe_key?: string | null
           description_text?: string
           embedding?: string | null
           employment_type?: string
@@ -437,6 +447,7 @@ export type Database = {
           locations?: Json
           missed_runs?: number
           posted_at?: string | null
+          remote_regions?: string[]
           remote_type?: string | null
           salary_currency?: string | null
           salary_max?: number | null
@@ -444,6 +455,7 @@ export type Database = {
           seniority?: string
           source: string
           source_updated_at?: string | null
+          tags?: string[]
           title: string
           updated_at?: string
         }
@@ -457,6 +469,7 @@ export type Database = {
           countries?: string[]
           created_at?: string
           date_source?: string
+          dedupe_key?: string | null
           description_text?: string
           embedding?: string | null
           employment_type?: string
@@ -467,6 +480,7 @@ export type Database = {
           locations?: Json
           missed_runs?: number
           posted_at?: string | null
+          remote_regions?: string[]
           remote_type?: string | null
           salary_currency?: string | null
           salary_max?: number | null
@@ -474,6 +488,7 @@ export type Database = {
           seniority?: string
           source?: string
           source_updated_at?: string | null
+          tags?: string[]
           title?: string
           updated_at?: string
         }
@@ -574,8 +589,10 @@ export type Database = {
           errors: Json
           finished_at: string | null
           id: string
+          jobs_closed: number
           jobs_new: number
           jobs_seen: number
+          jobs_updated: number
           source: string
           started_at: string
           updated_at: string
@@ -585,8 +602,10 @@ export type Database = {
           errors?: Json
           finished_at?: string | null
           id?: string
+          jobs_closed?: number
           jobs_new?: number
           jobs_seen?: number
+          jobs_updated?: number
           source: string
           started_at?: string
           updated_at?: string
@@ -596,8 +615,10 @@ export type Database = {
           errors?: Json
           finished_at?: string | null
           id?: string
+          jobs_closed?: number
           jobs_new?: number
           jobs_seen?: number
+          jobs_updated?: number
           source?: string
           started_at?: string
           updated_at?: string
@@ -659,6 +680,12 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      close_stale_jobs: {
+        Args: { p_days: number; p_source: string }
+        Returns: number
+      }
+      mark_jobs_missed: { Args: { ids: string[] }; Returns: number }
+      mark_jobs_seen: { Args: { ids: string[] }; Returns: undefined }
       prune_closed_jobs: { Args: never; Returns: number }
     }
     Enums: {

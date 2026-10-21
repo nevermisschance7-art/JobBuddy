@@ -1,0 +1,145 @@
+{
+  "comments": "21/08/2026: Cursor pagination is now available and is the preferred way to page through the feed. Pass the nextCursor value from each response back as ?cursor=. It is faster than offset and will never return the same job twice. The offset parameter is deprecated and will be removed in a future release. 13/03/2026: The API has been updated to include the companySlug field in the response.",
+  "updatedAt": 1792578663,
+  "offset": 0,
+  "limit": 3,
+  "totalCount": 125956,
+  "nextCursor": "MjAyNi0xMC0yMVQxMDozMDo1Ni4yNzUyNTFafDIyNTM3NDk",
+  "jobs": [
+    {
+      "title": "Senior Director, Go-to-Market",
+      "excerpt": "Everbridge empowers organizations to anticipate, respond to, and recover from critical events.",
+      "companyName": "Everbridge",
+      "companySlug": "everbridge",
+      "companyLogo": "https://cdn-images.himalayas.app/leodqdwojw5odi7ibfms3l70dsau",
+      "employmentType": "Full Time",
+      "minSalary": 174000,
+      "maxSalary": 200000,
+      "salaryPeriod": "annual",
+      "seniority": [
+        "Director",
+        "Executive"
+      ],
+      "currency": "USD",
+      "locationRestrictions": [
+        "United States"
+      ],
+      "timezoneRestrictions": [
+        -10,
+        -9,
+        -8,
+        -7,
+        -6,
+        -5,
+        14
+      ],
+      "categories": [
+        "Go-To-Market",
+        "Sales-Leadership",
+        "Sales-and-Marketing",
+        "Global-Account-Management",
+        "Revenue-Operations",
+        "Director-Of-Go-To-Market-Strategy",
+        "Director-Of-Go-To-Market",
+        "Go-To-Market-Director",
+        "Head-Of-Go-To-Market"
+      ],
+      "parentCategories": [
+        "Sales"
+      ],
+      "description": "<div>\n<p><strong><a href=\"https://himalayas.app/companies/everbridge\">Everbridge</a> </strong>empowers organizations to anticipate, respond to, and recover from critical events. Global corporations, government agencies, and nonprofit organizations rely on our technology to help protect people, maintain operations, and build resilience.</p>\n<p>This role sits within the RedSky team. <a href=\"https://himalayas.app/companies/everbridge\">Everbridge</a> E911, powered by RedSky, provides cloud-based emergency calling solutions that help organizations locate 911 callers, route calls to the appropriate emergency response center, notify on-site personnel, and meet federal E911 requirements. Our work supports a clear and meaningful purpose: helping people receive the right assistance when every second matters.</p>\n<p>We’re seeking an experienced, strategic, and customer-focused leader to guide the RedSky Go-to-Market organization through its next phase of growth. The <strong>Senior Director of GTM </strong>will lead the Directors responsible for Sales, Account Management &amp; Customer Retention, Customer Operations, Sales Engineering, and Marketing.</p>\n<p>This executive leadership role will align these functions around a unified GTM strategy that accelerates revenue growth, strengthens customer retention, improves operational performance, and delivers exceptional customer experience. Working closely with Executive Leadership, Channel Leadership, Product Management, Engineering, and Finance, this leader will translate company objectives into clear priorities and measurable results.</p>\n</div><h3>What you'll do:</h3><ul><div><ul>\n<li>Lead, coach, and develop Directors across RedSky’s customer-facing functions.</li>\n<li>Create and execute an integrated GTM strategy aligned with RedSky and <a href=\"https://himalayas.app/companies/everbridge\">Everbridge</a> business objectives.</li>\n<li>Establish annual priorities, budgets, performance metrics, and accountability across the organization.</li>\n<li>Drive revenue growth, customer retention, satisfaction, and operational efficiency.</li>\n<li>Align GTM teams to deliver a seamless experience throughout the customer lifecycle.</li>\n<li>Partner with Channel Leadership to expand pipeline, strengthen joint selling, and accelerate partner-driven revenue.</li>\n<li>Collaborate with Product Management and Engineering to ensure customer and market insights shape product strategy.</li>\n<li>Monitor business performance, address risks and opportunities, and adjust priorities as needed.</li>\n<li>Champion the responsible use of AI, automation, and data to improve productivity, decision-making, and customer engagement.</li>\n<li>Develop future leaders and foster a culture of accountability, innovation, collaboration, and continuous improvement.</li>\n<li>Serve as the executive escalation point for strategic customer and operational matters.</li>\n</ul></div></ul><h3>What you'll bring:</h3><ul><div><ul>\n<li>Bachelor’s degree in business, Marketing, Engineering, or a related field—or an equivalent combination of education and experience.</li>\n<li>12+ years of progressive leadership experience in B2B SaaS, enterprise technology, telecommunications, or a related industry.</li>\n<li>Significant experience leading leaders, including responsibility for multiple Director-level direct reports.</li>\n<li>Demonstrated success developing and executing GTM strategies that deliver revenue growth, customer retention, and operational excellence.</li>\n<li>Strong understanding of complex, channel-driven sales organizations and experience partnering effectively with Channel Leadership.</li>\n<li>Proven ability to align diverse functions, lead organizational change, and influence executive-level stakeholders.</li>\n<li>Excellent strategic planning, business judgment, communication, and people leadership skills.</li>\n<li>Practical experience using AI platforms and automation tools to improve business performance.</li>\n</ul></div></ul><h3>Why Join <a href=\"https://himalayas.app/companies/everbridge\">Everbridge</a>?</h3><ul><div><ul>\n<li>Meaningful work: Help advance technology designed to protect people and connect them with emergency assistance when it matters most.</li>\n<ul>\n<li>Visible leadership impact: Shape RedSky’s GTM strategy and influence growth, customer experience, product direction, and organizational performance.</li>\n<li>Opportunity to build: Lead an accomplished team of functional Directors while developing future leaders.</li>\n<li>Cross-functional influence: Partner with senior leaders across Product, Engineering, Finance, Channel, and Executive Leadership.</li>\n<li>Innovation with purpose: Apply AI, automation, and data-driven insights to a mission-critical business.</li>\n<li>A values-led culture: Join a collaborative organization guided by Customer First, Learning, Integrity, and People.</li>\n<li>This is an opportunity to shape how RedSky goes to market, strengthen the connection between customer needs and company strategy, and lead a high-performing organization positioned for sustainable growth.</li>\n</ul>\n</ul></div></ul><div>\n<div>The reasonably estimated salary for this role at <a href=\"https://himalayas.app/companies/everbridge\">Everbridge</a> ranges from $174,000 - $200,000 and may also include variable compensation. Actual compensation is based on factors such as the candidate's skills, qualifications, and experience. In addition, <a href=\"https://himalayas.app/companies/everbridge\">Everbridge</a> offers a wide range of best in class, comprehensive and inclusive employee benefits for this role including healthcare, dental, parental planning, and mental health benefits, disability income benefits, life and AD&amp;D insurance, a 401(k) plan and match, paid time off, and fitness reimbursements.</div>\n<h3>Fair Chance Statement US &amp; Canada</h3>\n<div> We are committed to providing equal employment opportunities in compliance with all applicable Federal, Provincial/State and Local laws, including the California Fair Chance Act and any local County Fair Chance Ordinance (or local equivalent). Pursuant to these and other relevant regulations, we consider qualified applicants with criminal histories in a manner consistent with the law.</div>\n<div>For roles subject to background checks, the following material job duties may be affected by an applicant’s criminal history:</div>\n<div>- Access to sensitive or confidential information, such as financial records, proprietary data, or client information.</div>\n<div>- Management of cash, company funds, or other valuable assets.</div>\n<div>- Work in environments requiring heightened security measures.</div>\n<div>- Compliance with contractual or regulatory requirements specific to the position.</div>\n<div>We evaluate each applicant's criminal history individually, considering its nature, timing, and relevance to the specific job duties, while maintaining our commitment to fair hiring practices and promoting workplace equity.</div>\n<div>\n<strong>Employment Practices:</strong> <a href=\"https://himalayas.app/companies/everbridge\">Everbridge</a> does not require or administer lie detector (polygraph) tests as a condition of employment or continued employment. In Massachusetts, it is unlawful to require or administer a lie detector test as a condition of employment or continued employment. Employers who violate this law may be subject to criminal penalties and civil liability. </div>\n</div><h3>About <a href=\"https://himalayas.app/companies/everbridge\">Everbridge</a>\n</h3><p><a href=\"https://himalayas.app/companies/everbridge\">Everbridge</a> empowers enterprises and government organizations to anticipate, mitigate, respond to, and recover from critical events. In an unpredictable world, resilient organizations protect their people and operations, adapt under pressure, and return to productivity faster. Our Critical Event Management (CEM) technology combines intelligent automation with comprehensive risk intelligence to help organizations strengthen resilience, keep people safe, and maintain operations.</p><p>Learn more at everbridge.com, explore the <a href=\"https://himalayas.app/companies/everbridge\">Everbridge</a> blog, and connect with us on social media.</p><h3>Equal Employment Opportunity</h3><p><a href=\"https://himalayas.app/companies/everbridge\">Everbridge</a> is an Equal Opportunity Employer. We consider all qualified applicants for employment without regard to race, color, creed, religion, national origin, ancestry, age, sex, pregnancy, sexual orientation, gender identity or expression, disability, protected veteran status, genetic information, marital status, or any other characteristic protected by applicable federal, state, or local law.</p><h3>Employment Practices</h3><p><a href=\"https://himalayas.app/companies/everbridge\">Everbridge</a> does not require or administer lie detector (polygraph) tests as a condition of employment or continued employment. In Massachusetts, it is unlawful to require or administer a lie detector test as a condition of employment or continued employment. Employers who violate this law may be subject to criminal penalties and civil liability.</p><p>Originally posted on <a href=\"https://himalayas.app\">Himalayas</a></p>",
+      "pubDate": 1792578663,
+      "expiryDate": 1797762663,
+      "applicationLink": "https://himalayas.app/companies/everbridge/jobs/senior-director-go-to-market?utm_source=api",
+      "guid": "https://himalayas.app/companies/everbridge/jobs/senior-director-go-to-market"
+    },
+    {
+      "title": "Data Engineer Lead",
+      "excerpt": "🚀 Join Our Data Products and Machine Learning Development Remote Startup!",
+      "companyName": "Mutt Data",
+      "companySlug": "mutt-data",
+      "companyLogo": "https://cdn-images.himalayas.app/bqu6v5it7pohbb9t6tc47f8buzn8",
+      "employmentType": "Full Time",
+      "minSalary": null,
+      "maxSalary": null,
+      "salaryPeriod": "annual",
+      "seniority": [
+        "Senior"
+      ],
+      "currency": null,
+      "locationRestrictions": [
+        "Argentina"
+      ],
+      "timezoneRestrictions": [
+        -3
+      ],
+      "categories": [
+        "Data-Engineering",
+        "Lead-Data-Engineer",
+        "Data-Engineer",
+        "Data-Engineering-Lead",
+        "Data-Engineering-Team-Lead",
+        "Senior-Data-Engineering-Leader",
+        "Team-Lead-(Data-Engineering)"
+      ],
+      "parentCategories": [
+        "Data Science"
+      ],
+      "description": "<div>🚀 <strong>Join Our Data Products and Machine Learning Development Remote Startup!</strong> 🚀</div><div>Muttdata is a dynamic startup committed to crafting innovative systems using cutting-edge Big Data and Machine Learning technologies.</div><div>We’re looking for a <strong>Data Engineer Lead</strong> to help take our expertise to the next level. If you consider yourself a data nerd like us, we’d love to connect! 🐶🚀</div><h3>🚀 What We Do</h3><ul>\n<li>Leveraging our expertise, we build modern Machine Learning systems for demand planning and budget forecasting.</li>\n<li>Developing scalable data infrastructures, we enhance high-level decision-making, tailored to each client.</li>\n<li>Offering comprehensive Data Engineering and custom AI solutions, we optimize cloud-based systems.</li>\n<li>Using Generative AI, we help e-commerce platforms and retailers create higher-quality ads, faster.</li>\n</ul><h3>🌟 Our Partnerships</h3><ul>\n<li>Amazon Web Services</li>\n<li>Astronomer</li>\n<li>Databricks</li>\n</ul><h3>🌟 Our values</h3><ul>\n<li>📊 We are Data Nerds</li>\n<li>🤗 We are Open Team Players</li>\n<li>🚀 We Take Ownership</li>\n<li>🌟 We Have a Positive Mindset</li>\n<div>🔍 <strong>Curious about what we’re up to?</strong> Check out our <strong>case studies</strong> and dive into our <strong>blog pos</strong><strong>t </strong>to learn more about our culture and the exciting projects we’re working on! 🚀</div>\n</ul><h3>Responsibilities 🤓</h3><ul>\n<li>Partner with cross-functional teams to define BI and analytics<br>requirements</li>\n<li>Innovate with new tools to improve <a href=\"https://himalayas.app/companies/mutt-data\">Mutt Data</a>'s infrastructure and processes.</li>\n<li>Design dimensional data models and build scalable data pipelines</li>\n<li>Develop data models to feed dashboards for teams across the org, as well<br>as client-facing analytics</li>\n<li>Develop tools for the team and assist in tech migrations and model design.</li>\n<li>Build scalable, high-performance data architectures.</li>\n<li>Focus on code quality—review, document, test, and integrate CI/CD.</li>\n</ul><h3>Required Skills 💻</h3><ul>\n<li>Experience leading and mentoring teams in Data projects, guiding technical decisions, and fostering team growth.</li>\n<li>Proven ability to collaborate with stakeholders, translate business needs into technical solutions, and align priorities across teams.</li>\n<li>Experience in Data Engineering, including building and optimizing data pipelines.</li>\n<li>Strong knowledge of SQL and Python (Pandas, Numpy, Jupyter).</li>\n<li>Experience working with any cloud (AWS, GCP, Azure or DBT).</li>\n<li>Knowledge of Docker.</li>\n<li>Experience with orchestration tools like Airflow or Prefect.</li>\n<li>Familiarity with ETL processes and automation.</li>\n</ul><h3>Nice to Have Skills 😉</h3><ul>\n<li>Experience with stream processing tools like Kafka Streams, Kinesis, or Spark.</li>\n<li>Knowledge of Kubernetes.</li>\n<li>Solid command of English for understanding and communicating technical concepts (Design Documents, etc.).</li>\n</ul><h3>🎁 Perks </h3><ul>\n<li>\n<strong>Remote-first culture </strong>– work from anywhere! 🌍</li>\n<li>\n<strong>AWS, DBT, Google Cloud, Azure &amp; Databricks</strong> certifications fully covered</li>\n<li>In-Company <strong>English Lessons.</strong>\n</li>\n<li>\n<strong>Birthday off + an extra vacation week</strong> (Mutt Week! 🏖️)</li>\n<li>\n<strong>Referral bonuses </strong>– help us grow the team &amp; get rewarded!</li>\n<li>\n<strong>Maslow:</strong> Monthly credits to spend in our benefits marketplace.</li>\n<li>✈️<strong>🏝️ Annual Mutters' Trip</strong> – an unforgettable getaway with the team!</li>\n</ul><p>Originally posted on <a href=\"https://himalayas.app\">Himalayas</a></p>",
+      "pubDate": 1792578659,
+      "expiryDate": 1797762659,
+      "applicationLink": "https://himalayas.app/companies/mutt-data/jobs/data-engineer-lead?utm_source=api",
+      "guid": "https://himalayas.app/companies/mutt-data/jobs/data-engineer-lead"
+    },
+    {
+      "title": "Legal Conflicts Account Specialist",
+      "excerpt": "We are seeking a talented member to join its Collections department.",
+      "companyName": "Latitude",
+      "companySlug": "latitude",
+      "companyLogo": "https://cdn-images.himalayas.app/6zhuor171tcjn6dnjv0ibkoy28cn",
+      "employmentType": "Full Time",
+      "minSalary": 60000,
+      "maxSalary": 75000,
+      "salaryPeriod": "annual",
+      "seniority": [
+        "Senior"
+      ],
+      "currency": "USD",
+      "locationRestrictions": [
+        "United States"
+      ],
+      "timezoneRestrictions": [
+        -10,
+        -9,
+        -8,
+        -7,
+        -6,
+        -5,
+        14
+      ],
+      "categories": [
+        "Legal-Collection",
+        "Collections-Specialist",
+        "Client-Account-Analyst",
+        "Law-Firm-Collections",
+        "Accounts-Receivable-Specialist",
+        "Legal-Conflicts-Specialist",
+        "Legal-Account-Specialist",
+        "Conflicts-Analyst",
+        "Conflicts-Coordinator",
+        "Account-Specialist",
+        "Client-Account-Specialist",
+        "Legal"
+      ],
+      "parentCategories": [
+        "Finance",
+        "Customer Service"
+      ],
+      "description": "<div>We are seeking a talented member to join its Collections department.The Client Accounts Analyst will coordinate and work with a professional and cohesive team, handling all communications with attorneys and clients to ensure payments, along with evaluating and maintaining accurate records for same.</div><h3>Responsibilities</h3><ul>\n<li>Responsible for own portfolio of clients</li>\n<li>Maintain strong attorney and client relationships</li>\n<li>Perform analysis to resolve and respond to attorney and client issues and queries on a timely basis</li>\n<li>Perform collection calls on a daily basis</li>\n<li>Maintain level of communication with attorneys and clients via telephone and email</li>\n<li>Interact with Billing Department regarding client account status</li>\n</ul><h3>Requirements</h3><ul>\n<li>5+ years of high volume law firm collections experience </li>\n<li>Accounts Receivable knowledge/experience in addition to collections experience is a plus</li>\n<li>Experience in Aderant and Star Collect preferred</li>\n<li>High school diploma/GED required</li>\n</ul><p>Originally posted on <a href=\"https://himalayas.app\">Himalayas</a></p>",
+      "pubDate": 1792578656,
+      "expiryDate": 1797762656,
+      "applicationLink": "https://himalayas.app/companies/latitude/jobs/legal-conflicts-account-specialist-4812414748?utm_source=api",
+      "guid": "https://himalayas.app/companies/latitude/jobs/legal-conflicts-account-specialist-4812414748"
+    }
+  ]
+}

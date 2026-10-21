@@ -7,6 +7,7 @@ dependencies = [
     "httpx>=0.28",
     "pydantic>=2.11",
     "python-dotenv>=1.1",
+    "fastembed>=0.7",
 ]
 
 [dependency-groups]
@@ -31,6 +32,7 @@ target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "SIM"]
+ignore = ["SIM905"]  # "a b c".split() is fine for data lists
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -1,0 +1,17 @@
+{
+  "totalCount": 1,
+  "jobs": [
+    {
+      "title": "Full Stack <b>Developer</b>",
+      "location": "Warsaw, Poland",
+      "snippet": "&nbsp;...React and Node.js, remote-friendly...",
+      "salary": "",
+      "source": "example.pl",
+      "type": "Full-time",
+      "link": "https://jooble.org/desc/-123456789?ckey=x",
+      "company": "Example Software Sp. z o.o.",
+      "updated": "2026-10-20T00:00:00.0000000",
+      "id": -123456789
+    }
+  ]
+}

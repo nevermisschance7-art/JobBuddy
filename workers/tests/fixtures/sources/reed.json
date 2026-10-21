@@ -1,0 +1,19 @@
+{
+  "results": [
+    {
+      "jobId": 51234567,
+      "employerName": "Example Fintech Ltd",
+      "jobTitle": "Software Engineer - TypeScript",
+      "locationName": "London",
+      "minimumSalary": 60000.0,
+      "maximumSalary": 75000.0,
+      "currency": "GBP",
+      "expirationDate": "30/11/2026",
+      "date": "18/10/2026",
+      "jobDescription": "Join our payments team. Hybrid, 2 days a week in our London office...",
+      "applications": 12,
+      "jobUrl": "https://www.reed.co.uk/jobs/software-engineer-typescript/51234567"
+    }
+  ],
+  "totalResults": 1
+}

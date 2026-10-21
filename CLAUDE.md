@@ -47,6 +47,16 @@ All LLM calls go through the router: [packages/shared/src/llm](packages/shared/s
 - Every call is logged to `llm_calls` (provider, model, tokens, latency; never content).
 - Tests use `FakeProvider`; never call real providers in tests.
 
+## Job fetching (workers)
+
+`uv run jobbuddy-workers fetch [--source NAME]` runs every 2 hours in [fetch-jobs.yml](.github/workflows/fetch-jobs.yml). Sources, their real date fields, schedules and closing rules are documented in [workers/SOURCES.md](workers/SOURCES.md); read it before touching an adapter.
+
+- Jobs are worldwide. Only tech roles where at least one user can work are stored (`is_relevant` in [run.py](workers/src/jobbuddy_workers/jobs/run.py)); locations are parsed to ISO countries plus remote regions (WORLDWIDE, EUROPE, EMEA, ...) in [geo.py](workers/src/jobbuddy_workers/geo.py).
+- Employer systems (complete listings) close a job after 2 missed runs; aggregators (partial listings) close after 14 days unseen.
+- Employer companies come from the `companies` table. Seed or re-verify the starter list with the "Seed companies" workflow ([candidates.py](workers/src/jobbuddy_workers/seed/candidates.py)).
+- Embeddings: fastembed with all-MiniLM-L6-v2 (384 dims), only for new or changed jobs.
+- Adapter tests run against recorded fixtures in `workers/tests/fixtures/sources`; refresh them with `uv run python scripts/probe_sources.py`.
+
 ## Running locally
 
 Requirements: Node 20+, pnpm, uv, Supabase CLI. Docker is optional (only for a local Supabase); by default we use the cloud project.

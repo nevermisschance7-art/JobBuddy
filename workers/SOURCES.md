@@ -1,0 +1,48 @@
+# Job sources
+
+Findings from calling each real endpoint on 2026-10-21 (`uv run python scripts/probe_sources.py`). Recorded samples live in [tests/fixtures/sources](tests/fixtures/sources).
+
+**Date rule:** `posted_at` only comes from a creation or publication field. An "updated" field is stored as `source_updated_at` and never used as the posting date. Crawl time is never used. No real field means `posted_at = null`, `date_source = 'unknown'`, shown as "Date unknown".
+
+## Employer systems (complete listings, worldwide)
+
+Each lists every open job of one company, so a job missing from **2 successful runs in a row** is closed. A company whose fetch fails is left alone.
+
+| System | Endpoint | Posting date | Not used as posting date | Notes |
+|---|---|---|---|---|
+| Greenhouse | `boards-api.greenhouse.io/v1/boards/{slug}/jobs?content=true` | `first_published` (ISO) | `updated_at` | `content` is entity-escaped HTML |
+| Lever | `api.lever.co/v0/postings/{slug}?mode=json` (EU: `api.eu.lever.co`, slug `eu:<slug>`) | `createdAt` (epoch ms) | | `country`, `workplaceType`, optional `salaryRange` |
+| Ashby | `api.ashbyhq.com/posting-api/job-board/{slug}?includeCompensation=true` | `publishedAt` (ISO) | | `workplaceType`, `isRemote`, salary in `compensation.summaryComponents` |
+| Workable | `apply.workable.com/api/v1/widget/accounts/{slug}?details=true` | `published_on` (date) | `created_at` (draft creation) | `telecommuting`, `locations[].countryCode` |
+| SmartRecruiters | `api.smartrecruiters.com/v1/companies/{slug}/postings` | `releasedDate` (ISO) | | List has no description: detail (`ref`) is fetched only for jobs not stored yet |
+| Teamtailor | `https://{slug}.teamtailor.com/jobs.rss` (or a custom host as slug) | RSS `pubDate` | | `remoteStatus` (none, hybrid, fully), `tt:locations` |
+
+## Aggregators and boards (partial listings)
+
+They return only their newest pages, so absence proves nothing: their jobs close when **not seen for 14 days**. Each runs on its own schedule to stay inside free limits.
+
+| Source | Coverage | Every | Posting date | Not used | Notes |
+|---|---|---|---|---|---|
+| Remotive | Remote, worldwide | 6 h | `publication_date` | | Asks for max 4 calls a day. `candidate_required_location` gives the region |
+| Himalayas | Remote, worldwide | 2 h | `pubDate` (epoch s) | `expiryDate` | `locationRestrictions`, salary with `salaryPeriod` |
+| Arbeitnow | Germany and EU | 2 h | `created_at` (epoch s) | | `remote` flag |
+| RemoteOK | Remote, worldwide | 4 h | `date` (ISO), `epoch` | | First array item is a legal notice. Terms: link back, name RemoteOK |
+| We Work Remotely | Remote, worldwide | 4 h | RSS `pubDate` | | Title is "Company: Role". Fixture synthesised (blocked from dev network) |
+| Adzuna | ~20 countries | 4 h | `created` | | Needs key. `salary_is_predicted = 1` salaries are ignored. Fixture synthesised from docs |
+| Reed | UK only | 4 h | `date` (dd/mm/yyyy) | `expirationDate` | Needs key. Only runs if someone wants GB jobs. Fixture synthesised from docs |
+| Jooble | ~70 countries | 6 h | none | `updated` | Needs key. Every Jooble job is "Date unknown". Fixture synthesised from docs |
+
+Re-record synthesised fixtures once keys are set: `uv run python scripts/probe_sources.py adzuna reed jooble weworkremotely`.
+
+## What gets stored
+
+- **Tech roles only** (title match), and only where at least one user can work: their countries, a remote region covering them, or remote with no stated area. With no users yet, all tech roles are kept.
+- **Internships are dropped.**
+- **Salary only if stated** by the source, yearly.
+- **Duplicates:** same canonical URL, or same company + title + first country within 30 days. Employer systems run first, so their copy (and apply link) wins.
+- **Embeddings** (all-MiniLM-L6-v2, 384 dims via fastembed) only for new or changed jobs (`content_hash`).
+- Descriptions are capped at 15,000 characters.
+
+## Politeness
+
+Clear User-Agent with a contact link, 3 retries with exponential backoff (honours `Retry-After`), 4 companies in parallel per system, aggregators one request at a time, robots.txt checked for feed and page URLs. No LinkedIn or Indeed.

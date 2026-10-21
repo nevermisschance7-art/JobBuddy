@@ -7,4 +7,4 @@ def test_help_without_command_exits_ok(capsys):
 
 
 def test_unbuilt_command_fails():
-    assert main(["fetch"]) == 1
+    assert main(["match"]) == 1

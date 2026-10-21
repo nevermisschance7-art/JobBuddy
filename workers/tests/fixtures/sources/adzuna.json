@@ -1,0 +1,53 @@
+{
+  "count": 2,
+  "results": [
+    {
+      "id": "4801234567",
+      "title": "Senior <strong>Python</strong> Developer",
+      "description": "We are hiring a senior Python developer to build data APIs...",
+      "created": "2026-10-20T09:15:00Z",
+      "redirect_url": "https://www.adzuna.de/land/ad/4801234567?se=abc&utm_medium=api",
+      "company": {
+        "display_name": "Example Data GmbH"
+      },
+      "location": {
+        "display_name": "Berlin",
+        "area": [
+          "Deutschland",
+          "Berlin"
+        ]
+      },
+      "salary_min": 70000,
+      "salary_max": 85000,
+      "salary_is_predicted": "0",
+      "contract_time": "full_time",
+      "contract_type": "permanent",
+      "category": {
+        "tag": "it-jobs",
+        "label": "IT Jobs"
+      }
+    },
+    {
+      "id": "4801234568",
+      "title": "Backend Engineer (Go)",
+      "description": "Hybrid role, 2 days in office...",
+      "created": "2026-10-19T11:00:00Z",
+      "redirect_url": "https://www.adzuna.de/land/ad/4801234568",
+      "company": {
+        "display_name": "Acme Cloud"
+      },
+      "location": {
+        "display_name": "Munich, Bavaria",
+        "area": [
+          "Deutschland",
+          "Bayern",
+          "Munich"
+        ]
+      },
+      "salary_min": 64000,
+      "salary_max": 64000,
+      "salary_is_predicted": "1",
+      "contract_time": "full_time"
+    }
+  ]
+}
