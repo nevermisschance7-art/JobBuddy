@@ -115,8 +115,12 @@ class CommonCrawl:
                 if not res:
                     continue
                 for line in res.text.splitlines():
-                    if line.startswith("{"):
+                    if not line.startswith("{"):
+                        continue
+                    try:
                         yield json.loads(line).get("url", "")
+                    except json.JSONDecodeError:
+                        continue  # a truncated line in a large response; skip it
 
 
 # ---------------------------------------------------------------- discovery run
