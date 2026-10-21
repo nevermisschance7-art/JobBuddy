@@ -66,7 +66,7 @@ describe.skipIf(!configured)("RLS isolation", () => {
       a.client.from("ai_keys").insert({ user_id: a.id, provider: "gemini", encrypted_key: "x" }),
       a.client.from("applications").insert({ user_id: a.id, job_id: jobId }),
       a.client.from("events").insert({ user_id: a.id, type: "test" }),
-      a.client.storage.from("cvs").upload(`${a.id}/cv.pdf`, new Blob(["%PDF-1.4"]), {
+      a.client.storage.from("cvs").upload(`${a.id}/cv.pdf`, new Blob(["%PDF-1.4"], { type: "application/pdf" }), {
         contentType: "application/pdf",
       }),
     ]);
@@ -143,7 +143,7 @@ describe.skipIf(!configured)("RLS isolation", () => {
   it("B cannot upload into A's CV folder", async () => {
     const { error } = await b.client.storage
       .from("cvs")
-      .upload(`${a.id}/evil.pdf`, new Blob(["%PDF-1.4"]), { contentType: "application/pdf" });
+      .upload(`${a.id}/evil.pdf`, new Blob(["%PDF-1.4"], { type: "application/pdf" }), { contentType: "application/pdf" });
     expect(error).not.toBeNull();
   });
 
