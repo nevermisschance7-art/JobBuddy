@@ -20,6 +20,8 @@ let b: TestUser;
 let anon: SupabaseClient;
 let jobId: string;
 
+const pdf = () => new Blob(["%PDF-1.4"], { type: "application/pdf" });
+
 async function makeUser(label: string): Promise<TestUser> {
   const email = `rls-${label}-${run}@jobbuddy.test`;
   const password = randomUUID();
@@ -66,9 +68,9 @@ describe.skipIf(!configured)("RLS isolation", () => {
       a.client.from("ai_keys").insert({ user_id: a.id, provider: "gemini", encrypted_key: "x" }),
       a.client.from("applications").insert({ user_id: a.id, job_id: jobId }),
       a.client.from("events").insert({ user_id: a.id, type: "test" }),
-      a.client.storage.from("cvs").upload(`${a.id}/cv.pdf`, new Blob(["%PDF-1.4"], { type: "application/pdf" }), {
-        contentType: "application/pdf",
-      }),
+      a.client.storage
+        .from("cvs")
+        .upload(`${a.id}/cv.pdf`, pdf(), { contentType: "application/pdf" }),
     ]);
     for (const w of writes) if (w.error) throw w.error;
   });
@@ -143,7 +145,7 @@ describe.skipIf(!configured)("RLS isolation", () => {
   it("B cannot upload into A's CV folder", async () => {
     const { error } = await b.client.storage
       .from("cvs")
-      .upload(`${a.id}/evil.pdf`, new Blob(["%PDF-1.4"], { type: "application/pdf" }), { contentType: "application/pdf" });
+      .upload(`${a.id}/evil.pdf`, pdf(), { contentType: "application/pdf" });
     expect(error).not.toBeNull();
   });
 
