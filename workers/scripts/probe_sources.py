@@ -81,7 +81,7 @@ def probe_rss(name: str, url: str) -> None:
     items = re.findall(r"<item>.*?</item>", text, re.S)[:3]
     head = text.split("<item>")[0]
     (FIXTURES / f"{name}.xml").write_text(
-        head + "".join(items) + "</channel></rss>\n", encoding="utf-8"
+        scrub(head + "".join(items) + "</channel></rss>\n"), encoding="utf-8"
     )
     print(f"\n== {name} ==  {url}")
     for tag in ["pubDate", "dc:date", "updated", "published"]:
