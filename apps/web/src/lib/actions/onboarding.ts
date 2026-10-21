@@ -48,7 +48,8 @@ export async function uploadCv(_prev: ActionState, formData: FormData): Promise<
   const bytes = new Uint8Array(await file.arrayBuffer());
   let cvText: string;
   try {
-    cvText = await extractCvText(bytes, kind);
+    // The PDF reader takes over (detaches) the buffer it gets, so give it a copy.
+    cvText = await extractCvText(bytes.slice(), kind);
   } catch (e) {
     console.error("CV extraction failed", e);
     return failed("I couldn't open that file. Is it a normal PDF or .docx?");

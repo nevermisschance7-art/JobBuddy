@@ -126,5 +126,6 @@ test("rejects a bad username", async ({ page }) => {
   await page.goto("/login");
   await page.getByLabel("Username").fill("a b");
   await page.getByRole("button", { name: "Continue" }).click();
-  await expect(page.getByRole("alert")).toContainText("letters, numbers");
+  // getByText, not getByRole("alert"): Next.js has its own hidden route announcer alert.
+  await expect(page.getByText(/letters, numbers/)).toBeVisible();
 });
