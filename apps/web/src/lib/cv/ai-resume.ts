@@ -31,7 +31,7 @@ const SHAPE = `Return an object with this shape:
   "certificates": [{ "name", "issuer", "date" }]
 }`;
 
-const tolerantResume = z.preprocess(cleanResume, resumeSchema);
+const tolerantResume = z.preprocess((value) => cleanResume(value), resumeSchema);
 
 export type CvReadResult = { resume: Resume; usedAi: boolean; note?: string };
 
