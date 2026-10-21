@@ -38,3 +38,8 @@ coverage/
 .vscode/*
 !.vscode/extensions.json
 .idea/
+
+# playwright
+apps/web/e2e-screenshots/
+apps/web/playwright-report/
+apps/web/test-results/

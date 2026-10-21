@@ -493,30 +493,36 @@ export type Database = {
           created_at: string
           display_name: string | null
           min_score: number
+          onboarded_at: string | null
           time_zone: string
           tone: string
           updated_at: string
           user_id: string
+          username: string | null
         }
         Insert: {
           alert_settings?: Json
           created_at?: string
           display_name?: string | null
           min_score?: number
+          onboarded_at?: string | null
           time_zone?: string
           tone?: string
           updated_at?: string
           user_id: string
+          username?: string | null
         }
         Update: {
           alert_settings?: Json
           created_at?: string
           display_name?: string | null
           min_score?: number
+          onboarded_at?: string | null
           time_zone?: string
           tone?: string
           updated_at?: string
           user_id?: string
+          username?: string | null
         }
         Relationships: []
       }

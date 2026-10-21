@@ -70,6 +70,53 @@ jobs:
       - if: steps.lock.outputs.ok
         run: pnpm test:rls
 
+  e2e:
+    name: Browser test + screenshots
+    # Uses repo secrets and the live Supabase project, so only on main, never on PRs.
+    if: github.event_name != 'pull_request'
+    needs: js
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      APP_ENCRYPTION_KEY: ${{ secrets.APP_ENCRYPTION_KEY }}
+      AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v5
+      - name: Check lockfile
+        id: lock
+        working-directory: .
+        run: if [ -f pnpm-lock.yaml ]; then echo "ok=true" >> "$GITHUB_OUTPUT"; fi
+      - if: steps.lock.outputs.ok
+        uses: pnpm/action-setup@v4
+      - if: steps.lock.outputs.ok
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+      - if: steps.lock.outputs.ok
+        run: pnpm install --frozen-lockfile --filter web...
+      - if: steps.lock.outputs.ok
+        run: pnpm exec playwright install --with-deps chromium
+      - if: steps.lock.outputs.ok
+        run: pnpm build
+      - if: steps.lock.outputs.ok
+        run: pnpm e2e
+      - name: Upload screenshots and report
+        if: always() && steps.lock.outputs.ok
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-screenshots
+          path: |
+            apps/web/e2e-screenshots/
+            apps/web/playwright-report/
+          retention-days: 14
+
   workers:
     name: Python workers
     runs-on: ubuntu-latest

@@ -6,7 +6,7 @@ A free online job-hunt assistant for our team. For each user it finds every suit
 
 **A human always reviews and presses Submit. The system never submits on its own.**
 
-Access is open: anyone with the link can sign up (Google or email magic link). There are no teams or invites. Each user's personal data (CV, keys, matches, applications, answers) is still private to that user through Supabase RLS, because the anon key is public in the browser.
+Access is open: anyone with the link signs in with **just a username** (no password, no email, by the owner's choice). A new username creates an account; an existing one signs in. The server maps the username to a hidden email (`<username>@users.jobbuddy.invalid`) and a password derived with HMAC from `AUTH_SECRET` ([src/lib/username.ts](apps/web/src/lib/username.ts)). There are no teams or invites. Each user's data is still private to that user through Supabase RLS. Because anyone who knows a username can sign in as that user, AI keys are decrypted only on the server and never sent to the browser.
 
 The full build plan is in [docs/job-hunt-assistant-prompts.md](docs/job-hunt-assistant-prompts.md). Prompt 13's "team invites" part is dropped.
 
@@ -53,6 +53,8 @@ pnpm lint && pnpm typecheck && pnpm test   # all JS/TS packages
 cd workers && uv run ruff check . && uv run ruff format --check . && uv run pytest
 ```
 
+Browser tests (Playwright) walk through sign-up and onboarding against the live project and save screenshots: `pnpm --filter web build && pnpm --filter web e2e`. In CI they run on main and upload an `e2e-screenshots` artifact.
+
 CI runs the same on every push and PR ([.github/workflows/ci.yml](.github/workflows/ci.yml)).
 
 RLS isolation tests run against the live Supabase project with throwaway users: `pnpm test:rls` (reads keys from `apps/web/.env.local`; in CI from repo secrets, main only).
@@ -69,6 +71,7 @@ Apply migrations with `supabase db push` (project is linked; no Docker needed). 
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY` (server only)
 - `APP_ENCRYPTION_KEY` (32-byte base64, AES-GCM for AI keys, server only)
+- `AUTH_SECRET` (server only; derives sign-in passwords. Changing it locks everyone out)
 - `OPENROUTER_API_KEY` (optional shared fallback)
 - `GEMINI_API_KEY` (dev testing only; users store their own keys encrypted in the database)
 
