@@ -31,37 +31,38 @@ test("sign up, onboard, edit settings, delete account", async ({ page }, info) =
     await shot(page, "02-welcome");
     await page.getByRole("button", { name: "Let's set you up" }).click();
 
-    // 2. CV upload and confirm
+    // 2. AI key: skipped here (no real keys in tests)
+    await expect(page).toHaveURL(/\/onboarding\/ai$/);
+    await shot(page, "03-ai-key");
+    await page.getByRole("link", { name: "Skip for now" }).click();
+
+    // 3. CV upload and confirm (no AI key, so the simple reader fills in the basics)
     await expect(page).toHaveURL(/\/onboarding\/cv$/);
-    await shot(page, "03-cv-empty");
+    await shot(page, "04-cv-empty");
     await page.getByLabel("CV file").setInputFiles(sampleCv);
     await page.getByRole("button", { name: "Upload CV" }).click();
     await expect(page.getByLabel("Full name")).not.toHaveValue("", { timeout: 20_000 });
     await expect(page.getByLabel("Email", { exact: true })).toHaveValue("sam.tester@example.com");
-    await shot(page, "04-cv-review");
+    await expect(page.getByText(/couldn't reach an AI/)).toBeVisible();
+    await shot(page, "05-cv-review");
     await page.getByRole("button", { name: "This is right, confirm my CV" }).click();
 
-    // 3. Filters
+    // 4. Filters
     await expect(page).toHaveURL(/\/onboarding\/filters$/);
     const countries = page.getByLabel("Countries I can work in");
     await countries.fill("United Kingdom");
     await countries.press("Enter");
     await expect(page.getByRole("button", { name: "Remove United Kingdom" })).toBeVisible();
     await page.getByLabel("Remote", { exact: true }).check();
-    await shot(page, "05-filters");
+    await shot(page, "06-filters");
     await page.getByRole("button", { name: "Save and continue" }).click();
 
-    // 4. Fixed answers
+    // 5. Fixed answers
     await expect(page).toHaveURL(/\/onboarding\/answers$/);
     await page.getByLabel("Notice period").fill("1 month");
     await page.getByLabel("Do you need visa sponsorship?").selectOption("No");
-    await shot(page, "06-answers");
+    await shot(page, "07-answers");
     await page.getByRole("button", { name: "Save and continue" }).click();
-
-    // 5. AI key: skipped here (no real keys in tests)
-    await expect(page).toHaveURL(/\/onboarding\/ai$/);
-    await shot(page, "07-ai-key");
-    await page.getByRole("link", { name: "Skip for now" }).click();
 
     // 6. Tone
     await expect(page).toHaveURL(/\/onboarding\/tone$/);

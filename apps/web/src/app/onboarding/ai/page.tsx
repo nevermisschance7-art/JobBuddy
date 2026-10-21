@@ -12,8 +12,8 @@ export default async function AiStep() {
   return (
     <>
       <MascotSays mood="thinking">
-        I use a free AI to tailor your CV and draft answers. It runs on your own free key, so it
-        costs nothing.
+        First, a free AI key. I use it to read your CV, tailor it and draft answers. It runs on your
+        own free key, so it costs nothing.
       </MascotSays>
       <h1 className="text-2xl font-semibold">Your AI key</h1>
       <AiKeysForm statuses={statuses} />

@@ -487,6 +487,48 @@ export type Database = {
           },
         ]
       }
+      llm_calls: {
+        Row: {
+          created_at: string
+          error_kind: string | null
+          id: string
+          input_tokens: number | null
+          latency_ms: number
+          model: string
+          ok: boolean
+          output_tokens: number | null
+          provider: string
+          task: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          error_kind?: string | null
+          id?: string
+          input_tokens?: number | null
+          latency_ms: number
+          model: string
+          ok: boolean
+          output_tokens?: number | null
+          provider: string
+          task: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          error_kind?: string | null
+          id?: string
+          input_tokens?: number | null
+          latency_ms?: number
+          model?: string
+          ok?: boolean
+          output_tokens?: number | null
+          provider?: string
+          task?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           alert_settings: Json

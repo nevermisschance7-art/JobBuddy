@@ -1,0 +1,68 @@
+{
+  "$comment": "Shared cases. The TypeScript (vitest) and Python (pytest) routers must both pass all of these.",
+  "style": [
+    {
+      "input": "I am passionate about clean code — and I leverage Python daily.",
+      "maxWords": 80,
+      "text": "I care about clean code, and I use Python daily.",
+      "overLimit": false,
+      "flagsContain": []
+    },
+    {
+      "input": "I built the API. Furthermore, I utilized Redis for caching.",
+      "maxWords": 80,
+      "text": "I built the API. I used Redis for caching.",
+      "overLimit": false,
+      "flagsContain": []
+    },
+    {
+      "input": "Worked there 2019–2021 in a fast-paced, dynamic team.",
+      "maxWords": 80,
+      "text": "Worked there 2019–2021 in a fast-paced, dynamic team.",
+      "overLimit": false,
+      "flagsContain": ["fast-paced", "dynamic"]
+    },
+    {
+      "input": "one two three four five six",
+      "maxWords": 5,
+      "text": "one two three four five six",
+      "overLimit": true,
+      "flagsContain": ["over the 5-word limit"]
+    },
+    {
+      "input": "I'm excited to delve into your data platform.",
+      "maxWords": 80,
+      "text": "I'd like to look into your data platform.",
+      "overLimit": false,
+      "flagsContain": []
+    }
+  ],
+  "redaction": [
+    {
+      "personal": {
+        "name": "Sam Tester",
+        "email": "sam.tester@example.com",
+        "phone": "+44 7700 900123",
+        "address": "12 Example Road, Leeds",
+        "fixedAnswers": ["Skilled Worker visa until 2027", "£70,000 base"]
+      },
+      "input": "Sam Tester (sam.tester@example.com, +44 (7700) 900-123) lives at 12 Example Road, Leeds. Sam holds a Skilled Worker visa until 2027 and wants £70,000 base. Contact Tester.",
+      "redacted": "{{NAME}} ({{EMAIL}}, {{PHONE}}) lives at {{ADDRESS}}. {{FIRST_NAME}} holds a {{FIXED_1}} and wants {{FIXED_2}}. Contact {{LAST_NAME}}.",
+      "mustNotContain": [
+        "Sam",
+        "Tester",
+        "example.com",
+        "7700",
+        "Example Road",
+        "Skilled Worker",
+        "70,000"
+      ]
+    }
+  ],
+  "jsonRepair": [
+    { "input": "```json\n{\"a\": 1}\n```", "parsed": { "a": 1 } },
+    { "input": "Sure! Here it is:\n{\"a\": [1, 2]}\nHope that helps.", "parsed": { "a": [1, 2] } },
+    { "input": "﻿​{\"name\": \"x\"}", "parsed": { "name": "x" } },
+    { "input": "[{\"a\": 1}]", "parsed": [{ "a": 1 }] }
+  ]
+}

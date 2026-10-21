@@ -8,7 +8,7 @@ import { failed, saved, type ActionState } from "@/lib/action-state";
 import { AI_PROVIDERS, validateAiKey, type AiProvider } from "@/lib/ai-keys/validate";
 import { encryptSecret } from "@/lib/crypto";
 import { cvKind, extractCvText, MAX_CV_BYTES } from "@/lib/cv/extract";
-import { cvTextToResume } from "@/lib/cv/to-resume";
+import { readCv } from "@/lib/cv/ai-resume";
 import { requireUser } from "@/lib/data";
 import { serverEnv } from "@/lib/env";
 import { FIXED_ANSWER_KEYS } from "@/lib/fixed-answers";
@@ -23,7 +23,7 @@ export async function startOnboarding(formData: FormData) {
   if (timeZone && isValidTimeZone(timeZone)) {
     await supabase.from("profiles").update({ time_zone: timeZone }).eq("user_id", user.id);
   }
-  redirect("/onboarding/cv");
+  redirect("/onboarding/ai");
 }
 
 function isValidTimeZone(tz: string) {
@@ -70,16 +70,18 @@ export async function uploadCv(_prev: ActionState, formData: FormData): Promise<
     return failed("Saving the file failed. Try again.");
   }
 
+  const read = await readCv(supabase, user.id, cvText);
+
   const { error } = await supabase.from("cvs").insert({
     user_id: user.id,
     original_file: path,
-    resume_json: cvTextToResume(cvText),
+    resume_json: read.resume,
     confirmed: false,
   });
   if (error) return failed("Saving your CV failed. Try again.");
 
   revalidatePath("/", "layout");
-  return saved("Got it. Check what I read below and fix anything that's off.");
+  return saved(read.note ?? "Got it. Check what I read below and fix anything that's off.");
 }
 
 export async function confirmResume(_prev: ActionState, formData: FormData): Promise<ActionState> {

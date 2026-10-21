@@ -34,6 +34,19 @@ docs/              build plan and notes
 
 pnpm workspace packages: `apps/*`, `packages/*`, `extension`. The Python workers are separate (uv).
 
+## AI router
+
+All LLM calls go through the router: [packages/shared/src/llm](packages/shared/src/llm) (TypeScript, used by the web app via `@jobbuddy/shared/llm`) and [workers/src/jobbuddy_workers/llm](workers/src/jobbuddy_workers/llm) (Python). Both behave the same and pass the same [test vectors](packages/shared/src/llm/test-vectors.json).
+
+- `generateJson(task, schema, prompt, userId)` / `generateText(task, prompt, maxWords, userId)`.
+- Order: the user's Gemini key, then Groq, then OpenRouter (user key, then the shared `OPENROUTER_API_KEY`). Anthropic is wired in but disabled.
+- Models and per-task settings live in [models.json](packages/shared/src/llm/models.json), not code. Check they still exist: `cd workers && uv run python -m jobbuddy_workers.llm.list_models`.
+- Rate limit or quota: the key cools down (`ai_keys.quota_reset_at`) and the next provider is tried. Bad key: `ai_keys.last_error` is set and the key is skipped until replaced. All failed: a `needs_fixing` event (max one a day).
+- Personal details (name, email, phone, address) and every fixed answer are replaced with placeholders before sending and restored afterwards. Pass them via the `personal` option ([personalInfoFor](apps/web/src/lib/ai/router.ts)).
+- Text output goes through the style rules (no em dashes, buzzword swaps, over-length flagged, never cut).
+- Every call is logged to `llm_calls` (provider, model, tokens, latency; never content).
+- Tests use `FakeProvider`; never call real providers in tests.
+
 ## Running locally
 
 Requirements: Node 20+, pnpm, uv, Supabase CLI. Docker is optional (only for a local Supabase); by default we use the cloud project.
