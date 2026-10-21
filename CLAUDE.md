@@ -54,6 +54,7 @@ All LLM calls go through the router: [packages/shared/src/llm](packages/shared/s
 - Jobs are worldwide. Only tech roles where at least one user can work are stored (`is_relevant` in [run.py](workers/src/jobbuddy_workers/jobs/run.py)); locations are parsed to ISO countries plus remote regions (WORLDWIDE, EUROPE, EMEA, ...) in [geo.py](workers/src/jobbuddy_workers/geo.py).
 - Employer systems (complete listings) close a job after 2 missed runs; aggregators (partial listings) close after 14 days unseen.
 - Employer companies come from the `companies` table. Seed or re-verify the starter list with the "Seed companies" workflow ([candidates.py](workers/src/jobbuddy_workers/seed/candidates.py)).
+- Weekly discovery (`jobbuddy-workers discover`, [discover-companies.yml](.github/workflows/discover-companies.yml)) adds companies found in stored job links and the Common Crawl URL index, after checking each board lists at least one job. Companies failing 5 fetch runs in a row are deactivated and re-checked monthly. Counts per system: the `company_stats` view.
 - Embeddings: fastembed with all-MiniLM-L6-v2 (384 dims), only for new or changed jobs.
 - Adapter tests run against recorded fixtures in `workers/tests/fixtures/sources`; refresh them with `uv run python scripts/probe_sources.py`.
 

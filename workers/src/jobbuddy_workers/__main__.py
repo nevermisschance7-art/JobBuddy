@@ -50,6 +50,29 @@ def cmd_seed(args: argparse.Namespace) -> int:
     return seed(env["SUPABASE_URL"], env["SUPABASE_SERVICE_ROLE_KEY"], dry_run=args.dry_run)
 
 
+def cmd_discover(args: argparse.Namespace) -> int:
+    from jobbuddy_workers.discover.run import CommonCrawl, discover, live_check
+    from jobbuddy_workers.discover.store import SupabaseDiscoveryStore
+    from jobbuddy_workers.http import Http
+
+    env = _env()
+    _require(env, "SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY")
+    store = SupabaseDiscoveryStore(env["SUPABASE_URL"], env["SUPABASE_SERVICE_ROLE_KEY"])
+    http = Http(retries=1)
+    try:
+        report = discover(
+            store,
+            lambda ats, slug: live_check(ats, slug, http),
+            None if args.no_common_crawl else CommonCrawl(),
+        )
+    finally:
+        http.close()
+    print(f"New candidates per system: {report.candidates}")
+    print(f"Checked {report.checked}; added {report.added}")
+    print(f"Deactivated {report.deactivated}; reactivated {report.reactivated}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
     parser = argparse.ArgumentParser(prog="jobbuddy-workers")
@@ -65,7 +88,11 @@ def main(argv: list[str] | None = None) -> int:
     seed.set_defaults(func=cmd_seed)
 
     sub.add_parser("match", help="Score new jobs for every user (prompt 6)")
-    sub.add_parser("discover", help="Find new companies on employer systems (prompt 5)")
+    disc = sub.add_parser("discover", help="Find new companies on employer systems")
+    disc.add_argument(
+        "--no-common-crawl", action="store_true", help="Only use links in stored jobs"
+    )
+    disc.set_defaults(func=cmd_discover)
 
     args = parser.parse_args(argv)
     if args.command is None:

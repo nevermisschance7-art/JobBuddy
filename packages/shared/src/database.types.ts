@@ -151,7 +151,9 @@ export type Database = {
         Row: {
           active: boolean
           ats: string
+          checked_at: string | null
           created_at: string
+          discovered_via: string
           fail_count: number
           id: string
           jobs_open: number
@@ -165,7 +167,9 @@ export type Database = {
         Insert: {
           active?: boolean
           ats: string
+          checked_at?: string | null
           created_at?: string
+          discovered_via?: string
           fail_count?: number
           id?: string
           jobs_open?: number
@@ -179,7 +183,9 @@ export type Database = {
         Update: {
           active?: boolean
           ats?: string
+          checked_at?: string | null
           created_at?: string
+          discovered_via?: string
           fail_count?: number
           id?: string
           jobs_open?: number
@@ -677,7 +683,16 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      company_stats: {
+        Row: {
+          active: number | null
+          ats: string | null
+          inactive: number | null
+          jobs_open: number | null
+          last_added_at: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       close_stale_jobs: {
