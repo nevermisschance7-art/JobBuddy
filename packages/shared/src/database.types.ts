@@ -642,6 +642,8 @@ export type Database = {
           breakdown: Json
           created_at: string
           dismissed_reason: string | null
+          explained_at: string | null
+          explanation: string | null
           id: string
           job_id: string
           passed_filters: boolean
@@ -655,6 +657,8 @@ export type Database = {
           breakdown?: Json
           created_at?: string
           dismissed_reason?: string | null
+          explained_at?: string | null
+          explanation?: string | null
           id?: string
           job_id: string
           passed_filters: boolean
@@ -668,6 +672,8 @@ export type Database = {
           breakdown?: Json
           created_at?: string
           dismissed_reason?: string | null
+          explained_at?: string | null
+          explanation?: string | null
           id?: string
           job_id?: string
           passed_filters?: boolean
@@ -733,6 +739,7 @@ export type Database = {
       mark_jobs_missed: { Args: { ids: string[] }; Returns: number }
       mark_jobs_seen: { Args: { ids: string[] }; Returns: undefined }
       prune_closed_jobs: { Args: never; Returns: number }
+      prune_stale_jobs: { Args: never; Returns: number }
     }
     Enums: {
       [_ in never]: never

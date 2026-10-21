@@ -1,17 +1,40 @@
 {
-  "totalCount": 1,
+  "totalCount": 373141,
   "jobs": [
     {
-      "title": "Full Stack <b>Developer</b>",
-      "location": "Warsaw, Poland",
-      "snippet": "&nbsp;...React and Node.js, remote-friendly...",
-      "salary": "",
-      "source": "example.pl",
+      "title": "Software Engineer II - Engine Team, LogScale (Hybrid)",
+      "location": "Austin, TX",
+      "snippet": "&nbsp;...each other. Ready to join a mission that matters? The future of cybersecurity starts with you. \r\n About the Role: \r\n As our new <b>software engineer </b>in CrowdStrike, you’ll contribute to the LogScale application for observability, log management, and security events. As a...&nbsp;",
+      "salary": "$104k - $187k",
+      "source": "vonq.crowdstrike.com",
       "type": "Full-time",
-      "link": "https://jooble.org/desc/-123456789?ckey=x",
-      "company": "Example Software Sp. z o.o.",
-      "updated": "2026-10-20T00:00:00.0000000",
-      "id": -123456789
+      "link": "https://jooble.org/away/-469044890557989903?p=1&pos=1&rgn=-1&cid=22169&ckey=software+engineer&jobAge=42&brelb=15&scr=269.575&bscr=269.575&aq=-5680631764530692777&elckey=7041090097417435707",
+      "updated": "2026-10-19T16:50:32.6430000",
+      "id": -469044890557989903
+    },
+    {
+      "title": "Full Stack Software Engineer",
+      "location": "San Diego, CA",
+      "snippet": "&nbsp;...Responsibilities \r\n Analyze business processes and requirements to identify <b>software </b>solutions and automation opportunities. \r\n Make technical decisions regarding software design, development, and implementation. \r\n Maintain and enhance existing applications, troubleshoot...&nbsp;",
+      "salary": "$110k - $120k",
+      "source": "app.linkedin.com",
+      "type": "Full-time",
+      "link": "https://jooble.org/away/-6866750730066498685?p=1&pos=2&rgn=-1&cid=22169&ckey=software+engineer&jobAge=83&brelb=10&scr=264.46988&bscr=264.46988&aq=-5680631764530692777&elckey=7041090097417435707",
+      "company": "Cypress HCM",
+      "updated": "2026-10-18T00:00:00.0000000",
+      "id": -6866750730066498685
+    },
+    {
+      "title": "Full Stack Software Engineer",
+      "location": "New York, NY",
+      "snippet": "&nbsp;...” for every team—helping them work 100x faster  without heavy <b>engineering </b>overhead. \r\n\r\n About the role \r\n We are seeking a highly autonomous...&nbsp;&nbsp;.... \r\n\r\n Qualifications \r\n~0-2 years  of professional <b>software </b>development experience (at least 1 year with full-stack responsibilities...&nbsp;",
+      "salary": "",
+      "source": "app.linkedin.com",
+      "type": "Full-time",
+      "link": "https://jooble.org/away/5746794968832957438?p=1&pos=3&rgn=-1&cid=22169&ckey=software+engineer&jobAge=11&brelb=10&scr=264.46988&bscr=264.46988&aq=-5680631764530692777&elckey=7041090097417435707",
+      "company": "Cassidy",
+      "updated": "2026-10-21T00:00:00.0000000",
+      "id": 5746794968832957438
     }
   ]
 }

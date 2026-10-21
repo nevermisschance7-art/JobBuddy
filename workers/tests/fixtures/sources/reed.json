@@ -1,19 +1,57 @@
 {
   "results": [
     {
-      "jobId": 51234567,
-      "employerName": "Example Fintech Ltd",
-      "jobTitle": "Software Engineer - TypeScript",
-      "locationName": "London",
-      "minimumSalary": 60000.0,
-      "maximumSalary": 75000.0,
-      "currency": "GBP",
+      "jobId": 57262885,
+      "employerId": 694011,
+      "employerName": "Gedu",
+      "employerProfileId": null,
+      "employerProfileName": null,
+      "jobTitle": "JIRA Developer",
+      "locationName": "Manchester",
+      "minimumSalary": null,
+      "maximumSalary": null,
+      "currency": null,
+      "expirationDate": "07/02/2027",
+      "date": "21/08/2026",
+      "jobDescription": "JOB TITLE: Jira Developer (Jira Service Management - JSM) REPORTS TO TITLE: Product Manager BUSINESS FUNCTION/ SUB-FUNCTION: MD Office / IT Systems LOCATION: Manchester or Leeds ROLE PURPOSE: The Jira Developer is responsible for managing, configuring, and maintaining GBS’s Jira Service Management (JSM) platform. This role ensures the system supports business and IT service processes efficiently, aligns with ITIL standards, and enables continuou... ",
+      "applications": 15,
+      "jobUrl": "https://www.reed.co.uk/jobs/jira-developer/57262885"
+    },
+    {
+      "jobId": 57472642,
+      "employerId": 430894,
+      "employerName": "Kensington Mortgage Company",
+      "employerProfileId": null,
+      "employerProfileName": null,
+      "jobTitle": "Software Engineer",
+      "locationName": "Marlow",
+      "minimumSalary": null,
+      "maximumSalary": null,
+      "currency": null,
       "expirationDate": "30/11/2026",
-      "date": "18/10/2026",
-      "jobDescription": "Join our payments team. Hybrid, 2 days a week in our London office...",
-      "applications": 12,
-      "jobUrl": "https://www.reed.co.uk/jobs/software-engineer-typescript/51234567"
+      "date": "19/10/2026",
+      "jobDescription": "Software Engineer Full Time Permanent Hybrid - Marlow or London adhoc Join our Digital Services team and help build technology that makes the mortgage journey simpler for customers, brokers and colleagues. We're looking for an experienced Software Engineer to design, build and maintain secure, reliable and scalable digital solutions using C#, .NET and Microsoft Azure . You'll work across APIs, back-end engineering and, where required, front-end ... ",
+      "applications": 17,
+      "jobUrl": "https://www.reed.co.uk/jobs/software-engineer/57472642"
+    },
+    {
+      "jobId": 57423323,
+      "employerId": 514667,
+      "employerName": "Greencore",
+      "employerProfileId": null,
+      "employerProfileName": null,
+      "jobTitle": "Product Developer",
+      "locationName": "Boston",
+      "minimumSalary": null,
+      "maximumSalary": null,
+      "currency": null,
+      "expirationDate": "02/11/2026",
+      "date": "05/10/2026",
+      "jobDescription": "Job: Product Developer Location: Boston Why Greencore? Following the combination with Bakkavor in January 2026, we're one of the UK's leading creators of convenience food, driven by a simple purpose: to make everyday taste better. As a vibrant and fast-moving business, we're proud to employ over 28,000 talented colleagues across 36 manufacturing sites and 21 distribution depots in the UK and the US. Together, we bring delicious food to life. Our... ",
+      "applications": 0,
+      "jobUrl": "https://www.reed.co.uk/jobs/product-developer/57423323"
     }
   ],
-  "totalResults": 1
+  "ambiguousLocations": [],
+  "totalResults": 2889
 }

@@ -68,6 +68,13 @@ All LLM calls go through the router: [packages/shared/src/llm](packages/shared/s
 - Full rescore when the CV embedding is cleared (the web app clears it whenever a CV is confirmed or edited) or filters changed after `profiles.matched_at`; otherwise only jobs with `content_updated_at` since the last matcher run.
 - Events: `hot_match` (score 85+, posted under 24 h, max 3 per user per local day) and one `daily_summary` per local day after the user's chosen time.
 
+## Web app pages
+
+- `/app`: job inbox (matches at or above `min_score`, best first, infinite scroll, filters, Saved and Hidden tabs). Card actions: Prepare application, Explain match (AI, cached in `user_job_matches.explanation`), Save, Not for me (reason, optional "skip this company").
+- `/applications`: board by status; moving to Applied stamps `applied_at` once.
+- `/usage`: AI calls per provider today and key health from `llm_calls` and `ai_keys`.
+- `/settings`, `/onboarding/*`, `/login`.
+
 ## Running locally
 
 Requirements: Node 20+, pnpm, uv, Supabase CLI. Docker is optional (only for a local Supabase); by default we use the cloud project.

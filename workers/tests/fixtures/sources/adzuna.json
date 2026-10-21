@@ -1,53 +1,109 @@
 {
-  "count": 2,
+  "__CLASS__": "Adzuna::API::Response::JobSearchResults",
+  "mean": 60231.15,
   "results": [
     {
-      "id": "4801234567",
-      "title": "Senior <strong>Python</strong> Developer",
-      "description": "We are hiring a senior Python developer to build data APIs...",
-      "created": "2026-10-20T09:15:00Z",
-      "redirect_url": "https://www.adzuna.de/land/ad/4801234567?se=abc&utm_medium=api",
-      "company": {
-        "display_name": "Example Data GmbH"
-      },
-      "location": {
-        "display_name": "Berlin",
-        "area": [
-          "Deutschland",
-          "Berlin"
-        ]
-      },
-      "salary_min": 70000,
-      "salary_max": 85000,
-      "salary_is_predicted": "0",
-      "contract_time": "full_time",
-      "contract_type": "permanent",
+      "description": "Forvis Mazars is a leading global professional services network providing audit & assurance, tax, and advisory services. Forvis Mazars in the UK spans 14 offices across the nation and has over 3,400 professionals, with 190 partners. We have a clear purpose and a shared commitment to shape a better future. You'll join a collaborative and inclusive team where you're supported to grow your skills, explore new opportunities, and contribute from day one. You'll work with a diverse client base, devel…",
+      "__CLASS__": "Adzuna::API::Response::Job",
+      "redirect_url": "https://www.adzuna.co.uk/jobs/land/ad/5900980427?se=ILw8z3TN8RG8f8HyuNM3ow&utm_medium=api&utm_source=57edf0b0&v=02C3300C16DF6A74169C37AE26BE5774FAA81BBA",
+      "salary_max": 78848.14,
+      "id": "5900980427",
       "category": {
+        "__CLASS__": "Adzuna::API::Response::Category",
         "tag": "it-jobs",
         "label": "IT Jobs"
-      }
-    },
-    {
-      "id": "4801234568",
-      "title": "Backend Engineer (Go)",
-      "description": "Hybrid role, 2 days in office...",
-      "created": "2026-10-19T11:00:00Z",
-      "redirect_url": "https://www.adzuna.de/land/ad/4801234568",
-      "company": {
-        "display_name": "Acme Cloud"
       },
+      "salary_min": 78848.14,
+      "created": "2026-09-28T01:49:00Z",
       "location": {
-        "display_name": "Munich, Bavaria",
+        "__CLASS__": "Adzuna::API::Response::Location",
+        "display_name": "Manchester, Greater Manchester",
         "area": [
-          "Deutschland",
-          "Bayern",
-          "Munich"
+          "UK",
+          "North West England",
+          "Greater Manchester",
+          "Manchester"
         ]
       },
-      "salary_min": 64000,
-      "salary_max": 64000,
+      "company": {
+        "__CLASS__": "Adzuna::API::Response::Company",
+        "display_name": "Forvis Mazars LLP"
+      },
+      "longitude": -2.23438,
+      "latitude": 53.480701,
+      "contract_time": "full_time",
       "salary_is_predicted": "1",
-      "contract_time": "full_time"
+      "title": "Engineering Team Lead",
+      "adref": "eyJhbGciOiJIUzI1NiJ9.eyJpIjoiNTkwMDk4MDQyNyIsInMiOiJJTHc4ejNUTjhSRzhmOEh5dU5NM293In0.qZBQaiF2L0XBWzFa_SeO9OQKtOG9CEsunDmt0W4VlHE"
+    },
+    {
+      "salary_min": 58926.99,
+      "category": {
+        "__CLASS__": "Adzuna::API::Response::Category",
+        "tag": "it-jobs",
+        "label": "IT Jobs"
+      },
+      "id": "5905876789",
+      "created": "2026-10-01T16:36:16Z",
+      "company": {
+        "__CLASS__": "Adzuna::API::Response::Company",
+        "display_name": "A&O Shearman"
+      },
+      "location": {
+        "display_name": "Castlereagh, Belfast",
+        "area": [
+          "UK",
+          "Northern Ireland",
+          "Belfast",
+          "Castlereagh"
+        ],
+        "__CLASS__": "Adzuna::API::Response::Location"
+      },
+      "description": "We have an exciting opportunity for a Salesforce Product Owner to join our IT Team , based in the A&O Shearman Belfast office. We are looking for an autonomous individual with excellent communication skills and confidence to engage with individuals at all levels of the organisation. As CRM Functional Administrator you will have a solid Salesforce Administration background, ideally ADM201 Certified, with the ability to understand business processes, objectives, driving adoption & process improve…",
+      "__CLASS__": "Adzuna::API::Response::Job",
+      "salary_max": 58926.99,
+      "redirect_url": "https://www.adzuna.co.uk/jobs/land/ad/5905876789?se=ILw8z3TN8RG8f8HyuNM3ow&utm_medium=api&utm_source=57edf0b0&v=936D39F77E33473C96086CDECDA4A6982A135D09",
+      "adref": "eyJhbGciOiJIUzI1NiJ9.eyJzIjoiSUx3OHozVE44Ukc4ZjhIeXVOTTNvdyIsImkiOiI1OTA1ODc2Nzg5In0.G8Y_jYfaTZVBGEw31JtkA4nZ158TxuN_tgJrJjZHT_U",
+      "latitude": 54.569737,
+      "longitude": -5.87395,
+      "salary_is_predicted": "1",
+      "contract_time": "full_time",
+      "title": "Salesforce Product Owner"
+    },
+    {
+      "id": "5905876802",
+      "salary_min": 53420.82,
+      "category": {
+        "label": "IT Jobs",
+        "tag": "it-jobs",
+        "__CLASS__": "Adzuna::API::Response::Category"
+      },
+      "created": "2026-10-01T16:36:16Z",
+      "location": {
+        "area": [
+          "UK",
+          "Northern Ireland",
+          "Ards",
+          "Newtownards"
+        ],
+        "display_name": "Newtownards, Ards",
+        "__CLASS__": "Adzuna::API::Response::Location"
+      },
+      "company": {
+        "display_name": "A&O Shearman",
+        "__CLASS__": "Adzuna::API::Response::Company"
+      },
+      "description": "We have an exciting opportunity for a Salesforce Product Owner to join our IT Team , based in the A&O Shearman Belfast office. We are looking for an autonomous individual with excellent communication skills and confidence to engage with individuals at all levels of the organisation. As CRM Functional Administrator you will have a solid Salesforce Administration background, ideally ADM201 Certified, with the ability to understand business processes, objectives, driving adoption & process improve…",
+      "__CLASS__": "Adzuna::API::Response::Job",
+      "redirect_url": "https://www.adzuna.co.uk/jobs/land/ad/5905876802?se=ILw8z3TN8RG8f8HyuNM3ow&utm_medium=api&utm_source=57edf0b0&v=C827CF98D2C2FCCD3F07C3047D2A59B482B9AB30",
+      "salary_max": 53420.82,
+      "adref": "eyJhbGciOiJIUzI1NiJ9.eyJzIjoiSUx3OHozVE44Ukc4ZjhIeXVOTTNvdyIsImkiOiI1OTA1ODc2ODAyIn0.Umr5PUJuNrXaB4gqOiGULUXoowaxU9asxcKpr_6BYjw",
+      "latitude": 54.595001,
+      "longitude": -5.70311,
+      "salary_is_predicted": "1",
+      "contract_time": "full_time",
+      "title": "Salesforce Product Owner"
     }
-  ]
+  ],
+  "count": 52396
 }

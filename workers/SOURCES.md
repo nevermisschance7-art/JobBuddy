@@ -28,11 +28,11 @@ They return only their newest pages, so absence proves nothing: their jobs close
 | Arbeitnow | Germany and EU | 2 h | `created_at` (epoch s) | | `remote` flag |
 | RemoteOK | Remote, worldwide | 4 h | `date` (ISO), `epoch` | | First array item is a legal notice. Terms: link back, name RemoteOK |
 | We Work Remotely | Remote, worldwide | 4 h | RSS `pubDate` | | Title is "Company: Role". Fixture synthesised (blocked from dev network) |
-| Adzuna | ~20 countries | 4 h | `created` | | Needs key. `salary_is_predicted = 1` salaries are ignored. Fixture synthesised from docs |
-| Reed | UK only | 4 h | `date` (dd/mm/yyyy) | `expirationDate` | Needs key. Only runs if someone wants GB jobs. Fixture synthesised from docs |
-| Jooble | ~70 countries | 6 h | none | `updated` | Needs key. Every Jooble job is "Date unknown". Fixture synthesised from docs |
+| Adzuna | ~20 countries | 4 h | `created` | | Needs key. `salary_is_predicted = 1` salaries are ignored |
+| Reed | UK only | 4 h | `date` (dd/mm/yyyy) | `expirationDate` | Needs key. Only runs if someone wants GB jobs |
+| Jooble | ~70 countries | 6 h | none | `updated` | Needs key. Every Jooble job is "Date unknown" (confirmed on the live API) |
 
-Re-record synthesised fixtures once keys are set: `uv run python scripts/probe_sources.py adzuna reed jooble weworkremotely`.
+Only the We Work Remotely fixture is synthesised (the feed is blocked from the dev network); re-record it with `uv run python scripts/probe_sources.py weworkremotely`.
 
 ## What gets stored
 

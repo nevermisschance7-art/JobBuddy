@@ -10,9 +10,15 @@ export function AppHeader({ username }: { username: string | null }) {
         <Link href="/app" className="flex items-center gap-2 font-semibold">
           <Mascot size={32} /> JobBuddy
         </Link>
-        <nav className="flex items-center gap-1 text-sm">
+        <nav className="flex items-center gap-0.5 overflow-x-auto text-sm">
           <Link href="/app" className="hover:bg-muted rounded-md px-3 py-2">
             Jobs
+          </Link>
+          <Link href="/applications" className="hover:bg-muted rounded-md px-3 py-2">
+            Applications
+          </Link>
+          <Link href="/usage" className="hover:bg-muted hidden rounded-md px-3 py-2 sm:inline">
+            Usage
           </Link>
           <Link href="/settings" className="hover:bg-muted rounded-md px-3 py-2">
             Settings

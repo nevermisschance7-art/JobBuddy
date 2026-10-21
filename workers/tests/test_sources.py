@@ -164,25 +164,37 @@ def test_wwr_splits_company_and_title_and_regions():
     assert jobs[1].remote_regions == ["EUROPE"]
 
 
-def test_adzuna_ignores_predicted_salary():
-    a, b = [norm("adzuna", r) for r in raws_for("adzuna")]
-    assert a.salary_min == 70000 and a.title == "Senior Python Developer"
-    assert b.salary_min is None and b.salary_max is None
+def test_adzuna_keeps_only_stated_salaries():
+    for raw in raws_for("adzuna"):
+        predicted = str(raw.data.get("salary_is_predicted")) == "1"
+        job = norm("adzuna", raw)
+        if job and predicted:
+            assert job.salary_min is None and job.salary_max is None
+    raw = raws_for("adzuna")[0]
+    stated = {**raw.data, "salary_is_predicted": "0", "salary_min": 70000, "salary_max": 85000}
+    job = norm("adzuna", RawJob("adzuna", raw.external_id, stated))
+    assert (job.salary_min, job.salary_max) == (70000, 85000)
+    assert job.countries == [raw.data["_country"]]
 
 
 def test_reed_date_is_day_month_year():
-    job = first("reed")
-    assert job.posted_at == datetime(2026, 10, 18, tzinfo=UTC)
-    assert job.countries == ["GB"]
-    assert job.salary_currency == "GBP"
+    for raw in raws_for("reed"):
+        job = norm("reed", raw)
+        if not job:
+            continue
+        d, m, y = (int(x) for x in raw.data["date"].split("/"))
+        assert job.posted_at == datetime(y, m, d, tzinfo=UTC)
+        assert job.countries == ["GB"]
 
 
 def test_jooble_never_uses_updated_as_posted():
-    job = first("jooble")
-    assert job.posted_at is None
-    assert job.date_source == "unknown"
-    assert job.source_updated_at is not None
-    assert job.countries == ["PL"]
+    jobs = [j for j in (norm("jooble", r) for r in raws_for("jooble")) if j]
+    assert jobs
+    for job in jobs:
+        assert job.posted_at is None
+        assert job.date_source == "unknown"
+        assert job.source_updated_at is not None
+        assert job.countries  # parsed from "Austin, TX"-style locations
 
 
 def test_smartrecruiters_only_fetches_details_for_tech_jobs():

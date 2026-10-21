@@ -357,3 +357,22 @@ def test_dedupe_ignores_company_spaces():
     from jobbuddy_workers.jobs.normalize import dedupe_key
 
     assert dedupe_key("Grafana Labs", "SRE", ["DE"]) == dedupe_key("grafanalabs", "SRE", ["DE"])
+
+
+def test_eligibility_chip():
+    def chip(j, f):
+        return evaluate(j, f, NOW).breakdown["eligibility"]["chip"]
+
+    assert chip(job(), filters()) == "indicated"
+    assert chip(job(countries=[], remote_type="remote"), filters()) == "unclear"
+    assert (
+        chip(
+            job(description_text="Visa sponsorship is available."), filters(needs_sponsorship=True)
+        )
+        == "sponsorship_stated"
+    )
+    assert chip(job(), filters(needs_sponsorship=True)) == "unclear"
+    assert (
+        chip(job(description_text="You must have the right to work in Germany."), filters())
+        == "restriction"
+    )

@@ -8,6 +8,45 @@ import { expect, test, type Page } from "@playwright/test";
 
 const sampleCv = path.join(__dirname, "fixtures", "sample-cv.pdf");
 
+function admin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      auth: { persistSession: false },
+    },
+  );
+}
+
+/** Inserts one match for the user, using any open job, like the matcher would. */
+async function seedMatch(username: string) {
+  const db = admin();
+  const { data: users } = await db.auth.admin.listUsers({ perPage: 200 });
+  const user = users.users.find((u) => u.email?.startsWith(`${username}@`));
+  const { data: job } = await db.from("jobs").select("id").is("closed_at", null).limit(1).single();
+  if (!user || !job) throw new Error("No user or open job to seed a match with");
+  const { error } = await db.from("user_job_matches").insert({
+    user_id: user.id,
+    job_id: job.id,
+    score: 82,
+    passed_filters: true,
+    breakdown: {
+      technical: { points: 28, reason: "Mentions 1 must-have skills (Python)" },
+      seniority: { points: 20, reason: "Senior, your level" },
+      eligibility: { points: 20, reason: "Based in United Kingdom", chip: "indicated" },
+      remote: { points: 10, reason: "Remote, as you want" },
+      freshness: { points: 2, reason: "Posted 20 days ago" },
+      compensation: { points: 2, reason: "Salary not stated" },
+      top_reasons: [
+        "Mentions 1 must-have skills (Python)",
+        "Senior, your level",
+        "Based in United Kingdom",
+      ],
+    },
+  });
+  if (error) throw error;
+}
+
 async function shot(page: Page, name: string) {
   const project = test.info().project.name;
   await page.screenshot({ path: `e2e-screenshots/${project}/${name}.png`, fullPage: true });
@@ -77,7 +116,52 @@ test("sign up, onboard, edit settings, delete account", async ({ page }, info) =
     await page.getByRole("button", { name: "Go to my dashboard" }).click();
 
     await expect(page).toHaveURL(/\/app$/);
-    await shot(page, "10-dashboard");
+    await shot(page, "10-dashboard-empty");
+
+    // Dashboard with a real job: give this user one match, as the matcher would.
+    await seedMatch(username);
+    await page.reload();
+    const card = page.locator("article").first();
+    await expect(card).toBeVisible();
+    await expect(card.getByText("Eligibility indicated")).toBeVisible();
+    await expect(card.getByText("Mentions 1 must-have skills (Python)")).toBeVisible();
+    await shot(page, "10b-dashboard-match");
+
+    // Explain match needs an AI key; without one it says so kindly.
+    await card.getByRole("button", { name: /Explain match/ }).click();
+    await expect(card.getByText(/need a working AI key/)).toBeVisible({ timeout: 30_000 });
+
+    // Save, then find it in the Saved tab.
+    await card.getByRole("button", { name: "Save" }).click();
+    await expect(card.getByRole("button", { name: "Saved" })).toBeVisible();
+    await page.getByRole("tab", { name: "Saved" }).click();
+    await expect(page.locator("article")).toHaveCount(1);
+
+    // Not for me: hide it with a reason, then restore it from Hidden.
+    await page.getByRole("button", { name: "Not for me" }).click();
+    await page.getByRole("button", { name: "Wrong level" }).click();
+    await expect(page.getByText(/seniority levels/)).toBeVisible();
+    await shot(page, "10c-not-for-me");
+    await page.getByRole("button", { name: "Hide this job" }).click();
+    await expect(page.locator("article")).toHaveCount(0);
+    await page.getByRole("tab", { name: "Hidden" }).click();
+    await page.getByRole("button", { name: "Show again" }).click();
+    await page.getByRole("tab", { name: "Matches" }).click();
+    await expect(page.locator("article")).toHaveCount(1);
+
+    // Prepare application, then move it on the board.
+    await page.getByRole("button", { name: "Prepare application" }).click();
+    await expect(page).toHaveURL(/\/applications$/);
+    const status = page.getByRole("combobox", { name: /^Status of / });
+    await expect(status).toHaveValue("prepared");
+    await status.selectOption("applied");
+    // The card's date line, not the "Applied" column heading.
+    await expect(page.getByText(/^Applied \d+\/\d+\/\d+/)).toBeVisible();
+    await shot(page, "10d-applications");
+
+    await page.goto("/usage");
+    await expect(page.getByRole("heading", { name: "AI usage" })).toBeVisible();
+    await shot(page, "10e-usage");
 
     // Settings keep what onboarding saved.
     await page.getByRole("link", { name: "Settings" }).click();
@@ -109,15 +193,15 @@ test("sign up, onboard, edit settings, delete account", async ({ page }, info) =
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
     if (url && key) {
-      const admin = createClient(url, key, { auth: { persistSession: false } });
-      const { data } = await admin.auth.admin.listUsers({ perPage: 200 });
+      const db = admin();
+      const { data } = await db.auth.admin.listUsers({ perPage: 200 });
       const user = data?.users.find((u) => u.email?.startsWith(`${username}@`));
       if (user) {
-        const { data: files } = await admin.storage.from("cvs").list(user.id);
+        const { data: files } = await db.storage.from("cvs").list(user.id);
         if (files?.length) {
-          await admin.storage.from("cvs").remove(files.map((f) => `${user.id}/${f.name}`));
+          await db.storage.from("cvs").remove(files.map((f) => `${user.id}/${f.name}`));
         }
-        await admin.auth.admin.deleteUser(user.id);
+        await db.auth.admin.deleteUser(user.id);
       }
     }
   }

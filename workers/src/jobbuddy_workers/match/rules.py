@@ -219,13 +219,20 @@ def eligibility(job: JobFacts, f: UserFilters) -> dict[str, object]:
         else ("open_remote", "No country filter set")
     )
     points = {"country": 20, "region": 17, "open_remote": 10, "none": 0}[kind]
+    # Chip for the job card: indicated | sponsorship_stated | unclear | restriction.
+    chip = {"country": "indicated", "region": "indicated"}.get(kind, "unclear")
+    if kind == "none" or says_no_sponsorship(job.description_text):
+        chip = "restriction"
     if f.needs_sponsorship:
         if says_sponsorship_available(job.description_text):
             reason += ", sponsorship stated"
+            chip = "sponsorship_stated"
         else:
             points = min(points, 12)
             reason += ", sponsorship not mentioned"
-    return _part(points, 20, reason)
+            if chip == "indicated":
+                chip = "unclear"
+    return {**_part(points, 20, reason), "chip": chip}
 
 
 def remote(job: JobFacts, f: UserFilters) -> dict[str, object]:
