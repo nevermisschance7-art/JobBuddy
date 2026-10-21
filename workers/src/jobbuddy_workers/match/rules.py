@@ -22,6 +22,13 @@ WEIGHTS = {
 }
 SENIORITY_ORDER = ["junior", "mid", "senior", "lead", "principal"]
 HOT_SCORE = 85
+SIM_FLOOR = 0.35
+SIM_FULL = 0.60
+
+
+def relevance_cap(technical_points: float) -> int:
+    """A job far from the CV can't score high just by being remote, senior and fresh."""
+    return round(30 + 2 * technical_points)
 
 
 @dataclass
@@ -65,6 +72,8 @@ class Result:
     score: int
     breakdown: dict[str, dict[str, object]]
     reasons_failed: list[str]
+    # True when the score was lowered because the job is not close to the CV.
+    capped: bool = False
 
 
 # ---------------------------------------------------------------- text checks
@@ -169,8 +178,9 @@ def _part(points: float, max_points: int, reason: str) -> dict[str, object]:
 
 
 def technical(job: JobFacts, f: UserFilters) -> dict[str, object]:
-    # Embedding similarity: MiniLM cosine of ~0.25 is unrelated, ~0.65+ is a strong match.
-    sim_points = 25 * (job.similarity - 0.25) / 0.40
+    # Calibrated on real data (MiniLM, CV vs job): median job ~0.33, top 10% ~0.45+,
+    # best matches ~0.60. So 0 points at 0.35 and full points at 0.60.
+    sim_points = 25 * (job.similarity - SIM_FLOOR) / (SIM_FULL - SIM_FLOOR)
     text = f"{job.title}\n{job.description_text}\n{' '.join(job.tags)}"
     skills = f.must_have_skills or f.cv_skills[:15]
     if skills:
@@ -260,12 +270,15 @@ def evaluate(job: JobFacts, f: UserFilters, now: datetime) -> Result:
         "compensation": compensation(job, f),
     }
     score = round(sum(float(p["points"]) for p in breakdown.values()))  # type: ignore[arg-type]
+    cap = relevance_cap(float(breakdown["technical"]["points"]))  # type: ignore[arg-type]
+    capped = score > cap
     reasons = hard_filters(job, f)
     return Result(
         passed=not reasons,
-        score=max(0, min(100, score)),
+        score=max(0, min(100, cap if capped else score)),
         breakdown=breakdown,
         reasons_failed=reasons,
+        capped=capped,
     )
 
 

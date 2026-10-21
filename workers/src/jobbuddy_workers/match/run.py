@@ -98,7 +98,11 @@ def match_row(user_id: str, job: JobFacts, result: Result) -> dict[str, Any]:
         "user_id": user_id,
         "job_id": job.id,
         "score": result.score,
-        "breakdown": {**result.breakdown, "top_reasons": top_reasons(result)},
+        "breakdown": {
+            **result.breakdown,
+            "top_reasons": top_reasons(result),
+            "note": "Lowered: not close to your CV" if result.capped else None,
+        },
         "passed_filters": result.passed,
         "reasons_failed": result.reasons_failed,
     }

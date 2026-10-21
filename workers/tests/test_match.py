@@ -342,3 +342,18 @@ def test_filter_change_triggers_full_rescore():
     run_matcher(store, FakeEmbedder(), now=NOW)
     assert store.since[0].year == 2000
     assert store.matched_at == NOW
+
+
+def test_relevance_cap_stops_unrelated_jobs_scoring_high():
+    far = evaluate(job(similarity=0.33, description_text="Salesforce admin work."), filters(), NOW)
+    assert far.capped
+    assert far.score < 55
+    close = evaluate(job(similarity=0.62), filters(), NOW)
+    assert not close.capped
+    assert close.score >= 85
+
+
+def test_dedupe_ignores_company_spaces():
+    from jobbuddy_workers.jobs.normalize import dedupe_key
+
+    assert dedupe_key("Grafana Labs", "SRE", ["DE"]) == dedupe_key("grafanalabs", "SRE", ["DE"])

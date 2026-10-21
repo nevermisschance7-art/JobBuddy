@@ -240,7 +240,9 @@ def content_hash(*values: object) -> str:
 
 
 def dedupe_key(company: str, title: str, countries: list[str]) -> str:
-    return f"{norm_key(company)}|{norm_key(title)}|{countries[0] if countries else 'REMOTE'}"
+    # Company spaces are ignored: "Grafana Labs" and "grafanalabs" are the same company.
+    company_key = norm_key(company).replace(" ", "")
+    return f"{company_key}|{norm_key(title)}|{countries[0] if countries else 'REMOTE'}"
 
 
 def utcnow() -> datetime:
