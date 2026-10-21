@@ -1,7 +1,7 @@
 // Models often wrap JSON in markdown fences, add a sentence before it, or slip in
 // invisible characters. This pulls out the JSON value and parses it.
 
-const INVISIBLE = /[​-‍⁠﻿­]/g;
+const INVISIBLE = /[\u200B-\u200D\u2060\uFEFF\u00AD]/g;
 
 export function stripToJson(raw: string): string {
   let s = raw.replace(INVISIBLE, "").trim();

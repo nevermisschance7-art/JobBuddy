@@ -62,7 +62,7 @@
   "jsonRepair": [
     { "input": "```json\n{\"a\": 1}\n```", "parsed": { "a": 1 } },
     { "input": "Sure! Here it is:\n{\"a\": [1, 2]}\nHope that helps.", "parsed": { "a": [1, 2] } },
-    { "input": "﻿​{\"name\": \"x\"}", "parsed": { "name": "x" } },
+    { "input": "\uFEFF\u200B{\"name\": \"x\"}", "parsed": { "name": "x" } },
     { "input": "[{\"a\": 1}]", "parsed": [{ "a": 1 }] }
   ]
 }

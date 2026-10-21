@@ -7,3 +7,4 @@ supabase/migrations
 packages/shared/src/database.types.ts
 workers
 docs/job-hunt-assistant-prompts.md
+packages/shared/src/llm/test-vectors.json
