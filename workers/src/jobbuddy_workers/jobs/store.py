@@ -31,9 +31,7 @@ class JobStore(Protocol):
     def mark_seen(self, ids: list[str]) -> None: ...
     def mark_missed(self, ids: list[str]) -> int: ...
     def close_stale(self, source: str, days: int) -> int: ...
-    def company_result(
-        self, company_id: str, ok: bool, jobs_open: int, error: str | None
-    ) -> None: ...
+    def company_results(self, results: list[dict[str, Any]]) -> None: ...
     def start_run(self, source: str) -> str: ...
     def finish_run(
         self, run_id: str, seen: int, new: int, updated: int, closed: int, errors: list[str]
@@ -137,26 +135,10 @@ class SupabaseStore:
     def close_stale(self, source: str, days: int) -> int:
         return self._rpc("close_stale_jobs", {"p_source": source, "p_days": days}) or 0
 
-    def company_result(self, company_id: str, ok: bool, jobs_open: int, error: str | None) -> None:
-        now = datetime.now(UTC).isoformat()
-        if ok:
-            body: dict[str, Any] = {
-                "last_ok_at": now,
-                "fail_count": 0,
-                "jobs_open": jobs_open,
-                "last_error": None,
-            }
-        else:
-            # fail_count is incremented by reading it first; one worker runs at a time.
-            res = self.client.get(
-                f"{self.rest}/companies", params={"select": "fail_count", "id": f"eq.{company_id}"}
-            )
-            res.raise_for_status()
-            current = (res.json() or [{"fail_count": 0}])[0]["fail_count"]
-            body = {"fail_count": current + 1, "last_error": (error or "")[:300]}
-        self.client.patch(
-            f"{self.rest}/companies", params={"id": f"eq.{company_id}"}, json=body
-        ).raise_for_status()
+    def company_results(self, results: list[dict[str, Any]]) -> None:
+        # One database call for all companies (record_company_results), not one each.
+        for chunk in _chunks(results, 1000):
+            self._rpc("record_company_results", {"results": chunk})
 
     def start_run(self, source: str) -> str:
         res = self.client.post(
@@ -247,8 +229,8 @@ class MemoryStore:
     def close_stale(self, source: str, days: int) -> int:
         return 0
 
-    def company_result(self, company_id: str, ok: bool, jobs_open: int, error: str | None) -> None:
-        self.company_log.append((company_id, ok))
+    def company_results(self, results: list[dict[str, Any]]) -> None:
+        self.company_log += [(r["id"], r["ok"]) for r in results]
 
     def start_run(self, source: str) -> str:
         run_id = str(uuid.uuid4())

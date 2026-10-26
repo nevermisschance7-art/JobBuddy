@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import threading
 from collections.abc import Iterable
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
@@ -20,6 +21,9 @@ from .store import Existing, JobStore
 log = logging.getLogger(__name__)
 
 EMPLOYER_CONCURRENCY = 16  # parallel companies per employer system (public, cached board APIs)
+MAX_DETAILS_PER_RUN = (
+    400  # detail requests (SmartRecruiters) per run; the rest wait for the next run
+)
 MAX_AGE_DAYS = 45  # older postings are rarely still worth applying to; keeps the free DB small
 AGGREGATOR_STALE_DAYS = 14  # aggregator jobs close when not seen for this long
 
@@ -141,11 +145,42 @@ class Runner:
         companies = self.store.active_companies(src.name)
         existing = self.store.existing(src.name)
 
-        def fetch(company: Company) -> tuple[Company, list[RawJob] | None, str | None]:
+        listed_ids: dict[str, set[str]] = {}
+        details_left = [MAX_DETAILS_PER_RUN]
+        lock = threading.Lock()
+
+        def take_detail_slot() -> bool:
+            with lock:
+                if details_left[0] <= 0:
+                    return False
+                details_left[0] -= 1
+                return True
+
+        def with_details(raws: list[RawJob]) -> list[RawJob]:
+            """Fetch details only for unseen jobs we would keep. Over budget: skip for now
+            (they are not stored, so the next run still sees them as new)."""
+            if not hasattr(src, "fetch_detail"):
+                return raws
+            wants = getattr(src, "wants_detail", lambda _r: True)
+            out = []
+            for r in raws:
+                if r.external_id in existing or not wants(r):
+                    out.append(r)
+                    continue
+                draft = src.normalise(r)
+                if draft is None or not is_relevant(draft, ctx.wanted_countries):
+                    continue
+                if take_detail_slot():
+                    out.append(src.fetch_detail(self.http, r))
+            return out
+
+        def fetch(company: Company) -> tuple[Company, list[RawJob] | None, int, str | None]:
             try:
-                return company, src.fetch_company(self.http, company), None
+                raws = src.fetch_company(self.http, company)
+                listed_ids[company.id] = {r.external_id for r in raws}
+                return company, with_details(raws), len(raws), None
             except Exception as e:  # noqa: BLE001 - one company failing must not stop the run
-                return company, None, f"{company.slug}: {e}"[:300]
+                return company, None, 0, f"{company.slug}: {e}"[:300]
 
         with ThreadPoolExecutor(EMPLOYER_CONCURRENCY) as pool:
             fetched = list(pool.map(fetch, companies))
@@ -153,25 +188,21 @@ class Runner:
         ok_companies: set[str] = set()
         seen_external: set[str] = set()
         jobs: list[Job] = []
-        for company, raws, error in fetched:
+        results: list[dict[str, Any]] = []
+        for company, raws, listed, error in fetched:
             if raws is None:
                 stats.errors.append(error or "unknown error")
-                self.store.company_result(company.id, False, 0, error)
+                results.append({"id": company.id, "ok": False, "jobs_open": 0, "error": error})
                 continue
             ok_companies.add(company.id)
-            stats.seen += len(raws)
-            seen_external |= {r.external_id for r in raws}
-            if hasattr(src, "fetch_detail"):
-                wants = getattr(src, "wants_detail", lambda _r: True)
-                raws = [
-                    src.fetch_detail(self.http, r)
-                    if r.external_id not in existing and wants(r)
-                    else r
-                    for r in raws
-                ]
+            stats.seen += listed
+            seen_external |= listed_ids.get(company.id, set())
             company_jobs = self._normalise_all(src, raws, ctx, stats)
             jobs += company_jobs
-            self.store.company_result(company.id, True, len(company_jobs), None)
+            results.append(
+                {"id": company.id, "ok": True, "jobs_open": len(company_jobs), "error": None}
+            )
+        self.store.company_results(results)
 
         self._store(jobs, existing, state, stats)
 

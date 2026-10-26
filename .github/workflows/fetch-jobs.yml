@@ -40,6 +40,8 @@ jobs:
           key: fastembed-all-MiniLM-L6-v2
       - run: uv sync --locked --no-dev
       - name: Fetch
+        # Own limit, so a slow source can never stop matching from running.
+        timeout-minutes: 35
         run: |
           if [ -n "${{ inputs.source }}" ]; then
             uv run jobbuddy-workers fetch --source "${{ inputs.source }}"

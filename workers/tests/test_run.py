@@ -165,3 +165,48 @@ def test_relevance_by_country_and_region():
     assert not is_relevant(sales, set())
     old = make_job("x", "5", posted_at=datetime(2026, 8, 1, tzinfo=UTC))
     assert not is_relevant(old, {"DE"}, now=datetime(2026, 10, 21, tzinfo=UTC))
+
+
+class FakeDetailSource(FakeEmployer):
+    """Like SmartRecruiters: the listing lacks descriptions; details cost a request each."""
+
+    name = "greenhouse"
+
+    def __init__(self):
+        super().__init__()
+        self.detail_calls = 0
+
+    def wants_detail(self, raw):
+        return True
+
+    def fetch_detail(self, http, raw):
+        self.detail_calls += 1
+        return raw
+
+
+def test_details_only_for_relevant_new_jobs_and_capped(setup, monkeypatch):
+    store, runner, _, _ = setup
+    src = FakeDetailSource()
+    monkeypatch.setattr(run_module, "EMPLOYER_SOURCES", {"greenhouse": src})
+    monkeypatch.setattr(run_module, "MAX_DETAILS_PER_RUN", 2)
+    src.listings["acme"] = [
+        make_job("greenhouse", "1"),
+        make_job("greenhouse", "2", title="Data Engineer"),
+        make_job("greenhouse", "3", title="SRE"),
+        make_job("greenhouse", "far", countries=("US",)),  # not relevant: no detail fetched
+    ]
+    first = runner.run(hour=0)["greenhouse"]
+    assert src.detail_calls == 2
+    assert first.new == 2  # the third waits for the next run, it is not stored without details
+
+    second = runner.run(hour=0)["greenhouse"]
+    assert src.detail_calls == 3  # only the one still missing
+    assert second.new == 1
+    assert ("greenhouse", "far") not in store.jobs
+
+
+def test_company_results_are_recorded_in_one_batch(setup):
+    store, runner, employer, _ = setup
+    employer.listings["acme"] = [make_job("greenhouse", "1")]
+    runner.run(hour=0)
+    assert store.company_log == [("c1", True)]
