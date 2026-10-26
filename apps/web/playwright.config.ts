@@ -6,7 +6,9 @@ export default defineConfig({
   testDir: "./e2e",
   // Deletes all e2e-* test accounts after the run, even if a test timed out.
   globalTeardown: "./e2e/teardown.ts",
-  timeout: 60_000,
+  timeout: 90_000,
+  // The database is in Sydney and CI runs in the US, so each step can take a few seconds.
+  expect: { timeout: 15_000 },
   fullyParallel: false,
   retries: process.env.CI ? 1 : 0,
   reporter: [["list"], ["html", { open: "never" }]],
