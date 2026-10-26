@@ -30,6 +30,7 @@ from .types import (
 M = TypeVar("M", bound=BaseModel)
 
 _COOLDOWN_KINDS = {"rate_limit", "quota"}
+_MODEL_LEVEL_ERRORS = {"model_not_found", "server", "bad_request"}
 _NO_KEY = "No AI key is set up. Add a free Gemini key in Settings."
 _ALL_FAILED = (
     "All your AI keys are out of quota or not working right now. "
@@ -210,8 +211,9 @@ class LlmRouter:
                 last = e
             except Exception as e:  # noqa: BLE001 - any provider bug counts as a server error
                 last = LlmError("server", str(e))
-            self._log(user_id, task, name, model, started, False, None, None, last.kind)
-            if last.kind != "model_not_found":
+            self._log(user_id, task, name, model, started, False, None, None, last.kind, str(last))
+            # Key-level problems end this provider; a model-level one tries its next model.
+            if last.kind not in _MODEL_LEVEL_ERRORS:
                 break
         return False, "", last
 
@@ -226,6 +228,7 @@ class LlmRouter:
         input_tokens: int | None,
         output_tokens: int | None,
         error_kind: str | None = None,
+        error_message: str | None = None,
     ) -> None:
         # Usage logging must never break a call.
         with contextlib.suppress(Exception):
@@ -240,5 +243,6 @@ class LlmRouter:
                     latency_ms=int((time.monotonic() - started) * 1000),
                     ok=ok,
                     error_kind=error_kind,  # type: ignore[arg-type]
+                    error_message=error_message[:300] if error_message else None,
                 )
             )

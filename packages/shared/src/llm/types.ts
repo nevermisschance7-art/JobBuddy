@@ -70,6 +70,8 @@ export type LlmCallLog = {
   latencyMs: number;
   ok: boolean;
   errorKind: LlmErrorKind | null;
+  /** The provider's error text, for diagnosis. Never prompt or response content. */
+  errorMessage: string | null;
 };
 
 /** Usage logging (no prompt content) and "needs fixing" events. */

@@ -1,0 +1,28 @@
+name: AI check
+
+# Manual: lists each provider's models and calls every configured model once with a tiny
+# prompt, from a US server (Gemini is blocked from some countries).
+on:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: workers
+    env:
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv sync --locked --no-dev
+      - name: Models each provider offers
+        run: uv run python -m jobbuddy_workers.llm.list_models || true
+      - name: Call every configured model
+        run: uv run python -m jobbuddy_workers.llm.smoke

@@ -68,6 +68,7 @@ class LlmCallLog:
     latency_ms: int
     ok: bool
     error_kind: ErrorKind | None
+    error_message: str | None = None
 
 
 class LlmSinks(Protocol):

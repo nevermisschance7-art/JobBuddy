@@ -68,6 +68,7 @@ export function routerFor(supabase: Supabase): LlmRouter {
         latency_ms: e.latencyMs,
         ok: e.ok,
         error_kind: e.errorKind,
+        error_message: e.errorMessage,
       });
     },
     async needsFixing(userId, message) {

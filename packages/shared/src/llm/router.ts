@@ -56,6 +56,8 @@ export type RouterOptions = {
 type CallOptions = { system?: string; personal?: PersonalInfo };
 
 const COOLDOWN_KINDS = new Set(["rate_limit", "quota"]);
+// Errors tied to one model (missing, overloaded, rejects an option): try the next model.
+const MODEL_LEVEL_ERRORS = new Set(["model_not_found", "server", "bad_request"]);
 
 export class LlmRouter {
   private readonly config: ModelsConfig;
@@ -226,10 +228,11 @@ export class LlmRouter {
           started,
           ok: false,
           kind: error.kind,
+          message: error.message,
         });
         lastError = error;
-        // Only a missing model means "try this provider's next model".
-        if (error.kind !== "model_not_found") break;
+        // Key-level problems end this provider; a model-level one tries its next model.
+        if (!MODEL_LEVEL_ERRORS.has(error.kind)) break;
       }
     }
     return { ok: false, error: lastError };
@@ -244,6 +247,7 @@ export class LlmRouter {
     ok: boolean;
     res?: { inputTokens: number | null; outputTokens: number | null };
     kind?: LlmError["kind"];
+    message?: string;
   }) {
     try {
       await this.opts.sinks.logCall({
@@ -256,6 +260,7 @@ export class LlmRouter {
         latencyMs: Date.now() - e.started,
         ok: e.ok,
         errorKind: e.kind ?? null,
+        errorMessage: e.message ? e.message.slice(0, 300) : null,
       });
     } catch {
       // Usage logging must never break a call.

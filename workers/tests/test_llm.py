@@ -241,3 +241,11 @@ def test_real_config_is_valid():
     for p in cfg["providers"].values():
         assert p["models"], "every provider needs at least one model"
     assert cfg["providers"]["anthropic"]["enabled"] is False
+
+
+def test_server_error_tries_next_model_and_logs_reason():
+    router, fakes, _, sinks = make([key("gemini")])
+    fakes["gemini"].queue(LlmError("server", "503 model overloaded"), '{"title":"x","years":0}')
+    router.generate_json("t", Thing, "p", "u1")
+    assert [r.model for _, r in fakes["gemini"].requests] == ["g-new", "g-old"]
+    assert sinks.logs[0].error_message == "503 model overloaded"

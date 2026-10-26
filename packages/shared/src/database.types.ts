@@ -515,6 +515,7 @@ export type Database = {
         Row: {
           created_at: string
           error_kind: string | null
+          error_message: string | null
           id: string
           input_tokens: number | null
           latency_ms: number
@@ -528,6 +529,7 @@ export type Database = {
         Insert: {
           created_at?: string
           error_kind?: string | null
+          error_message?: string | null
           id?: string
           input_tokens?: number | null
           latency_ms: number
@@ -541,6 +543,7 @@ export type Database = {
         Update: {
           created_at?: string
           error_kind?: string | null
+          error_message?: string | null
           id?: string
           input_tokens?: number | null
           latency_ms?: number
@@ -740,6 +743,7 @@ export type Database = {
       mark_jobs_seen: { Args: { ids: string[] }; Returns: undefined }
       prune_closed_jobs: { Args: never; Returns: number }
       prune_stale_jobs: { Args: never; Returns: number }
+      record_company_results: { Args: { results: Json }; Returns: undefined }
     }
     Enums: {
       [_ in never]: never

@@ -158,6 +158,18 @@ describe("LlmRouter", () => {
     expect(fakes.gemini.requests.map((r) => r.model)).toEqual(["g-new", "g-old"]);
   });
 
+  it("tries the provider's next model after a server error, and logs the reason", async () => {
+    const { router, fakes, logs } = setup({ gemini: {} });
+    fakes.gemini.queue(new LlmError("server", "503 model overloaded"), '{"title":"x","years":0}');
+    await router.generateJson("t", schema, "p", "u1");
+    expect(fakes.gemini.requests.map((r) => r.model)).toEqual(["g-new", "g-old"]);
+    expect(logs[0]).toMatchObject({
+      ok: false,
+      errorKind: "server",
+      errorMessage: "503 model overloaded",
+    });
+  });
+
   it("marks a bad key as broken and moves on", async () => {
     const { router, fakes, broken } = setup({ gemini: {}, groq: {} });
     fakes.gemini.queue(new LlmError("auth", "bad key"));
