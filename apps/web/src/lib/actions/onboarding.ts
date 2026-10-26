@@ -314,5 +314,5 @@ export async function finishOnboarding() {
     .update({ onboarded_at: new Date().toISOString() })
     .eq("user_id", user.id);
   await requestMatchRun();
-  redirect("/app?first=1");
+  redirect("/app");
 }
