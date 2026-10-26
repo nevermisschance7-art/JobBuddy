@@ -126,7 +126,7 @@ class Runner:
         for name, src in EMPLOYER_SOURCES.items():
             if only_set and name not in only_set:
                 continue
-            results[name] = self._run_employer(src, ctx, state)
+            results[name] = self._guarded(name, lambda s=src: self._run_employer(s, ctx, state))
 
         for name, src in AGGREGATOR_SOURCES.items():
             if only_set and name not in only_set:
@@ -134,8 +134,16 @@ class Runner:
             due = only_set or hour % src.every_hours == 0
             if not due or not src.available(ctx):
                 continue
-            results[name] = self._run_aggregator(src, ctx, state)
+            results[name] = self._guarded(name, lambda s=src: self._run_aggregator(s, ctx, state))
         return results
+
+    def _guarded(self, name: str, run: Any) -> SourceStats:
+        """One source crashing must not stop the others (or matching afterwards)."""
+        try:
+            return run()
+        except Exception as e:  # noqa: BLE001
+            log.exception("source %s crashed", name)
+            return SourceStats(errors=[f"crashed: {e}"[:300]])
 
     # ------------------------------------------------------------ employer systems
 
@@ -290,6 +298,6 @@ class Runner:
             vectors = self.embedder.embed(
                 [job_text(j.title, j.company_name, j.description_text) for j, _, _ in batch]
             )
-            self.store.upsert_jobs(
+            stats.errors += self.store.upsert_jobs(
                 [job_row(j, h, k, v) for (j, h, k), v in zip(batch, vectors, strict=True)]
             )

@@ -210,3 +210,16 @@ def test_company_results_are_recorded_in_one_batch(setup):
     employer.listings["acme"] = [make_job("greenhouse", "1")]
     runner.run(hour=0)
     assert store.company_log == [("c1", True)]
+
+
+def test_a_crashing_source_does_not_stop_the_others(setup, monkeypatch):
+    store, runner, employer, aggregator = setup
+    employer.listings["acme"] = [make_job("greenhouse", "1")]
+    aggregator.jobs = [make_job("remotive", "r1", title="Frontend Developer", company="Other")]
+
+    def boom(rows):
+        raise RuntimeError("database down")
+
+    monkeypatch.setattr(store, "upsert_jobs", boom)
+    results = runner.run(hour=0)
+    assert results["greenhouse"].errors and results["remotive"].errors  # both ran, both reported

@@ -3,6 +3,7 @@ MemoryStore does the same in memory for tests."""
 
 from __future__ import annotations
 
+import time
 import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
@@ -27,7 +28,7 @@ class JobStore(Protocol):
     def active_companies(self, ats: str) -> list[Company]: ...
     def existing(self, source: str) -> dict[str, Existing]: ...
     def open_keys(self) -> tuple[dict[str, str], set[str]]: ...
-    def upsert_jobs(self, rows: list[dict[str, Any]]) -> None: ...
+    def upsert_jobs(self, rows: list[dict[str, Any]]) -> list[str]: ...
     def mark_seen(self, ids: list[str]) -> None: ...
     def mark_missed(self, ids: list[str]) -> int: ...
     def close_stale(self, source: str, days: int) -> int: ...
@@ -115,15 +116,42 @@ class SupabaseStore:
         keys = {r["dedupe_key"]: r["source"] for r in rows if r.get("dedupe_key")}
         return keys, {r["canonical_url"] for r in rows}
 
-    def upsert_jobs(self, rows: list[dict[str, Any]]) -> None:
-        for chunk in _chunks(rows, 200):
-            res = self.client.post(
-                f"{self.rest}/jobs",
-                params={"on_conflict": "source,external_id"},
-                headers={"Prefer": "resolution=merge-duplicates,return=minimal"},
-                json=chunk,
-            )
-            res.raise_for_status()
+    def _post_jobs(self, rows: list[dict[str, Any]]) -> httpx.Response:
+        return self.client.post(
+            f"{self.rest}/jobs",
+            params={"on_conflict": "source,external_id"},
+            headers={"Prefer": "resolution=merge-duplicates,return=minimal"},
+            json=rows,
+        )
+
+    def upsert_jobs(self, rows: list[dict[str, Any]]) -> list[str]:
+        """Saves in small batches. A batch that keeps failing is retried row by row, and rows
+        that still fail are reported, not raised, so one bad row never stops a run."""
+        errors: list[str] = []
+        for chunk in _chunks(rows, 50):
+            res = None
+            for attempt in range(3):
+                try:
+                    res = self._post_jobs(chunk)
+                except httpx.HTTPError:
+                    res = None
+                else:
+                    if res.status_code < 500:
+                        break
+                time.sleep(2 * (attempt + 1))
+            if res is not None and res.status_code < 300:
+                continue
+            # Still failing: save row by row so only the bad row(s) are lost.
+            for row in chunk:
+                try:
+                    one = self._post_jobs([row])
+                    if one.status_code >= 300:
+                        errors.append(
+                            f"save {row['external_id']}: {one.status_code} {one.text[:200]}"
+                        )
+                except httpx.HTTPError as e:
+                    errors.append(f"save {row['external_id']}: {e}"[:300])
+        return errors
 
     def mark_seen(self, ids: list[str]) -> None:
         for chunk in _chunks(ids, 500):
@@ -201,11 +229,12 @@ class MemoryStore:
             j["canonical_url"] for j in open_jobs
         }
 
-    def upsert_jobs(self, rows: list[dict[str, Any]]) -> None:
+    def upsert_jobs(self, rows: list[dict[str, Any]]) -> list[str]:
         for r in rows:
             key = (r["source"], r["external_id"])
             current = self.jobs.get(key, {"id": str(uuid.uuid4()), "missed_runs": 0})
             self.jobs[key] = {**current, **r}
+        return []
 
     def _by_id(self, job_id: str) -> dict[str, Any]:
         return next(j for j in self.jobs.values() if j["id"] == job_id)
