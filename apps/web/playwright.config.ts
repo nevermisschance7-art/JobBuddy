@@ -4,6 +4,8 @@ import { defineConfig, devices } from "@playwright/test";
 // CI runs `pnpm build` first; screenshots of every screen land in e2e-screenshots/.
 export default defineConfig({
   testDir: "./e2e",
+  // Deletes all e2e-* test accounts after the run, even if a test timed out.
+  globalTeardown: "./e2e/teardown.ts",
   timeout: 60_000,
   fullyParallel: false,
   retries: process.env.CI ? 1 : 0,

@@ -19,20 +19,49 @@ export function Label({ className, ...props }: React.ComponentProps<"label">) {
   return <label className={cn("text-sm font-medium", className)} {...props} />;
 }
 
+/** Red asterisk for required fields; screen readers hear "required" instead. */
+export function RequiredMark() {
+  return (
+    <>
+      <span aria-hidden className="text-destructive ml-0.5">
+        *
+      </span>
+      <span className="sr-only"> (required)</span>
+    </>
+  );
+}
+
+/** "* required" legend, shown once at the top of a form with required fields. */
+export function RequiredLegend() {
+  return (
+    <p className="text-muted-foreground text-xs">
+      <span aria-hidden className="text-destructive">
+        *
+      </span>{" "}
+      required
+    </p>
+  );
+}
+
 export function Field({
   label,
   hint,
   htmlFor,
+  required = false,
   children,
 }: {
   label: string;
   hint?: string;
   htmlFor?: string;
+  required?: boolean;
   children: React.ReactNode;
 }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <Label htmlFor={htmlFor}>{label}</Label>
+      <Label htmlFor={htmlFor}>
+        {label}
+        {required ? <RequiredMark /> : null}
+      </Label>
       {children}
       {hint ? <p className="text-muted-foreground text-xs">{hint}</p> : null}
     </div>

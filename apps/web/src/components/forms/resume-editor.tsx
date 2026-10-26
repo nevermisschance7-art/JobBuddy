@@ -5,7 +5,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { useActionState, useState } from "react";
 import { NextField } from "@/components/next-field";
 import { Button } from "@/components/ui/button";
-import { Card, Field, FormMessage, Input, Textarea } from "@/components/ui/field";
+import { Card, Field, FormMessage, Input, RequiredLegend, Textarea } from "@/components/ui/field";
 import { initialState } from "@/lib/action-state";
 import { confirmResume } from "@/lib/actions/onboarding";
 
@@ -20,15 +20,21 @@ type Draft = {
   projects: Row[];
 };
 
-type FieldDef = { key: string; label: string; multiline?: boolean; placeholder?: string };
+type FieldDef = {
+  key: string;
+  label: string;
+  multiline?: boolean;
+  placeholder?: string;
+  required?: boolean;
+};
 
 const SECTIONS: { key: keyof Omit<Draft, "basics">; title: string; fields: FieldDef[] }[] = [
   {
     key: "work",
     title: "Experience",
     fields: [
-      { key: "position", label: "Job title" },
-      { key: "name", label: "Company" },
+      { key: "position", label: "Job title", required: true },
+      { key: "name", label: "Company", required: true },
       { key: "location", label: "Location" },
       { key: "startDate", label: "Start", placeholder: "YYYY-MM" },
       { key: "endDate", label: "End (empty if current)", placeholder: "YYYY-MM" },
@@ -39,7 +45,7 @@ const SECTIONS: { key: keyof Omit<Draft, "basics">; title: string; fields: Field
     key: "education",
     title: "Education",
     fields: [
-      { key: "institution", label: "School" },
+      { key: "institution", label: "School", required: true },
       { key: "studyType", label: "Degree" },
       { key: "area", label: "Subject" },
       { key: "startDate", label: "Start", placeholder: "YYYY" },
@@ -50,7 +56,7 @@ const SECTIONS: { key: keyof Omit<Draft, "basics">; title: string; fields: Field
     key: "skills",
     title: "Skills",
     fields: [
-      { key: "name", label: "Group", placeholder: "e.g. Backend" },
+      { key: "name", label: "Group", placeholder: "e.g. Backend", required: true },
       { key: "keywords", label: "Skills, comma separated", placeholder: "Python, Go, PostgreSQL" },
     ],
   },
@@ -58,7 +64,7 @@ const SECTIONS: { key: keyof Omit<Draft, "basics">; title: string; fields: Field
     key: "projects",
     title: "Projects",
     fields: [
-      { key: "name", label: "Name" },
+      { key: "name", label: "Name", required: true },
       { key: "url", label: "Link" },
       { key: "description", label: "Short description", multiline: true },
       { key: "keywords", label: "Tech, comma separated" },
@@ -68,8 +74,8 @@ const SECTIONS: { key: keyof Omit<Draft, "basics">; title: string; fields: Field
     key: "profiles",
     title: "Links",
     fields: [
-      { key: "network", label: "Site", placeholder: "LinkedIn" },
-      { key: "url", label: "URL" },
+      { key: "network", label: "Site", placeholder: "LinkedIn", required: true },
+      { key: "url", label: "URL", required: true },
     ],
   },
 ];
@@ -202,6 +208,7 @@ export function ResumeEditor({
       <input type="hidden" name="cv_id" value={cvId} />
       <input type="hidden" name="resume_json" value={JSON.stringify(fromDraft(draft, resume))} />
       <NextField next={next} />
+      <RequiredLegend />
 
       <Card className="grid gap-4 sm:grid-cols-2">
         <h2 className="text-lg font-semibold sm:col-span-2">About you</h2>
@@ -215,7 +222,7 @@ export function ResumeEditor({
             ["countryCode", "Country code", "e.g. GB"],
           ] as const
         ).map(([key, label, placeholder]) => (
-          <Field key={key} label={label} htmlFor={`basics-${key}`}>
+          <Field key={key} label={label} htmlFor={`basics-${key}`} required={key === "name"}>
             <Input
               id={`basics-${key}`}
               value={draft.basics[key] ?? ""}
@@ -244,7 +251,7 @@ export function ResumeEditor({
                 const id = `${section.key}-${i}-${f.key}`;
                 return (
                   <div key={f.key} className={f.multiline ? "sm:col-span-2" : undefined}>
-                    <Field label={f.label} htmlFor={id}>
+                    <Field label={f.label} htmlFor={id} required={f.required}>
                       {f.multiline ? (
                         <Textarea
                           id={id}

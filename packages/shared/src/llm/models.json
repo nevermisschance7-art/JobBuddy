@@ -1,10 +1,10 @@
 {
-  "$comment": "LLM providers and models. Edit here when free tiers change; no code changes needed. Each provider tries its models in order and moves to the next on 'model not found'. Check what exists with: cd workers && uv run python -m jobbuddy_workers.llm.list_models",
+  "$comment": "LLM providers and models. Edit here when free tiers change; no code changes needed. Each provider tries its models in order, moving to the next when one is missing, overloaded, too slow or rejects the request. Ordered by reliability on free tiers: on 2026-10-27 the newest Gemini models returned 503 'high demand' or timed out, while flash-lite answered in under 2 s. Check with the 'AI check' workflow or: cd workers && uv run python -m jobbuddy_workers.llm.smoke",
   "order": ["gemini", "groq", "openrouter", "anthropic"],
   "providers": {
     "gemini": {
       "enabled": true,
-      "models": ["gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.5-flash-lite"]
+      "models": ["gemini-3.5-flash-lite", "gemini-3.7-flash", "gemini-3.8-flash"]
     },
     "groq": {
       "enabled": true,
@@ -12,11 +12,7 @@
     },
     "openrouter": {
       "enabled": true,
-      "models": [
-        "google/gemma-4-31b-it:free",
-        "nvidia/nemotron-3-super-120b-a12b:free",
-        "minimax/minimax-m3.1-flash:free"
-      ]
+      "models": ["google/gemma-4-31b-it:free", "nvidia/nemotron-3-super-120b-a12b:free"]
     },
     "anthropic": {
       "$comment": "Paid. Set enabled to true and add ANTHROPIC_API_KEY to turn it on.",
@@ -25,12 +21,33 @@
     }
   },
   "tasks": {
-    "cv_to_resume": { "temperature": 0.1, "maxOutputTokens": 8192 },
-    "tailor_cv": { "temperature": 0.2, "maxOutputTokens": 8192 },
-    "draft_answer": { "temperature": 0.6, "maxOutputTokens": 1024 },
-    "cover_letter": { "temperature": 0.6, "maxOutputTokens": 1024 },
-    "explain_match": { "temperature": 0.3, "maxOutputTokens": 512 },
-    "classify_reply": { "temperature": 0, "maxOutputTokens": 256 },
-    "key_check": { "temperature": 0, "maxOutputTokens": 16 }
+    "cv_to_resume": {
+      "temperature": 0.1,
+      "maxOutputTokens": 8192
+    },
+    "tailor_cv": {
+      "temperature": 0.2,
+      "maxOutputTokens": 8192
+    },
+    "draft_answer": {
+      "temperature": 0.6,
+      "maxOutputTokens": 1024
+    },
+    "cover_letter": {
+      "temperature": 0.6,
+      "maxOutputTokens": 1024
+    },
+    "explain_match": {
+      "temperature": 0.3,
+      "maxOutputTokens": 512
+    },
+    "classify_reply": {
+      "temperature": 0,
+      "maxOutputTokens": 256
+    },
+    "key_check": {
+      "temperature": 0,
+      "maxOutputTokens": 16
+    }
   }
 }

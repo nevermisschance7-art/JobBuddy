@@ -6,7 +6,8 @@ import {
   type ProviderName,
 } from "./types";
 
-const TIMEOUT_MS = 60_000;
+// Per model. A user is waiting on most calls, and a slow model is skipped for the next one.
+const TIMEOUT_MS = 30_000;
 
 /** Parses "30s", "1.5s", "2m59.56s", "1h2m" or plain seconds. */
 export function parseDuration(value: string | null | undefined): number | null {

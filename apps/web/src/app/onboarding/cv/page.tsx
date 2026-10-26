@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CvUpload } from "@/components/forms/cv-upload";
+import { CvUpload, RereadCv } from "@/components/forms/cv-upload";
 import { ResumeEditor } from "@/components/forms/resume-editor";
 import { MascotSays } from "@/components/mascot";
 import { Card } from "@/components/ui/field";
@@ -20,10 +20,11 @@ export default async function CvStep() {
       <Card className="flex flex-col gap-3">
         <h1 className="text-2xl font-semibold">Your CV</h1>
         <CvUpload hasCv={Boolean(cv)} />
+        {cv?.original_file ? <RereadCv cvId={cv.id} /> : null}
       </Card>
       {cv ? (
         <ResumeEditor
-          key={cv.id}
+          key={`${cv.id}-${cv.updated_at}`}
           cvId={cv.id}
           resume={cv.resume}
           confirmed={cv.confirmed}

@@ -1,7 +1,7 @@
 import { AppHeader } from "@/components/app-header";
 import { DeleteAccountForm, DisplayNameForm } from "@/components/forms/account-forms";
 import { AiKeysForm } from "@/components/forms/ai-keys-form";
-import { CvUpload } from "@/components/forms/cv-upload";
+import { CvUpload, RereadCv } from "@/components/forms/cv-upload";
 import { FiltersForm } from "@/components/forms/filters-form";
 import { FixedAnswersForm } from "@/components/forms/fixed-answers-form";
 import { ResumeEditor } from "@/components/forms/resume-editor";
@@ -80,9 +80,15 @@ export default async function SettingsPage() {
         <Section id="cv" title="CV">
           <Card>
             <CvUpload hasCv={Boolean(cv)} />
+            {cv?.original_file ? <RereadCv cvId={cv.id} /> : null}
           </Card>
           {cv ? (
-            <ResumeEditor key={cv.id} cvId={cv.id} resume={cv.resume} confirmed={cv.confirmed} />
+            <ResumeEditor
+              key={`${cv.id}-${cv.updated_at}`}
+              cvId={cv.id}
+              resume={cv.resume}
+              confirmed={cv.confirmed}
+            />
           ) : null}
         </Section>
 

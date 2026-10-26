@@ -9,6 +9,7 @@ import { AI_PROVIDERS, validateAiKey, type AiProvider } from "@/lib/ai-keys/vali
 import { encryptSecret } from "@/lib/crypto";
 import { cvKind, extractCvText, MAX_CV_BYTES } from "@/lib/cv/extract";
 import { readCv } from "@/lib/cv/ai-resume";
+import { prefillFromResume } from "@/lib/cv/prefill";
 import { requireUser } from "@/lib/data";
 import { serverEnv } from "@/lib/env";
 import { FIXED_ANSWER_KEYS } from "@/lib/fixed-answers";
@@ -110,8 +111,48 @@ export async function confirmResume(_prev: ActionState, formData: FormData): Pro
     .eq("user_id", user.id);
   if (error) return failed("Saving failed. Try again.");
 
+  const filled = await prefillFromResume(supabase, user.id, parsed.data);
   revalidatePath("/", "layout");
-  return finish(formData, saved("CV confirmed. This is now the only source I tailor from."));
+  const extra = filled.length > 0 ? ` I also filled in ${filled.join(", ")} from it.` : "";
+  return finish(
+    formData,
+    saved(`CV confirmed. This is now the only source I tailor from.${extra}`),
+  );
+}
+
+/** Reads the stored CV file again with AI, for when the first read missed things. */
+export async function rereadCv(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const { supabase, user } = await requireUser();
+  const cvId = text(formData, "cv_id");
+  if (!cvId) return failed("Something went wrong. Reload the page and try again.");
+  const { data: cv } = await supabase
+    .from("cvs")
+    .select("original_file")
+    .eq("id", cvId)
+    .eq("user_id", user.id)
+    .single();
+  if (!cv?.original_file) return failed("I can't find the original file. Upload it again.");
+
+  const { data: blob } = await supabase.storage.from("cvs").download(cv.original_file);
+  if (!blob) return failed("I can't open the original file. Upload it again.");
+  const kind = cv.original_file.endsWith(".docx") ? "docx" : "pdf";
+  let cvText: string;
+  try {
+    cvText = await extractCvText(new Uint8Array(await blob.arrayBuffer()), kind);
+  } catch {
+    return failed("I couldn't read the original file. Upload it again.");
+  }
+
+  const read = await readCv(supabase, user.id, cvText);
+  if (!read.usedAi)
+    return failed(read.note ?? "The AI isn't available right now. Try again later.");
+  await supabase
+    .from("cvs")
+    .update({ resume_json: read.resume, confirmed: false, embedding: null })
+    .eq("id", cvId)
+    .eq("user_id", user.id);
+  revalidatePath("/", "layout");
+  return saved("Done. I filled the form from your CV again. Check it and confirm.");
 }
 
 // ---------------------------------------------------------------- filters

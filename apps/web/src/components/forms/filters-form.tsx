@@ -5,7 +5,7 @@ import { useActionState, useState } from "react";
 import { NextField } from "@/components/next-field";
 import { TagInput } from "@/components/tag-input";
 import { Button } from "@/components/ui/button";
-import { Card, Field, FormMessage, Input, Select } from "@/components/ui/field";
+import { Card, Field, FormMessage, Input, RequiredLegend, Select } from "@/components/ui/field";
 import { initialState } from "@/lib/action-state";
 import { saveFilters } from "@/lib/actions/onboarding";
 import { COUNTRY_OPTIONS, CURRENCIES } from "@/lib/countries";
@@ -53,11 +53,13 @@ export function FiltersForm({
   return (
     <form action={action} className="flex flex-col gap-6">
       <NextField next={next} />
+      <RequiredLegend />
 
       <Card className="flex flex-col gap-5">
         <h2 className="text-lg font-semibold">Where you can work</h2>
         <Field
           label="Countries I can work in"
+          required
           htmlFor="countries"
           hint="Type a country and press Enter. Remote jobs open to these countries count too."
         >
@@ -81,7 +83,7 @@ export function FiltersForm({
 
       <Card className="flex flex-col gap-5">
         <h2 className="text-lg font-semibold">How you want to work</h2>
-        <Field label="Work style">
+        <Field label="Work style" required>
           <Checks
             name="remote_types"
             options={[
@@ -117,7 +119,7 @@ export function FiltersForm({
             />
           </Field>
         </div>
-        <Field label="Job type">
+        <Field label="Job type" required>
           <Checks
             name="employment_types"
             options={[

@@ -13,6 +13,7 @@ export function LoginForm() {
     <form action={action} className="flex flex-col gap-4">
       <Field
         label="Username"
+        required
         htmlFor="username"
         hint="New name? I'll make you an account. Used it before? You're back in."
       >

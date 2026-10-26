@@ -30,7 +30,7 @@ from .types import (
 M = TypeVar("M", bound=BaseModel)
 
 _COOLDOWN_KINDS = {"rate_limit", "quota"}
-_MODEL_LEVEL_ERRORS = {"model_not_found", "server", "bad_request"}
+_MODEL_LEVEL_ERRORS = {"model_not_found", "server", "bad_request", "network"}
 _NO_KEY = "No AI key is set up. Add a free Gemini key in Settings."
 _ALL_FAILED = (
     "All your AI keys are out of quota or not working right now. "

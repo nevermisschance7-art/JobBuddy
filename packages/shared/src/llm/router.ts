@@ -56,8 +56,8 @@ export type RouterOptions = {
 type CallOptions = { system?: string; personal?: PersonalInfo };
 
 const COOLDOWN_KINDS = new Set(["rate_limit", "quota"]);
-// Errors tied to one model (missing, overloaded, rejects an option): try the next model.
-const MODEL_LEVEL_ERRORS = new Set(["model_not_found", "server", "bad_request"]);
+// Errors tied to one model (missing, overloaded, too slow, rejects an option): try the next model.
+const MODEL_LEVEL_ERRORS = new Set(["model_not_found", "server", "bad_request", "network"]);
 
 export class LlmRouter {
   private readonly config: ModelsConfig;
