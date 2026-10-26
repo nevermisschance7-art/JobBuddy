@@ -10,6 +10,7 @@ import { encryptSecret } from "@/lib/crypto";
 import { cvKind, extractCvText, MAX_CV_BYTES } from "@/lib/cv/extract";
 import { readCv } from "@/lib/cv/ai-resume";
 import { prefillFromResume } from "@/lib/cv/prefill";
+import { requestMatchRun } from "@/lib/runs";
 import { requireUser } from "@/lib/data";
 import { serverEnv } from "@/lib/env";
 import { FIXED_ANSWER_KEYS } from "@/lib/fixed-answers";
@@ -112,6 +113,7 @@ export async function confirmResume(_prev: ActionState, formData: FormData): Pro
   if (error) return failed("Saving failed. Try again.");
 
   const filled = await prefillFromResume(supabase, user.id, parsed.data);
+  await requestMatchRun();
   revalidatePath("/", "layout");
   const extra = filled.length > 0 ? ` I also filled in ${filled.join(", ")} from it.` : "";
   return finish(
@@ -212,6 +214,8 @@ export async function saveFilters(_prev: ActionState, formData: FormData): Promi
   ]);
   if (f.error || p.error) return failed("Saving failed. Try again.");
 
+  // Filters changed: rescore now rather than at the next scheduled run.
+  await requestMatchRun();
   revalidatePath("/", "layout");
   return finish(formData, saved());
 }
@@ -309,5 +313,6 @@ export async function finishOnboarding() {
     .from("profiles")
     .update({ onboarded_at: new Date().toISOString() })
     .eq("user_id", user.id);
-  redirect("/app");
+  await requestMatchRun();
+  redirect("/app?first=1");
 }

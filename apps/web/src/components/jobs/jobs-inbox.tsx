@@ -193,7 +193,7 @@ export function JobsInbox({ initial, minScore, hasCv }: Props) {
             ? "Nothing saved yet. Tap Save on a job to keep it here."
             : query.view === "hidden"
               ? "No hidden jobs."
-              : "No matches with these filters yet. I check for new jobs every 2 hours."}
+              : "No matches yet. I start a search right after you change your CV or filters, and results arrive within about 15 minutes. I also check every 2 hours."}
         </MascotSays>
       ) : (
         <div className="flex flex-col gap-3">

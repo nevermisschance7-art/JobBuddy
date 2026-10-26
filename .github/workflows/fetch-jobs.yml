@@ -2,7 +2,9 @@ name: Fetch jobs
 
 on:
   schedule:
-    - cron: "7 */2 * * *" # every 2 hours
+    # The database starts this every 2 hours (start_fetch_run via pg_cron), because GitHub
+    # schedules run late or get skipped. This is only a backup.
+    - cron: "47 */6 * * *"
   workflow_dispatch:
     inputs:
       source:
