@@ -35,11 +35,12 @@ export function createAdminClient() {
   );
 }
 
-/** The signed-in user, or null. */
+/** The signed-in user (just the id), or null.
+ * getClaims() verifies the session token locally with the project's public key (ES256),
+ * so there is no round trip to Supabase Auth on every request. */
 export async function getUser() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  return { supabase, user };
+  const { data } = await supabase.auth.getClaims();
+  const id = data?.claims?.sub;
+  return { supabase, user: id ? { id } : null };
 }
