@@ -49,7 +49,7 @@ All LLM calls go through the router: [packages/shared/src/llm](packages/shared/s
 
 ## Job fetching (workers)
 
-`uv run jobbuddy-workers fetch [--source NAME]` runs every 2 hours in [fetch-jobs.yml](.github/workflows/fetch-jobs.yml). Sources, their real date fields, schedules and closing rules are documented in [workers/SOURCES.md](workers/SOURCES.md); read it before touching an adapter.
+`uv run jobbuddy-workers fetch [--source NAME]` runs in [fetch-jobs.yml](.github/workflows/fetch-jobs.yml), followed by matching. The database starts that workflow every 2 hours (`start_fetch_run()` via pg_cron and pg_net, GitHub token in Vault as `github_dispatch_token`) because GitHub's own schedule is unreliable; GitHub's schedule is a 6-hourly backup. The web app also starts it after onboarding, CV confirmation and filter changes (`requestMatchRun` in [runs.ts](apps/web/src/lib/runs.ts), `GITHUB_DISPATCH_TOKEN` on Netlify), unless a run is already queued or running. Sources, their real date fields, schedules and closing rules are documented in [workers/SOURCES.md](workers/SOURCES.md); read it before touching an adapter.
 
 - Jobs are worldwide. Only tech roles posted in the last 45 days where at least one user can work are stored (remote only while there are no users) (`is_relevant` in [run.py](workers/src/jobbuddy_workers/jobs/run.py)); locations are parsed to ISO countries plus remote regions (WORLDWIDE, EUROPE, EMEA, ...) in [geo.py](workers/src/jobbuddy_workers/geo.py).
 - Employer systems (complete listings) close a job after 2 missed runs; aggregators (partial listings) close after 14 days unseen.
@@ -113,6 +113,7 @@ Apply migrations with `supabase db push` (project is linked; no Docker needed). 
 - `SUPABASE_SERVICE_ROLE_KEY` (server only)
 - `APP_ENCRYPTION_KEY` (32-byte base64, AES-GCM for AI keys, server only)
 - `AUTH_SECRET` (server only; derives sign-in passwords. Changing it locks everyone out)
+- `GITHUB_DISPATCH_TOKEN` (server only; fine-grained token, Actions read/write on this repo only)
 - `OPENROUTER_API_KEY` (optional shared fallback)
 - `GEMINI_API_KEY` (dev testing only; users store their own keys encrypted in the database)
 
