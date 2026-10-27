@@ -149,7 +149,7 @@ test("sign up, onboard, edit settings, delete account", async ({ page }, info) =
     await expect(card.getByText("New", { exact: true })).toHaveCount(0);
 
     // Explain match needs an AI key; without one it says so kindly.
-    await card.getByText("More", { exact: true }).click();
+    await card.locator("summary[aria-label='More actions']").click();
     await card.getByRole("button", { name: /Explain match/ }).click();
     await expect(card.getByText(/need a working AI key/)).toBeVisible({ timeout: 30_000 });
 
@@ -160,7 +160,7 @@ test("sign up, onboard, edit settings, delete account", async ({ page }, info) =
     await expect(page.locator("article")).toHaveCount(1);
 
     // Not for me: hide it with a reason, then restore it from Hidden.
-    await page.locator("article").getByText("More", { exact: true }).click();
+    await page.locator("article summary[aria-label='More actions']").click();
     await page.getByRole("button", { name: "Not for me" }).click();
     await page.getByRole("button", { name: "Wrong level" }).click();
     await expect(page.getByText(/seniority levels/)).toBeVisible();

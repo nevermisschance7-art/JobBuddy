@@ -13,6 +13,8 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   reporter: [["list"], ["html", { open: "never" }]],
   use: {
+    // A stuck step fails with its own name instead of hanging until the test timeout.
+    actionTimeout: 20_000,
     baseURL: "http://localhost:3000",
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
