@@ -1,4 +1,3 @@
-import "server-only";
 import type { Resume } from "@jobbuddy/shared";
 import { Document, Packer, Paragraph, TabStopType, TextRun } from "docx";
 import { PDFDocument, StandardFonts, rgb, type PDFFont } from "pdf-lib";

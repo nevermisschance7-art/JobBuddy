@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, Field, FormMessage, Input, Textarea } from "@/components/ui/field";
 import { initialState } from "@/lib/action-state";
 import { draftApplicationAnswers, saveApplicationAnswers } from "@/lib/actions/answers";
-import type { StoredAnswer } from "@/lib/answers";
+import type { StoredAnswer } from "@/lib/answers-core";
 
 const LABELS: Record<StoredAnswer["kind"], { text: string; tone: string; help?: string }> = {
   fixed: {

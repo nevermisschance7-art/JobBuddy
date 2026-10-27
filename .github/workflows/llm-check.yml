@@ -26,3 +26,28 @@ jobs:
         run: uv run python -m jobbuddy_workers.llm.list_models || true
       - name: Call every configured model
         run: uv run python -m jobbuddy_workers.llm.smoke
+
+  web:
+    name: Tailoring and answers (real models)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Tailor a sample CV and draft answers
+        working-directory: apps/web
+        run: pnpm exec vitest run --config vitest.ai.config.ts --reporter=verbose
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-check-output
+          path: apps/web/ai-check-output

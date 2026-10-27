@@ -9,7 +9,7 @@ import { TailorButtons } from "@/components/applications/tailor-buttons";
 import { ResumeEditor } from "@/components/forms/resume-editor";
 import { MascotSays } from "@/components/mascot";
 import { Card } from "@/components/ui/field";
-import type { StoredAnswer } from "@/lib/answers";
+import type { StoredAnswer } from "@/lib/answers-core";
 import { loadProfile } from "@/lib/data";
 
 export const metadata = { title: "Application · JobBuddy" };
