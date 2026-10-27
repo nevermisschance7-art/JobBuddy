@@ -11,38 +11,13 @@ import { revalidatePath } from "next/cache";
 import { failed, saved, type ActionState } from "@/lib/action-state";
 import { cvFileName } from "@/lib/cv/layout";
 import { renderDocx, renderPdf } from "@/lib/cv/render";
-import { jobText, tailorResume, type TailorJob } from "@/lib/cv/tailor";
+import { jobText, tailorResume } from "@/lib/cv/tailor";
+import { loadApplicationContext as loadContext } from "@/lib/application-context";
 import { requireUser } from "@/lib/data";
 import { text } from "@/lib/form";
 import { cleanResume } from "@/lib/resume-clean";
 
 type Supabase = Awaited<ReturnType<typeof requireUser>>["supabase"];
-
-async function loadContext(supabase: Supabase, userId: string, applicationId: string | null) {
-  if (!applicationId) return null;
-  const [{ data: app }, { data: cv }] = await Promise.all([
-    supabase
-      .from("applications")
-      .select("id, jobs(title, company_name, description_text)")
-      .eq("id", applicationId)
-      .eq("user_id", userId)
-      .maybeSingle(),
-    supabase
-      .from("cvs")
-      .select("resume_json")
-      .eq("user_id", userId)
-      .eq("confirmed", true)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
-  ]);
-  if (!app) return null;
-  const source = resumeSchema.safeParse(cv?.resume_json);
-  return {
-    job: app.jobs as unknown as TailorJob,
-    source: source.success ? source.data : null,
-  };
-}
 
 async function saveTailored(
   supabase: Supabase,

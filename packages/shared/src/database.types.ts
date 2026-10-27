@@ -49,6 +49,7 @@ export type Database = {
       }
       answer_memory: {
         Row: {
+          company: string | null
           created_at: string
           final_answer: string
           id: string
@@ -60,6 +61,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          company?: string | null
           created_at?: string
           final_answer: string
           id?: string
@@ -71,6 +73,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          company?: string | null
           created_at?: string
           final_answer?: string
           id?: string

@@ -3,11 +3,13 @@ import { Download, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AppHeader } from "@/components/app-header";
+import { AnswersPanel } from "@/components/applications/answers-panel";
 import { CvPreview } from "@/components/applications/cv-preview";
 import { TailorButtons } from "@/components/applications/tailor-buttons";
 import { ResumeEditor } from "@/components/forms/resume-editor";
 import { MascotSays } from "@/components/mascot";
 import { Card } from "@/components/ui/field";
+import type { StoredAnswer } from "@/lib/answers";
 import { loadProfile } from "@/lib/data";
 
 export const metadata = { title: "Application · JobBuddy" };
@@ -21,7 +23,7 @@ export default async function ApplicationPage({ params }: { params: Promise<{ id
     supabase
       .from("applications")
       .select(
-        "id, status, tailored_resume_json, tailor_report, tailored_at, cv_approved_at, tailored_cv_pdf, jobs(title, company_name, apply_url)",
+        "id, status, answers, tailored_resume_json, tailor_report, tailored_at, cv_approved_at, tailored_cv_pdf, jobs(title, company_name, apply_url)",
       )
       .eq("id", id)
       .eq("user_id", user.id)
@@ -42,6 +44,7 @@ export default async function ApplicationPage({ params }: { params: Promise<{ id
   const tailored = resumeSchema.safeParse(app.tailored_resume_json);
   const report = app.tailor_report as TruthReport | null;
   const approved = Boolean(app.cv_approved_at && app.tailored_cv_pdf);
+  const answers = (Array.isArray(app.answers) ? app.answers : []) as unknown as StoredAnswer[];
   const taken = report ? [...report.removed, ...report.corrected] : [];
 
   return (
@@ -159,6 +162,12 @@ export default async function ApplicationPage({ params }: { params: Promise<{ id
                 </p>
               </Card>
             ) : null}
+
+            <AnswersPanel
+              key={answers.map((a) => `${a.kind}:${a.question}`).join("|")}
+              applicationId={app.id}
+              answers={answers}
+            />
           </>
         )}
       </main>

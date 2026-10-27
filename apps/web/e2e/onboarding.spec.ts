@@ -169,6 +169,24 @@ test("sign up, onboard, edit settings, delete account", async ({ page }, info) =
     );
     expect(docx.status()).toBe(200);
 
+    // Answers: sensitive questions come from fixed answers, never an AI.
+    await page
+      .getByLabel("Paste the questions, one per line")
+      .fill(
+        "Do you need visa sponsorship?\nWhat is your notice period?\nWhy do you want this job?",
+      );
+    await page.getByRole("button", { name: "Draft answers" }).click();
+    await expect(page.getByText(/^Done\./)).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByLabel("Do you need visa sponsorship?", { exact: true })).toHaveValue(
+      "No",
+    );
+    await expect(page.getByLabel("What is your notice period?")).toHaveValue("1 month");
+    await expect(page.getByText("Write this one yourself")).toBeVisible();
+    await page.getByLabel("Why do you want this job?").fill("I like building APIs.");
+    await page.getByRole("button", { name: "Save my answers" }).click();
+    await expect(page.getByText(/^Saved\./)).toBeVisible();
+    await shot(page, "10e2-answers");
+
     // Then move it on the board.
     await page.getByRole("link", { name: "Back to applications" }).click();
     await expect(page).toHaveURL(/\/applications$/);
