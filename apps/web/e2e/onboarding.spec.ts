@@ -253,7 +253,8 @@ test("sign up, onboard, edit settings, delete account", async ({ page }, info) =
     const status = page.getByRole("combobox", { name: /^Status of / });
     await expect(status).toHaveValue("prepared");
     await page.getByRole("button", { name: "I applied" }).click();
-    await expect(status).toHaveValue("applied");
+    // It leaves "Ready to apply" and shows under "Applied".
+    await expect(page.locator("li", { hasText: "E2E Backend Engineer" })).toHaveCount(0);
     await page.getByRole("link", { name: /^Applied/ }).click();
     await expect(page.locator("li", { hasText: "E2E Backend Engineer" })).toBeVisible();
     await shot(page, "10f-applications");
