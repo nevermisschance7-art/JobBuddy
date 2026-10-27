@@ -77,6 +77,15 @@ All LLM calls go through the router: [packages/shared/src/llm](packages/shared/s
 - `/usage`: AI calls per provider today and key health from `llm_calls` and `ai_keys`.
 - `/settings`, `/onboarding/*`, `/login`.
 
+## Chrome extension
+
+[extension/](extension) (MV3, Vite). Never clicks Submit.
+
+- Sign-in: the popup takes the username and calls `POST /api/extension/session` (also refreshes tokens). The session lives in `chrome.storage.local`. All data goes through `/api/extension/*` with a bearer token ([auth.ts](apps/web/src/lib/extension/auth.ts)), so RLS applies as on the website; the middleware skips these routes.
+- Content script ([content/index.ts](extension/src/content/index.ts), all frames) on the hosts in `ATS_HOSTS` ([urls.ts](packages/shared/src/extension/urls.ts)): finds the job from the page URL (`jobKeyFromUrl`; Greenhouse embeds via `gh_jid`/`token`), then "Fill this application" or "Prepare this one" (sends the form's questions to `/api/extension/prepare`, which adds the job if unknown with an unknown posting date, drafts answers and creates an `application_ready` event). Filling ([form.ts](extension/src/content/form.ts), tested with happy-dom): labels from `label[for]`, aria and container text; sensitive questions only from fixed answers; others from the application's saved answers (similarity 0.6+); native value setter plus input/change events; the approved CV PDF via DataTransfer (or a drop event); unfilled fields outlined. A confirmation page after a fill marks the application applied (`/api/extension/applied`).
+- Background: polls `/api/extension/events` every 15 minutes (chrome.alarms) for the 5 alert types, respects quiet hours and enabled types ([alerts.ts](packages/shared/src/extension/alerts.ts)), messages in the user's tone, badge = unread alerts.
+- Build: `pnpm --filter extension build` (main build, then the content script as one IIFE file; the manifest is generated in [vite.config.ts](extension/vite.config.ts)). For the team: the manual "Build extension" workflow attaches `jobbuddy-extension.zip` to the `extension-latest` release, linked from Settings.
+
 ## Running locally
 
 Requirements: Node 20+, pnpm, uv, Supabase CLI. Docker is optional (only for a local Supabase); by default we use the cloud project.
@@ -84,7 +93,7 @@ Requirements: Node 20+, pnpm, uv, Supabase CLI. Docker is optional (only for a l
 ```bash
 pnpm install                 # all JS/TS packages
 pnpm dev                     # web app at http://localhost:3000
-pnpm --filter extension dev  # build the extension in watch mode, load extension/dist unpacked
+pnpm --filter extension dev  # build the extension once, load extension/dist unpacked
 cd workers && uv sync        # Python deps (uv installs Python 3.12 itself)
 cd workers && uv run python -m jobbuddy_workers --help
 ```
@@ -131,9 +140,7 @@ Apply migrations with `supabase db push` (project is linked; no Docker needed). 
 
 **extension** (`extension/.env`)
 
-- `VITE_SUPABASE_URL`
-- `VITE_SUPABASE_ANON_KEY`
-- `VITE_APP_URL`
+- `VITE_APP_URL` (the web app; every request goes through it)
 
 ## Notes for working on this repo
 

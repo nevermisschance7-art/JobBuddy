@@ -1,0 +1,35 @@
+name: Build extension
+
+# Manual: builds the Chrome extension for the live site and attaches the zip to the
+# "extension-latest" release, which Settings links to. Costs no Netlify credits.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      VITE_APP_URL: https://jobbuddy-team.netlify.app
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter extension build
+      - name: Zip
+        run: cd extension/dist && zip -r ../../jobbuddy-extension.zip .
+      - name: Attach to the extension-latest release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view extension-latest >/dev/null 2>&1 || \
+            gh release create extension-latest --title "JobBuddy Chrome extension" \
+              --notes "Unzip, open chrome://extensions, turn on Developer mode, Load unpacked. Built from ${GITHUB_SHA}."
+          gh release upload extension-latest jobbuddy-extension.zip --clobber

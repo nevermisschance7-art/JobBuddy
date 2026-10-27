@@ -17,8 +17,13 @@ const SECTIONS = [
   ["answers", "Fixed answers"],
   ["ai", "AI keys"],
   ["tone", "Tone"],
+  ["extension", "Chrome extension"],
   ["data", "Your data"],
 ] as const;
+
+/** Built by the "Build extension" workflow and attached to the extension-latest release. */
+const EXTENSION_ZIP =
+  "https://github.com/nevermisschance7-art/JobBuddy/releases/download/extension-latest/jobbuddy-extension.zip";
 
 function Section({
   id,
@@ -99,6 +104,33 @@ export default async function SettingsPage() {
 
         <Section id="tone" title="Tone">
           <ToneForm tone={profile?.tone ?? "kind"} />
+        </Section>
+
+        <Section id="extension" title="Chrome extension">
+          <Card className="flex flex-col gap-3 text-sm">
+            <p>
+              The extension fills application forms on Greenhouse, Lever, Ashby, Workable and
+              SmartRecruiters with your details, fixed answers, drafted answers and tailored CV, and
+              shows your alerts. It never presses Submit: you always do.
+            </p>
+            <ol className="flex list-decimal flex-col gap-1 pl-5">
+              <li>
+                <a href={EXTENSION_ZIP} className="underline">
+                  Download the extension
+                </a>{" "}
+                and unzip it.
+              </li>
+              <li>
+                In Chrome, open <code>chrome://extensions</code> and turn on Developer mode (top
+                right).
+              </li>
+              <li>Click &quot;Load unpacked&quot; and choose the unzipped folder.</li>
+              <li>
+                Click the JobBuddy icon in the toolbar and sign in with your username,{" "}
+                <strong>{username}</strong>.
+              </li>
+            </ol>
+          </Card>
         </Section>
 
         <Section id="data" title="Your data">

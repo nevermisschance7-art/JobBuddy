@@ -18,13 +18,28 @@ function admin() {
   );
 }
 
-/** Inserts one match for the user, using any open job, like the matcher would. */
-async function seedMatch(username: string) {
+/** Adds a throwaway Greenhouse-style job and one match for the user, like the matcher would. */
+async function seedMatch(username: string, jobUrl: string) {
   const db = admin();
   const { data: users } = await db.auth.admin.listUsers({ perPage: 200 });
   const user = users.users.find((u) => u.email?.startsWith(`${username}@`));
-  const { data: job } = await db.from("jobs").select("id").is("closed_at", null).limit(1).single();
-  if (!user || !job) throw new Error("No user or open job to seed a match with");
+  const { data: job, error: jobError } = await db
+    .from("jobs")
+    .insert({
+      source: "e2e",
+      external_id: jobUrl,
+      canonical_url: jobUrl,
+      apply_url: jobUrl,
+      title: "E2E Backend Engineer",
+      company_name: "E2E Test Co",
+      description_text: "Build Python APIs on AWS.",
+      remote_type: "remote",
+      posted_at: new Date().toISOString(),
+      date_source: "source_field",
+    })
+    .select("id")
+    .single();
+  if (!user || !job) throw new Error(`No user or job to seed a match with: ${jobError?.message}`);
   const { error } = await db.from("user_job_matches").insert({
     user_id: user.id,
     job_id: job.id,
@@ -54,6 +69,7 @@ async function shot(page: Page, name: string) {
 
 test("sign up, onboard, edit settings, delete account", async ({ page }, info) => {
   const username = `e2e-${info.project.name}-${randomUUID().slice(0, 6)}`;
+  const jobUrl = `https://boards.greenhouse.io/e2etestco/jobs/${Date.now()}${Math.floor(Math.random() * 1000)}`;
 
   try {
     // Signed-out visitors land on the login page.
@@ -118,7 +134,7 @@ test("sign up, onboard, edit settings, delete account", async ({ page }, info) =
     await shot(page, "10-dashboard-empty");
 
     // Dashboard with a real job: give this user one match, as the matcher would.
-    await seedMatch(username);
+    await seedMatch(username, jobUrl);
     await page.reload();
     const card = page.locator("article").first();
     await expect(card).toBeVisible();
@@ -187,6 +203,42 @@ test("sign up, onboard, edit settings, delete account", async ({ page }, info) =
     await expect(page.getByText(/^Saved\./)).toBeVisible();
     await shot(page, "10e2-answers");
 
+    // The Chrome extension's API: sign in with the username, find this job's application by
+    // its page URL with everything needed to fill the form, then mark it applied.
+    const signIn = await page.request.post("/api/extension/session", { data: { username } });
+    expect(signIn.status()).toBe(200);
+    const { access_token } = await signIn.json();
+    const auth = { authorization: `Bearer ${access_token}` };
+    expect(
+      (await page.request.post("/api/extension/lookup", { data: { url: jobUrl } })).status(),
+    ).toBe(401);
+    const lookup = await (
+      await page.request.post("/api/extension/lookup", {
+        headers: auth,
+        data: { url: `${jobUrl}?utm_source=x` },
+      })
+    ).json();
+    expect(lookup.job.title).toBe("E2E Backend Engineer");
+    expect(lookup.application.profile.email).toBe("sam.tester@example.com");
+    expect(lookup.application.fixedAnswers.needs_sponsorship).toBe("No");
+    expect(lookup.application.answers).toContainEqual(
+      expect.objectContaining({
+        question: "Why do you want this job?",
+        answer: "I like building APIs.",
+      }),
+    );
+    expect(lookup.application.cv.base64.length).toBeGreaterThan(100);
+    const summary = await (
+      await page.request.get("/api/extension/summary", { headers: auth })
+    ).json();
+    expect(summary.username).toBe(username);
+    expect((await page.request.get("/api/extension/events", { headers: auth })).status()).toBe(200);
+    expect(
+      (
+        await page.request.post("/api/extension/session", { data: { username: "e2e-nobody-x1" } })
+      ).status(),
+    ).toBe(404);
+
     // Then move it on the board.
     await page.getByRole("link", { name: "Back to applications" }).click();
     await expect(page).toHaveURL(/\/applications$/);
@@ -246,6 +298,7 @@ test("sign up, onboard, edit settings, delete account", async ({ page }, info) =
         }
         await db.auth.admin.deleteUser(user.id);
       }
+      await db.from("jobs").delete().eq("source", "e2e").eq("external_id", jobUrl);
     }
   }
 });
