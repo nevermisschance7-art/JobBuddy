@@ -25,7 +25,7 @@ const LABELS: Record<StoredAnswer["kind"], { text: string; tone: string; help?: 
   failed: {
     text: "Write this one yourself",
     tone: "bg-rose-100 text-rose-900",
-    help: "I couldn't draft it (no working AI key?).",
+    help: "I couldn't draft it: no working AI key, or too many questions at once. Press Draft answers again with this question, or write it yourself.",
   },
 };
 

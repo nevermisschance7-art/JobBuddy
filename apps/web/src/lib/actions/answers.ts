@@ -48,7 +48,7 @@ export async function draftApplicationAnswers(
   const missing = drafted.filter((d) => d.kind === "missing_fixed").length;
   const notes = [
     failedCount > 0
-      ? `${failedCount} couldn't be drafted (no working AI key?), write those yourself`
+      ? `${failedCount} couldn't be drafted (no working AI key, or too many at once): draft them again or write them yourself`
       : "",
     missing > 0 ? `${missing} need${missing === 1 ? "s" : ""} a fixed answer from you` : "",
   ].filter(Boolean);

@@ -108,6 +108,21 @@ describe("answerQuestions", () => {
     expect(out[0]!.unsupported).toEqual(["ci/cd", "kafka"]);
   });
 
+  it("drafts at most maxDrafts answers with the AI; fixed answers don't count", async () => {
+    const d = deps({ maxDrafts: 2 });
+    const out = await answerQuestions(
+      [
+        { text: "Q one?" },
+        { text: "Do you need sponsorship?" },
+        { text: "Q two?" },
+        { text: "Q three?" },
+      ],
+      d,
+    );
+    expect(d.draft).toHaveBeenCalledTimes(2);
+    expect(out.map((a) => a.kind)).toEqual(["drafted", "fixed", "drafted", "failed"]);
+  });
+
   it("marks a failed draft instead of throwing", async () => {
     const d = deps({ draft: vi.fn(async () => Promise.reject(new Error("no keys"))) });
     const out = await answerQuestions([{ text: "Why us?" }], d);

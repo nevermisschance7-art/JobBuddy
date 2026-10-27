@@ -168,6 +168,8 @@ export type DraftDeps = {
   adapt?: (answer: string, question: string) => Promise<{ text: string }>;
   /** Lists claims in a draft that the CV doesn't support (see unsupportedIn). */
   check?: (text: string) => string[];
+  /** Most AI drafts in one call, so a long form fits in one web request. Default 12. */
+  maxDrafts?: number;
 };
 
 /** AI calls running at once: quick enough for a web request, gentle on free rate limits. */
@@ -179,10 +181,12 @@ export async function answerQuestions(
 ): Promise<DraftedAnswer[]> {
   const out: DraftedAnswer[] = new Array(questions.length);
   let next = 0;
+  let budget = deps.maxDrafts ?? 12;
+  const takeDraft = () => budget-- > 0;
   const worker = async () => {
     while (next < questions.length) {
       const i = next++;
-      out[i] = await answerOne(questions[i]!, deps);
+      out[i] = await answerOne(questions[i]!, deps, takeDraft);
     }
   };
   await Promise.all(Array.from({ length: Math.min(PARALLEL, questions.length) }, worker));
@@ -192,6 +196,7 @@ export async function answerQuestions(
 async function answerOne(
   q: { text: string; coverLetter?: boolean },
   deps: DraftDeps,
+  takeDraft: () => boolean,
 ): Promise<DraftedAnswer> {
   const isCoverLetter = Boolean(q.coverLetter);
   const maxWords = isCoverLetter
@@ -232,6 +237,8 @@ async function answerOne(
     };
   }
 
+  // Over the limit: left for the user, who can press Draft again for the rest.
+  if (!takeDraft()) return { ...base, kind: "failed", answer: "" };
   try {
     const examples = ranked.slice(0, 5).map((r) => r.m);
     const { text } = await deps.draft({ question: q.text, maxWords, examples, isCoverLetter });
