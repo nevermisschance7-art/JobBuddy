@@ -150,7 +150,7 @@ In 2 to 4 short sentences, tell the candidate why this job fits and what might n
   }
 }
 
-/** Starts an application. CV tailoring and answers build on this (next steps). */
+/** Starts an application (or reopens it) and goes to its page to tailor the CV. */
 export async function prepareApplication(jobId: string): Promise<void> {
   const { supabase, user } = await requireUser();
   const { data: existing } = await supabase
@@ -159,10 +159,14 @@ export async function prepareApplication(jobId: string): Promise<void> {
     .eq("user_id", user.id)
     .eq("job_id", jobId)
     .maybeSingle();
-  if (!existing) {
-    await supabase
+  let applicationId = existing?.id;
+  if (!applicationId) {
+    const { data: created } = await supabase
       .from("applications")
-      .insert({ user_id: user.id, job_id: jobId, status: "prepared" });
+      .insert({ user_id: user.id, job_id: jobId, status: "prepared" })
+      .select("id")
+      .single();
+    applicationId = created?.id;
   }
   await supabase
     .from("user_job_matches")
@@ -170,5 +174,5 @@ export async function prepareApplication(jobId: string): Promise<void> {
     .eq("user_id", user.id)
     .eq("job_id", jobId);
   revalidatePath("/app");
-  redirect("/applications");
+  redirect(applicationId ? `/applications/${applicationId}` : "/applications");
 }

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, Field, FormMessage, Input, RequiredLegend, Textarea } from "@/components/ui/field";
 import { initialState } from "@/lib/action-state";
 import { confirmResume } from "@/lib/actions/onboarding";
+import { approveTailored } from "@/lib/actions/tailor";
 
 // Loose editing shape: everything is a string while typing; the server cleans and validates.
 type Row = Record<string, string>;
@@ -67,6 +68,7 @@ const SECTIONS: { key: keyof Omit<Draft, "basics">; title: string; fields: Field
       { key: "name", label: "Name", required: true },
       { key: "url", label: "Link" },
       { key: "description", label: "Short description", multiline: true },
+      { key: "highlights", label: "What you did, one per line", multiline: true },
       { key: "keywords", label: "Tech, comma separated" },
     ],
   },
@@ -118,6 +120,7 @@ function toDraft(r: Resume): Draft {
       name: str(p.name),
       url: str(p.url),
       description: str(p.description),
+      highlights: joinList(p.highlights, "\n"),
       keywords: joinList(p.keywords, ", "),
     })),
   };
@@ -171,25 +174,34 @@ function fromDraft(d: Draft, original: Resume): Resume {
       name: p.name ?? "",
       url: p.url,
       description: p.description,
-      highlights: [],
+      highlights: lines(p.highlights),
       keywords: commas(p.keywords),
     })),
   };
 }
 
+/**
+ * Edits the confirmed CV, or (with `applicationId`) the tailored copy for one application,
+ * where saving means "approve and create the files".
+ */
 export function ResumeEditor({
   cvId,
+  applicationId,
   resume,
   confirmed,
   next,
 }: {
-  cvId: string;
+  cvId?: string;
+  applicationId?: string;
   resume: Resume;
   confirmed: boolean;
   next?: string;
 }) {
   const [draft, setDraft] = useState<Draft>(() => toDraft(resume));
-  const [state, action, pending] = useActionState(confirmResume, initialState);
+  const [state, action, pending] = useActionState(
+    applicationId ? approveTailored : confirmResume,
+    initialState,
+  );
 
   const setBasic = (key: string, value: string) =>
     setDraft((d) => ({ ...d, basics: { ...d.basics, [key]: value } }));
@@ -205,7 +217,8 @@ export function ResumeEditor({
 
   return (
     <form action={action} className="flex flex-col gap-6">
-      <input type="hidden" name="cv_id" value={cvId} />
+      {cvId ? <input type="hidden" name="cv_id" value={cvId} /> : null}
+      {applicationId ? <input type="hidden" name="application_id" value={applicationId} /> : null}
       <input type="hidden" name="resume_json" value={JSON.stringify(fromDraft(draft, resume))} />
       <NextField next={next} />
       <RequiredLegend />
@@ -296,7 +309,15 @@ export function ResumeEditor({
 
       <FormMessage error={state.error} ok={state.message} />
       <Button type="submit" size="lg" disabled={pending}>
-        {pending ? "Saving..." : confirmed ? "Save changes" : "This is right, confirm my CV"}
+        {pending
+          ? "Saving..."
+          : applicationId
+            ? confirmed
+              ? "Save changes and create files again"
+              : "Approve and create files"
+            : confirmed
+              ? "Save changes"
+              : "This is right, confirm my CV"}
       </Button>
     </form>
   );

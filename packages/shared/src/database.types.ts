@@ -96,11 +96,14 @@ export type Database = {
           answers: Json
           applied_at: string | null
           created_at: string
+          cv_approved_at: string | null
           id: string
           job_id: string
           last_reply_at: string | null
           notes: string | null
           status: string
+          tailor_report: Json | null
+          tailored_at: string | null
           tailored_cv_docx: string | null
           tailored_cv_pdf: string | null
           tailored_resume_json: Json | null
@@ -111,11 +114,14 @@ export type Database = {
           answers?: Json
           applied_at?: string | null
           created_at?: string
+          cv_approved_at?: string | null
           id?: string
           job_id: string
           last_reply_at?: string | null
           notes?: string | null
           status?: string
+          tailor_report?: Json | null
+          tailored_at?: string | null
           tailored_cv_docx?: string | null
           tailored_cv_pdf?: string | null
           tailored_resume_json?: Json | null
@@ -126,11 +132,14 @@ export type Database = {
           answers?: Json
           applied_at?: string | null
           created_at?: string
+          cv_approved_at?: string | null
           id?: string
           job_id?: string
           last_reply_at?: string | null
           notes?: string | null
           status?: string
+          tailor_report?: Json | null
+          tailored_at?: string | null
           tailored_cv_docx?: string | null
           tailored_cv_pdf?: string | null
           tailored_resume_json?: Json | null

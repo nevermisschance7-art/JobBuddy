@@ -1,6 +1,7 @@
 "use client";
 
 import { ExternalLink } from "lucide-react";
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import { Select, Textarea } from "@/components/ui/field";
 import { moveApplication, saveNotes } from "@/lib/actions/applications";
@@ -38,6 +39,9 @@ function Card({ item }: { item: BoardItem }) {
         {item.jobs.title} <ExternalLink size={12} className="inline" />
       </a>
       <p className="text-muted-foreground">{item.jobs.company_name}</p>
+      <Link href={`/applications/${item.id}`} className="text-xs underline">
+        CV for this job
+      </Link>
       {item.applied_at ? (
         <p className="text-muted-foreground text-xs">
           Applied {new Date(item.applied_at).toLocaleDateString()}

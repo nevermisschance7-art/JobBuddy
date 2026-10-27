@@ -148,19 +148,40 @@ test("sign up, onboard, edit settings, delete account", async ({ page }, info) =
     await page.getByRole("tab", { name: "Matches" }).click();
     await expect(page.locator("article")).toHaveCount(1);
 
-    // Prepare application, then move it on the board.
+    // Prepare application: use the CV as it is (no AI key here), approve, get the files.
     await page.getByRole("button", { name: "Prepare application" }).click();
+    await expect(page).toHaveURL(/\/applications\/[0-9a-f-]+$/);
+    await shot(page, "10d-application-start");
+    await page.getByRole("button", { name: "Use my CV as it is" }).click();
+    await expect(page.getByText(/Using your CV as it is/)).toBeVisible();
+    await page.getByRole("button", { name: "Approve and create files" }).click();
+    await expect(page.getByText(/^Approved/)).toBeVisible({ timeout: 30_000 });
+    await page.reload();
+    const pdfLink = page.getByRole("link", { name: "Download PDF" });
+    await expect(pdfLink).toBeVisible();
+    await shot(page, "10e-application-cv");
+    const pdf = await page.request.get((await pdfLink.getAttribute("href"))!);
+    expect(pdf.status()).toBe(200);
+    expect(pdf.headers()["content-type"]).toBe("application/pdf");
+    expect((await pdf.body()).subarray(0, 5).toString()).toBe("%PDF-");
+    const docx = await page.request.get(
+      (await page.getByRole("link", { name: "Download Word" }).getAttribute("href"))!,
+    );
+    expect(docx.status()).toBe(200);
+
+    // Then move it on the board.
+    await page.getByRole("link", { name: "Back to applications" }).click();
     await expect(page).toHaveURL(/\/applications$/);
     const status = page.getByRole("combobox", { name: /^Status of / });
     await expect(status).toHaveValue("prepared");
     await status.selectOption("applied");
     // The card's date line, not the "Applied" column heading.
     await expect(page.getByText(/^Applied \d+\/\d+\/\d+/)).toBeVisible();
-    await shot(page, "10d-applications");
+    await shot(page, "10f-applications");
 
     await page.goto("/usage");
     await expect(page.getByRole("heading", { name: "AI usage" })).toBeVisible();
-    await shot(page, "10e-usage");
+    await shot(page, "10g-usage");
 
     // Settings keep what onboarding saved.
     await page.locator("header").getByRole("link", { name: "Settings" }).click();
