@@ -192,8 +192,7 @@ describe.skipIf(keys.length === 0)("AI check: tailoring and answers", () => {
     );
     report("answers", started);
     for (const a of answers) {
-      if (a.unsupported?.length)
-        console.log(`\n(flagged, not in CV: ${a.unsupported.join(", ")})`);
+      if (a.unsupported?.length) console.log(`\n(flagged, not in CV: ${a.unsupported.join(", ")})`);
       console.log(
         `\n[${a.kind}] ${a.question} (${a.answer.split(/\s+/).filter(Boolean).length}/${a.maxWords} words)\n${a.answer}`,
       );
