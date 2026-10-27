@@ -71,6 +71,19 @@ export function FiltersForm({
             placeholder="e.g. United Kingdom"
           />
         </Field>
+        <Field
+          label="Also show remote jobs limited to these countries"
+          htmlFor="remote-extra"
+          hint='For example United States, if you would work remotely for a US company as a contractor. These jobs are marked "Potential restriction".'
+        >
+          <TagInput
+            id="remote-extra"
+            name="remote_extra_countries"
+            initial={filters.remote_extra_countries}
+            options={COUNTRY_OPTIONS}
+            placeholder="e.g. United States"
+          />
+        </Field>
         <label className="flex items-center gap-2 text-sm">
           <input
             type="checkbox"

@@ -376,3 +376,19 @@ def test_eligibility_chip():
         chip(job(description_text="You must have the right to work in Germany."), filters())
         == "restriction"
     )
+
+
+def test_remote_jobs_limited_to_another_country_are_opt_in():
+    us_remote = job(countries=["US"], remote_type="remote", description_text="Python APIs.")
+    poland = filters(countries_allowed=["PL"])
+    assert "location" in hard_filters(us_remote, poland)
+
+    opted_in = filters(countries_allowed=["PL"], remote_extra_countries=["US"])
+    assert hard_filters(us_remote, opted_in) == []
+    elig = evaluate(us_remote, opted_in, NOW).breakdown["eligibility"]
+    assert elig["chip"] == "restriction"
+    assert elig["points"] == 6
+    assert "contractor" in elig["reason"]
+
+    us_office = job(countries=["US"], remote_type="onsite")
+    assert "location" in hard_filters(us_office, opted_in)  # only remote jobs, never office jobs

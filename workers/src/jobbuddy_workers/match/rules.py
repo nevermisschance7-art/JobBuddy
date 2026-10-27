@@ -34,6 +34,8 @@ def relevance_cap(technical_points: float) -> int:
 @dataclass
 class UserFilters:
     countries_allowed: list[str] = field(default_factory=list)
+    # Remote jobs limited to these countries are shown too (e.g. US remote, as a contractor).
+    remote_extra_countries: list[str] = field(default_factory=list)
     needs_sponsorship: bool = False
     remote_types: list[str] = field(default_factory=lambda: ["remote", "hybrid", "onsite"])
     hybrid_max_office_days: int | None = None
@@ -125,8 +127,10 @@ def mentions(text: str, skill: str) -> bool:
 # ---------------------------------------------------------------- filters
 
 
-def location_fit(job: JobFacts, allowed: list[str]) -> tuple[str, str]:
-    """('country'|'region'|'open_remote'|'none', reason)."""
+def location_fit(
+    job: JobFacts, allowed: list[str], remote_extra: list[str] | None = None
+) -> tuple[str, str]:
+    """('country'|'region'|'open_remote'|'remote_abroad'|'none', reason)."""
     allowed_set = set(allowed)
     hit = allowed_set & set(job.countries)
     if hit:
@@ -137,6 +141,10 @@ def location_fit(job: JobFacts, allowed: list[str]) -> tuple[str, str]:
             return "region", f"Remote, open to {label}"
     if job.remote_type == "remote" and not job.countries and not job.remote_regions:
         return "open_remote", "Remote, location limits not stated"
+    abroad = set(remote_extra or []) & set(job.countries)
+    if job.remote_type == "remote" and abroad:
+        names = ", ".join(COUNTRIES.get(c, c) for c in sorted(abroad))
+        return "remote_abroad", f"Remote, {names} only. You may need to work as a contractor"
     return "none", "Not in a country you can work in"
 
 
@@ -144,7 +152,10 @@ def hard_filters(job: JobFacts, f: UserFilters) -> list[str]:
     reasons: list[str] = []
     text = f"{job.title}\n{job.description_text}"
 
-    if f.countries_allowed and location_fit(job, f.countries_allowed)[0] == "none":
+    if (
+        f.countries_allowed
+        and location_fit(job, f.countries_allowed, f.remote_extra_countries)[0] == "none"
+    ):
         reasons.append("location")
     if f.needs_sponsorship and says_no_sponsorship(job.description_text):
         reasons.append("no_sponsorship")
@@ -214,14 +225,14 @@ def seniority(job: JobFacts, f: UserFilters) -> dict[str, object]:
 
 def eligibility(job: JobFacts, f: UserFilters) -> dict[str, object]:
     kind, reason = (
-        location_fit(job, f.countries_allowed)
+        location_fit(job, f.countries_allowed, f.remote_extra_countries)
         if f.countries_allowed
         else ("open_remote", "No country filter set")
     )
-    points = {"country": 20, "region": 17, "open_remote": 10, "none": 0}[kind]
+    points = {"country": 20, "region": 17, "open_remote": 10, "remote_abroad": 6, "none": 0}[kind]
     # Chip for the job card: indicated | sponsorship_stated | unclear | restriction.
     chip = {"country": "indicated", "region": "indicated"}.get(kind, "unclear")
-    if kind == "none" or says_no_sponsorship(job.description_text):
+    if kind in ("none", "remote_abroad") or says_no_sponsorship(job.description_text):
         chip = "restriction"
     if f.needs_sponsorship:
         if says_sponsorship_available(job.description_text):

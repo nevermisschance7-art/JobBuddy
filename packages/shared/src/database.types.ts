@@ -323,6 +323,7 @@ export type Database = {
           max_commute_km: number | null
           must_have_skills: string[]
           needs_sponsorship: boolean
+          remote_extra_countries: string[]
           remote_types: string[]
           salary_currency: string | null
           salary_floor: number | null
@@ -341,6 +342,7 @@ export type Database = {
           max_commute_km?: number | null
           must_have_skills?: string[]
           needs_sponsorship?: boolean
+          remote_extra_countries?: string[]
           remote_types?: string[]
           salary_currency?: string | null
           salary_floor?: number | null
@@ -359,6 +361,7 @@ export type Database = {
           max_commute_km?: number | null
           must_have_skills?: string[]
           needs_sponsorship?: boolean
+          remote_extra_countries?: string[]
           remote_types?: string[]
           salary_currency?: string | null
           salary_floor?: number | null
@@ -744,6 +747,7 @@ export type Database = {
       prune_closed_jobs: { Args: never; Returns: number }
       prune_stale_jobs: { Args: never; Returns: number }
       record_company_results: { Args: { results: Json }; Returns: undefined }
+      start_fetch_run: { Args: never; Returns: number }
     }
     Enums: {
       [_ in never]: never

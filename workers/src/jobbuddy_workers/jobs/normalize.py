@@ -17,7 +17,8 @@ RemoteType = Literal["remote", "hybrid", "onsite"]
 Seniority = Literal["junior", "mid", "senior", "lead", "principal", "unknown"]
 EmploymentType = Literal["full_time", "part_time", "contract", "temporary", "unknown"]
 
-MAX_DESCRIPTION_CHARS = 15_000
+# Enough to match and tailor on, and small enough for the free 500 MB database.
+MAX_DESCRIPTION_CHARS = 6_000
 
 # ---------------------------------------------------------------- text
 

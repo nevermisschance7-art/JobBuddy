@@ -11,6 +11,7 @@ from ...geo import country_code, parse_locations
 from ...http import FetchError, Http
 from ..model import Job, RawJob
 from ..normalize import (
+    MAX_DESCRIPTION_CHARS,
     canonical_url,
     employment_from,
     from_epoch,
@@ -123,7 +124,7 @@ class Lever:
             title=title,
             company_name=raw.company_name or "",
             company_id=raw.company_id,
-            description_text="\n\n".join(p for p in parts if p).strip()[:15_000],
+            description_text="\n\n".join(p for p in parts if p).strip()[:MAX_DESCRIPTION_CHARS],
             countries=countries,
             remote_regions=regions,
             locations=locs,
@@ -193,7 +194,7 @@ class Ashby:
             company_name=raw.company_name or "",
             company_id=raw.company_id,
             description_text=(j.get("descriptionPlain") or html_to_text(j.get("descriptionHtml")))[
-                :15_000
+                :MAX_DESCRIPTION_CHARS
             ],
             countries=countries,
             remote_regions=regions,
@@ -346,7 +347,7 @@ class SmartRecruiters:
             title=title,
             company_name=dig(j, "company", "name") or raw.company_name or "",
             company_id=raw.company_id,
-            description_text=description[:15_000],
+            description_text=description[:MAX_DESCRIPTION_CHARS],
             countries=countries,
             remote_regions=regions,
             locations=locs,

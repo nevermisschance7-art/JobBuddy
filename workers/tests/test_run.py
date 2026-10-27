@@ -158,7 +158,7 @@ def test_relevance_by_country_and_region():
     assert not is_relevant(de, {"BR"})
     eu_remote = make_job("x", "2", countries=(), regions=["EUROPE"], remote_type="remote")
     assert is_relevant(eu_remote, {"PL"})
-    assert not is_relevant(eu_remote, {"US"})
+    assert is_relevant(eu_remote, {"US"})  # all recent remote jobs are stored; matching decides
     anywhere = make_job("x", "3", countries=(), remote_type="remote")
     assert is_relevant(anywhere, {"US"})
     sales = make_job("x", "4", title="Account Executive", remote_type="remote")
@@ -223,3 +223,13 @@ def test_a_crashing_source_does_not_stop_the_others(setup, monkeypatch):
     monkeypatch.setattr(store, "upsert_jobs", boom)
     results = runner.run(hour=0)
     assert results["greenhouse"].errors and results["remotive"].errors  # both ran, both reported
+
+
+def test_every_recent_remote_job_is_kept_but_old_ones_are_not():
+    now = datetime(2026, 10, 27, tzinfo=UTC)
+    us_remote = make_job(
+        "x", "u", countries=("US",), remote_type="remote", posted_at=now - timedelta(days=3)
+    )
+    assert is_relevant(us_remote, {"PL"}, now=now)
+    month_old = make_job("x", "o", remote_type="remote", posted_at=now - timedelta(days=31))
+    assert not is_relevant(month_old, {"PL"}, now=now)

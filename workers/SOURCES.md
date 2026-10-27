@@ -36,13 +36,13 @@ Only the We Work Remotely fixture is synthesised (the feed is blocked from the d
 
 ## What gets stored
 
-- **Tech roles only** (title match), and only where at least one user can work: their countries, a remote region covering them, or remote with no stated area. With no users yet, only remote jobs are kept.
-- **Posted within 45 days** (unknown dates are kept). Open jobs posted more than 60 days ago are deleted daily (`prune_stale_jobs`) unless someone applied.
+- **Tech roles only** (title match): every remote job, plus office and hybrid jobs in countries at least one user can work in.
+- **Posted within 30 days** (unknown dates are kept). Open jobs posted more than 30 days ago are deleted daily (`prune_stale_jobs`) unless someone applied.
+- Descriptions are capped at 6,000 characters.
 - **Internships are dropped.**
 - **Salary only if stated** by the source, yearly.
 - **Duplicates:** same canonical URL, or same company + title + first country within 30 days. Employer systems run first, so their copy (and apply link) wins.
 - **Embeddings** (all-MiniLM-L6-v2, 384 dims via fastembed) only for new or changed jobs (`content_hash`).
-- Descriptions are capped at 15,000 characters.
 
 ## Politeness
 

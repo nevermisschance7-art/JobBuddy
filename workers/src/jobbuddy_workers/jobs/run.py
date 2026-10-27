@@ -14,7 +14,7 @@ from ..embed import Embedder, job_text, to_pgvector
 from ..geo import region_covers
 from ..http import Http
 from .model import Job, RawJob
-from .normalize import content_hash, dedupe_key, is_tech_role
+from .normalize import MAX_DESCRIPTION_CHARS, content_hash, dedupe_key, is_tech_role
 from .sources import AGGREGATOR_SOURCES, EMPLOYER_SOURCES, Company, FetchContext
 from .store import Existing, JobStore
 
@@ -24,7 +24,7 @@ EMPLOYER_CONCURRENCY = 16  # parallel companies per employer system (public, cac
 MAX_DETAILS_PER_RUN = (
     400  # detail requests (SmartRecruiters) per run; the rest wait for the next run
 )
-MAX_AGE_DAYS = 45  # older postings are rarely still worth applying to; keeps the free DB small
+MAX_AGE_DAYS = 30  # older postings are rarely still worth applying to; keeps the free DB small
 AGGREGATOR_STALE_DAYS = 14  # aggregator jobs close when not seen for this long
 
 
@@ -52,14 +52,15 @@ def is_relevant(job: Job, wanted: set[str], now: datetime | None = None) -> bool
     now = now or datetime.now(UTC)
     if job.posted_at and now - job.posted_at > timedelta(days=MAX_AGE_DAYS):
         return False
+    # Every recent remote tech job is kept: anyone may want it, even if it is limited to
+    # another country (filters.remote_extra_countries, e.g. "US remote" for contractors).
+    if job.remote_type == "remote":
+        return True
     if not wanted:
-        return job.remote_type == "remote"
+        return False
     if wanted & set(job.countries):
         return True
-    if any(region_covers(r, c) for r in job.remote_regions for c in wanted):
-        return True
-    # Remote with no stated area: keep; the matcher marks eligibility as unclear.
-    return job.remote_type == "remote" and not job.countries and not job.remote_regions
+    return any(region_covers(r, c) for r in job.remote_regions for c in wanted)
 
 
 def job_row(job: Job, h: str, key: str, embedding: list[float] | None) -> dict[str, Any]:
@@ -260,6 +261,8 @@ class Runner:
             except Exception as e:  # noqa: BLE001 - one odd posting must not stop the run
                 stats.errors.append(f"normalise {raw.external_id}: {e}"[:300])
                 continue
+            if job:
+                job.description_text = job.description_text[:MAX_DESCRIPTION_CHARS]
             if job and raw.company_id and not job.company_id:
                 job.company_id = raw.company_id
             if job and is_relevant(job, ctx.wanted_countries):

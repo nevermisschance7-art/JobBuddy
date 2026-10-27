@@ -161,6 +161,7 @@ export async function rereadCv(_prev: ActionState, formData: FormData): Promise<
 
 const filtersSchema = z.object({
   countries_allowed: z.array(z.string().regex(/^[A-Z]{2}$/)),
+  remote_extra_countries: z.array(z.string().regex(/^[A-Z]{2}$/)).max(50),
   needs_sponsorship: z.boolean(),
   remote_types: z
     .array(z.enum(["remote", "hybrid", "onsite"]))
@@ -186,6 +187,7 @@ export async function saveFilters(_prev: ActionState, formData: FormData): Promi
   const { supabase, user } = await requireUser();
   const parsed = filtersSchema.safeParse({
     countries_allowed: tags(formData, "countries_allowed"),
+    remote_extra_countries: tags(formData, "remote_extra_countries"),
     needs_sponsorship: formData.get("needs_sponsorship") === "on",
     remote_types: list(formData, "remote_types"),
     hybrid_max_office_days: int(formData, "hybrid_max_office_days"),

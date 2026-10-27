@@ -65,6 +65,7 @@ class SupabaseMatchStore(SupabaseStore):
                     matched_at=from_iso(p["matched_at"]),
                     filters=UserFilters(
                         countries_allowed=f["countries_allowed"] or [],
+                        remote_extra_countries=f.get("remote_extra_countries") or [],
                         needs_sponsorship=f["needs_sponsorship"],
                         remote_types=f["remote_types"] or ["remote", "hybrid", "onsite"],
                         hybrid_max_office_days=f["hybrid_max_office_days"],
