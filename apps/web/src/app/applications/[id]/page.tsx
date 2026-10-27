@@ -163,11 +163,7 @@ export default async function ApplicationPage({ params }: { params: Promise<{ id
               </Card>
             ) : null}
 
-            <AnswersPanel
-              key={answers.map((a) => `${a.kind}:${a.question}`).join("|")}
-              applicationId={app.id}
-              answers={answers}
-            />
+            <AnswersPanel applicationId={app.id} answers={answers} />
           </>
         )}
       </main>

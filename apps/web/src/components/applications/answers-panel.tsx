@@ -37,13 +37,6 @@ export function AnswersPanel({
   answers: StoredAnswer[];
 }) {
   const [draftState, draftAction, drafting] = useActionState(draftApplicationAnswers, initialState);
-  const [saveState, saveAction, saving] = useActionState(saveApplicationAnswers, initialState);
-  const [items, setItems] = useState(() =>
-    answers.map((a) => ({ ...a, final: a.final ?? a.answer })),
-  );
-
-  const setFinal = (i: number, final: string) =>
-    setItems((list) => list.map((a, j) => (j === i ? { ...a, final } : a)));
 
   return (
     <div className="flex flex-col gap-4">
@@ -74,86 +67,107 @@ export function AnswersPanel({
         </form>
       </Card>
 
-      {items.length > 0 ? (
-        <form action={saveAction} className="flex flex-col gap-4">
-          <input type="hidden" name="application_id" value={applicationId} />
-          <input
-            type="hidden"
-            name="finals"
-            value={JSON.stringify(items.map((a) => ({ question: a.question, final: a.final })))}
-          />
-          {items.map((a, i) => {
-            const label = LABELS[a.kind];
-            const words = countWords(a.final);
-            const id = `answer-${i}`;
-            return (
-              <Card key={a.question} className="flex flex-col gap-2">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <label htmlFor={id} className="font-medium">
-                    {a.question}
-                  </label>
-                  <span className={`rounded-full px-2 py-0.5 text-xs ${label.tone}`}>
-                    {label.text}
-                  </span>
-                </div>
-                {label.help ? <p className="text-muted-foreground text-xs">{label.help}</p> : null}
-                {a.kind === "reused" && a.reusedFrom ? (
-                  <p className="text-muted-foreground text-xs">
-                    From your answer to: &quot;{a.reusedFrom}&quot;
-                  </p>
-                ) : null}
-                {a.kind === "fixed" || a.kind === "missing_fixed" ? (
-                  <Input
-                    id={id}
-                    value={a.final}
-                    maxLength={500}
-                    onChange={(e) => setFinal(i, e.target.value)}
-                  />
-                ) : (
-                  <Textarea
-                    id={id}
-                    value={a.final}
-                    className="min-h-28"
-                    onChange={(e) => setFinal(i, e.target.value)}
-                  />
-                )}
-                <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-                  <span
-                    className={
-                      words > a.maxWords ? "font-medium text-rose-700" : "text-muted-foreground"
-                    }
-                  >
-                    {words} / {a.maxWords} words
-                    {words > a.maxWords ? ", too long for this form" : ""}
-                  </span>
-                  <span className="flex gap-1">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => navigator.clipboard?.writeText(a.final)}
-                    >
-                      <Copy size={14} /> Copy
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setItems((list) => list.filter((_, j) => j !== i))}
-                    >
-                      <Trash2 size={14} /> Remove
-                    </Button>
-                  </span>
-                </div>
-              </Card>
-            );
-          })}
-          <FormMessage error={saveState.error} ok={saveState.message} />
-          <Button type="submit" disabled={saving} className="self-start">
-            {saving ? "Saving..." : "Save my answers"}
-          </Button>
-        </form>
-      ) : null}
+      {/* Starts fresh when new drafts arrive; the draft form above keeps its message. */}
+      <AnswersList
+        key={answers.map((a) => `${a.kind}:${a.question}`).join("|")}
+        applicationId={applicationId}
+        answers={answers}
+      />
     </div>
   );
+}
+
+function AnswersList({
+  applicationId,
+  answers,
+}: {
+  applicationId: string;
+  answers: StoredAnswer[];
+}) {
+  const [saveState, saveAction, saving] = useActionState(saveApplicationAnswers, initialState);
+  const [items, setItems] = useState(() =>
+    answers.map((a) => ({ ...a, final: a.final ?? a.answer })),
+  );
+
+  const setFinal = (i: number, final: string) =>
+    setItems((list) => list.map((a, j) => (j === i ? { ...a, final } : a)));
+
+  return items.length > 0 ? (
+    <form action={saveAction} className="flex flex-col gap-4">
+      <input type="hidden" name="application_id" value={applicationId} />
+      <input
+        type="hidden"
+        name="finals"
+        value={JSON.stringify(items.map((a) => ({ question: a.question, final: a.final })))}
+      />
+      {items.map((a, i) => {
+        const label = LABELS[a.kind];
+        const words = countWords(a.final);
+        const id = `answer-${i}`;
+        return (
+          <Card key={a.question} className="flex flex-col gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <label htmlFor={id} className="font-medium">
+                {a.question}
+              </label>
+              <span className={`rounded-full px-2 py-0.5 text-xs ${label.tone}`}>{label.text}</span>
+            </div>
+            {label.help ? <p className="text-muted-foreground text-xs">{label.help}</p> : null}
+            {a.kind === "reused" && a.reusedFrom ? (
+              <p className="text-muted-foreground text-xs">
+                From your answer to: &quot;{a.reusedFrom}&quot;
+              </p>
+            ) : null}
+            {a.kind === "fixed" || a.kind === "missing_fixed" ? (
+              <Input
+                id={id}
+                value={a.final}
+                maxLength={500}
+                onChange={(e) => setFinal(i, e.target.value)}
+              />
+            ) : (
+              <Textarea
+                id={id}
+                value={a.final}
+                className="min-h-28"
+                onChange={(e) => setFinal(i, e.target.value)}
+              />
+            )}
+            <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+              <span
+                className={
+                  words > a.maxWords ? "font-medium text-rose-700" : "text-muted-foreground"
+                }
+              >
+                {words} / {a.maxWords} words
+                {words > a.maxWords ? ", too long for this form" : ""}
+              </span>
+              <span className="flex gap-1">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigator.clipboard?.writeText(a.final)}
+                >
+                  <Copy size={14} /> Copy
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setItems((list) => list.filter((_, j) => j !== i))}
+                >
+                  <Trash2 size={14} /> Remove
+                </Button>
+              </span>
+            </div>
+          </Card>
+        );
+      })}
+      <FormMessage error={saveState.error} ok={saveState.message} />
+      <Button type="submit" disabled={saving} className="self-start">
+        {saving ? "Saving..." : "Save my answers"}
+      </Button>
+    </form>
+  ) : null;
 }
