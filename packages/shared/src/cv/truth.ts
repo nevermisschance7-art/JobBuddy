@@ -82,6 +82,17 @@ function problemIn(text: string, facts: Facts): string | null {
   return null;
 }
 
+/**
+ * Technologies and numbers in a piece of text (an answer, a cover letter) that the CV
+ * doesn't contain. Used to warn, since free text can't simply be cut.
+ */
+export function unsupportedIn(text: string, source: Resume): string[] {
+  const facts = factsOf(source);
+  const terms = [...termsIn(text)].filter((t) => !facts.terms.has(t) && !facts.skills.has(t));
+  const numbers = [...numbersIn(text)].filter((n) => !facts.numbers.has(n));
+  return [...terms, ...numbers];
+}
+
 const clip = (s: string) => (s.length > 90 ? `${s.slice(0, 87)}...` : s);
 
 // ---------------------------------------------------------------- the check

@@ -4,6 +4,7 @@ import {
   type DraftInput,
   type PastAnswer,
   type Resume,
+  unsupportedIn,
 } from "@jobbuddy/shared";
 import type { LlmRouter, PersonalInfo } from "@jobbuddy/shared/llm";
 
@@ -16,7 +17,8 @@ export type StoredAnswer = DraftedAnswer & { final?: string };
 
 const SYSTEM = `You write a job application answer for the candidate, as the candidate ("I").
 Rules:
-- Only use facts from the candidate's CV below. Never invent experience, numbers, employers or skills.
+- Only use facts from the candidate's CV below. Never invent experience, numbers, employers, skills or technologies.
+- Never describe steps, methods, causes or results the CV doesn't state. If the CV gives little detail, stay short and general rather than filling gaps.
 - Plain, short, human and specific. No buzzwords, no clichés, no em dashes.
 - Match the style of the candidate's past answers when given.
 - Never mention salary, visa, sponsorship, notice period, location or personal details.
@@ -74,6 +76,7 @@ export async function draftWithRouter(
   return answerQuestions(questions, {
     fixedAnswers,
     memory,
+    check: (text) => unsupportedIn(text, cv),
     company: job.company_name,
     draft: (input) =>
       router.generateText(

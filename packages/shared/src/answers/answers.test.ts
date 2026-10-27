@@ -99,6 +99,15 @@ describe("answerQuestions", () => {
     expect(out[1]!.overLimit).toBe(false);
   });
 
+  it("flags drafted claims the CV doesn't support", async () => {
+    const d = deps({
+      draft: vi.fn(async () => ({ text: "I set up CI/CD and Kafka" })),
+      check: (t) => (t.includes("Kafka") ? ["ci/cd", "kafka"] : []),
+    });
+    const out = await answerQuestions([{ text: "Why us?" }], d);
+    expect(out[0]!.unsupported).toEqual(["ci/cd", "kafka"]);
+  });
+
   it("marks a failed draft instead of throwing", async () => {
     const d = deps({ draft: vi.fn(async () => Promise.reject(new Error("no keys"))) });
     const out = await answerQuestions([{ text: "Why us?" }], d);

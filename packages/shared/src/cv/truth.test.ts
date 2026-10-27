@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { resumeSchema, type Resume } from "../resume";
-import { checkTailoredCv, numbersIn, termsIn } from "./truth";
+import { checkTailoredCv, numbersIn, termsIn, unsupportedIn } from "./truth";
 
 const source: Resume = resumeSchema.parse({
   basics: { name: "Sam Tester", email: "sam@example.com", summary: "Backend developer." },
@@ -96,6 +96,15 @@ describe("checkTailoredCv", () => {
       "We use Python, Kafka and K8s on AWS.",
     );
     expect(report.gaps).toEqual(["kafka", "kubernetes"]);
+  });
+});
+
+describe("unsupportedIn", () => {
+  it("lists technologies and numbers not in the CV", () => {
+    expect(unsupportedIn("Cut latency by 40% with Docker, ran Kafka for 5 teams", source)).toEqual([
+      "kafka",
+      "5",
+    ]);
   });
 });
 

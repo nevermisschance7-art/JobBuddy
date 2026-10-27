@@ -113,6 +113,12 @@ function AnswersList({
               <span className={`rounded-full px-2 py-0.5 text-xs ${label.tone}`}>{label.text}</span>
             </div>
             {label.help ? <p className="text-muted-foreground text-xs">{label.help}</p> : null}
+            {a.unsupported?.length ? (
+              <p className="rounded-md bg-amber-50 px-2 py-1 text-xs text-amber-900">
+                Check this: it mentions {a.unsupported.join(", ")}, which isn&apos;t in your CV.
+                Change it or remove it unless it&apos;s true.
+              </p>
+            ) : null}
             {a.kind === "reused" && a.reusedFrom ? (
               <p className="text-muted-foreground text-xs">
                 From your answer to: &quot;{a.reusedFrom}&quot;

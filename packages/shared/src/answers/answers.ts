@@ -144,6 +144,8 @@ export type DraftedAnswer = {
   reusedFrom?: string;
   overLimit?: boolean;
   isCoverLetter?: boolean;
+  /** Technologies or numbers in an AI draft that the CV doesn't contain. */
+  unsupported?: string[];
 };
 
 export type PastAnswer = { question: string; answer: string; company?: string | null };
@@ -164,6 +166,8 @@ export type DraftDeps = {
   draft: (input: DraftInput) => Promise<{ text: string }>;
   /** Lightly adapts a reused answer to this job; optional (no AI: reused as is). */
   adapt?: (answer: string, question: string) => Promise<{ text: string }>;
+  /** Lists claims in a draft that the CV doesn't support (see unsupportedIn). */
+  check?: (text: string) => string[];
 };
 
 /** AI calls running at once: quick enough for a web request, gentle on free rate limits. */
@@ -231,7 +235,14 @@ async function answerOne(
   try {
     const examples = ranked.slice(0, 5).map((r) => r.m);
     const { text } = await deps.draft({ question: q.text, maxWords, examples, isCoverLetter });
-    return { ...base, kind: "drafted", answer: text, overLimit: countWords(text) > maxWords };
+    const unsupported = deps.check?.(text) ?? [];
+    return {
+      ...base,
+      kind: "drafted",
+      answer: text,
+      overLimit: countWords(text) > maxWords,
+      ...(unsupported.length > 0 ? { unsupported } : {}),
+    };
   } catch {
     return { ...base, kind: "failed", answer: "" };
   }
