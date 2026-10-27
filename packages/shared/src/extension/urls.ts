@@ -71,9 +71,24 @@ export function jobKeyFromUrl(raw: string): JobKey | null {
       return id ? { ats, id: id.toLowerCase() } : null;
     }
     case "smartrecruiters": {
-      // /Acme/744000012345678-backend-engineer[/apply]
+      // Apply form: /oneclick-ui/company/Acme/publication/<uuid>
+      if (parts[0] === "oneclick-ui") {
+        const uuid = url.pathname.match(UUID)?.[0];
+        return uuid ? { ats, id: uuid.toLowerCase() } : null;
+      }
+      // Job page: /Acme/744000012345678-backend-engineer[/apply]
       const id = parts[1]?.match(/^(\d{6,})/)?.[1];
       return id ? { ats, id } : null;
     }
+  }
+}
+
+/** A page address without query or fragment, to match jobs on any site by URL. */
+export function pageAddress(raw: string): string | null {
+  try {
+    const u = new URL(raw);
+    return `${u.origin}${u.pathname.replace(/\/+$/, "")}`.toLowerCase();
+  } catch {
+    return null;
   }
 }

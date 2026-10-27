@@ -1,4 +1,4 @@
-import { jobKeyFromUrl, resumeSchema, type Json } from "@jobbuddy/shared";
+import { jobKeyFromUrl, pageAddress, resumeSchema, type Json } from "@jobbuddy/shared";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { draftAnswers, type StoredAnswer } from "@/lib/answers";
@@ -26,9 +26,11 @@ export async function POST(request: Request) {
   const { supabase, userId } = auth;
   const input = parsed.data;
 
-  const key = jobKeyFromUrl(input.url);
-  if (!key)
-    return NextResponse.json({ error: "This isn't an application page I know." }, { status: 400 });
+  // Known employer systems by their job id; any other site by its page address.
+  const known = jobKeyFromUrl(input.url);
+  const address = pageAddress(input.url);
+  if (!known && !address) return NextResponse.json({ error: "Bad page address." }, { status: 400 });
+  const externalId = known ? `${known.ats}:${known.id}` : `web:${address}`;
 
   let found = await findJobForUrl(supabase, input.url);
   if (!found) {
@@ -40,7 +42,7 @@ export async function POST(request: Request) {
       .upsert(
         {
           source: "extension",
-          external_id: `${key.ats}:${key.id}`,
+          external_id: externalId,
           canonical_url: `${page.origin}${page.pathname}`,
           apply_url: input.url,
           title: input.title,
@@ -68,6 +70,7 @@ export async function POST(request: Request) {
     .eq("job_id", job.id)
     .maybeSingle();
   let applicationId = existing?.id;
+  const isNew = !applicationId;
   if (!applicationId) {
     const { data: created, error } = await supabase
       .from("applications")
@@ -109,11 +112,14 @@ export async function POST(request: Request) {
     }
   }
 
-  await supabase.from("events").insert({
-    user_id: userId,
-    type: "application_ready",
-    payload: { title: job.title, application_id: applicationId },
-  });
+  // Only a new application is news; extra answers drafted during a fill are not.
+  if (isNew) {
+    await supabase.from("events").insert({
+      user_id: userId,
+      type: "application_ready",
+      payload: { title: job.title, application_id: applicationId },
+    });
+  }
 
   return NextResponse.json({
     applicationId,

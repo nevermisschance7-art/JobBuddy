@@ -20,13 +20,15 @@ function manifest(appUrl: string): Plugin {
           {
             manifest_version: 3,
             name: "JobBuddy",
-            version: "0.1.0",
+            version: "0.2.0",
             description: "Job alerts and application autofill. You always press Submit yourself.",
             icons: { 16: "icon-16.png", 48: "icon-48.png", 128: "icon-128.png" },
             action: { default_popup: "popup.html", default_title: "JobBuddy" },
             background: { service_worker: "background.js", type: "module" },
-            // Minimal: settings and session, the 15-minute alert check, notifications.
-            permissions: ["storage", "alarms", "notifications"],
+            // Minimal: settings and session, the 15-minute alert check, notifications, and
+            // activeTab + scripting so "Fill this page" works on any site the user is on
+            // (only when they press it; no access to other sites).
+            permissions: ["storage", "alarms", "notifications", "activeTab", "scripting"],
             // The app (all requests go through it) and the employer systems it fills.
             host_permissions: [`${app.origin}/*`, ...atsMatches],
             content_scripts: [

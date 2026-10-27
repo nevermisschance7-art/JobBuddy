@@ -1,6 +1,7 @@
 import { api, APP_URL, getSession, setSession, signIn, SignedOutError } from "./api";
 
-// Popup: sign in with your JobBuddy username, then today's matches and the next thing to do.
+// Popup: sign in with your JobBuddy username; then today's numbers, "Fill this page" for any
+// application form, and links into the app.
 
 type Summary = {
   username: string | null;
@@ -22,7 +23,7 @@ const LINES: Record<Summary["tone"], string[]> = {
     "Recruiters are typing... probably.",
     "Coffee first, applications second.",
   ],
-  plain: ["Ready when you are.", "Here's where things stand.", "Check, edit, submit."],
+  plain: ["Ready when you are.", "Here's where things stand.", "Check, fill, submit."],
 };
 
 const esc = (s: string) =>
@@ -30,13 +31,13 @@ const esc = (s: string) =>
 
 function signedOutView(error = ""): void {
   root.innerHTML = `
-    <p>Sign in with the same username you use on the JobBuddy website.</p>
+    <p class="lead">Sign in with the same username you use on the JobBuddy website.</p>
     <form id="f">
       <label for="u">Username</label>
       <input id="u" name="u" autocomplete="username" required minlength="3" maxlength="30">
-      <button type="submit">Sign in</button>
+      <button type="submit" class="primary">Sign in</button>
     </form>
-    <p class="err">${esc(error)}</p>
+    ${error ? `<p class="err">${esc(error)}</p>` : ""}
     <p class="muted">New here? <a href="${APP_URL}/login" target="_blank">Sign up on the website</a> first.</p>`;
   const form = document.getElementById("f") as HTMLFormElement;
   form.addEventListener("submit", async (e) => {
@@ -53,6 +54,26 @@ function signedOutView(error = ""): void {
   });
 }
 
+/** Loads the filler into the current tab (any site, thanks to activeTab) and opens its box. */
+async function fillThisPage(): Promise<void> {
+  const status = document.getElementById("fill-status")!;
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!tab?.id || !/^https?:/.test(tab.url ?? "")) {
+    status.textContent = "Open an application form first, then press this again.";
+    return;
+  }
+  try {
+    await chrome.scripting.executeScript({
+      target: { tabId: tab.id, allFrames: true },
+      files: ["content.js"],
+    });
+    await chrome.tabs.sendMessage(tab.id, { type: "fill-here" });
+    window.close();
+  } catch {
+    status.textContent = "I can't work on this page. Try the application form itself.";
+  }
+}
+
 async function show(): Promise<void> {
   const session = await getSession();
   if (!session) return signedOutView();
@@ -61,19 +82,21 @@ async function show(): Promise<void> {
     const s = await api<Summary>("summary");
     const lines = LINES[s.tone] ?? LINES.kind;
     const line = lines[new Date().getDate() % lines.length] ?? "";
-    const next =
-      s.toReview > 0
-        ? `<a href="${APP_URL}/applications" target="_blank">Review ${s.toReview} prepared application${s.toReview === 1 ? "" : "s"}</a>`
-        : s.newMatches > 0
-          ? `<a href="${APP_URL}/app" target="_blank">Look at today's matches</a>`
-          : `<a href="${APP_URL}/app" target="_blank">Open your job board</a>`;
     root.innerHTML = `
+      <div class="stats">
+        <a class="stat" href="${APP_URL}/app" target="_blank"><b>${s.newMatches}</b><span>new matches (24 h)</span></a>
+        <a class="stat" href="${APP_URL}/applications" target="_blank"><b>${s.toReview}</b><span>ready to apply</span></a>
+      </div>
+      <button id="fill" class="primary">⚡ Fill this page</button>
+      <p id="fill-status" class="muted center">Works on any application form. You always press Submit.</p>
+      <div class="links">
+        <a href="${APP_URL}/app" target="_blank">Find jobs</a>
+        <a href="${APP_URL}/applications" target="_blank">Applications</a>
+        <a href="${APP_URL}/settings" target="_blank">Settings</a>
+      </div>
       <div class="mascot"><span aria-hidden="true">🐱</span><p>${esc(line)}</p></div>
-      <p class="big">${s.newMatches}</p>
-      <p class="muted">new matches in the last 24 hours</p>
-      <p><b>Next:</b> ${next}</p>
-      <p class="muted">On an application page, the JobBuddy box fills the form. You always press Submit yourself.</p>
-      <p class="muted">Signed in as ${esc(session.username)} · <a href="#" id="out">Sign out</a></p>`;
+      <p class="muted foot">Signed in as <b>${esc(session.username)}</b> · <a href="#" id="out">Sign out</a></p>`;
+    document.getElementById("fill")!.addEventListener("click", () => void fillThisPage());
     document.getElementById("out")!.addEventListener("click", async (e) => {
       e.preventDefault();
       await setSession(null);

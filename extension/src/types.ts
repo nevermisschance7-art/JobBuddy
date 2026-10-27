@@ -14,8 +14,9 @@ export type FillProfile = {
 };
 
 export type FillData = {
-  applicationId: string;
-  status: string;
+  /** Null for the basics-only data ("base") of a job without an application. */
+  applicationId: string | null;
+  status: string | null;
   profile: FillProfile;
   fixedAnswers: Record<string, string>;
   answers: { question: string; answer: string; isCoverLetter: boolean }[];
@@ -25,6 +26,8 @@ export type FillData = {
 export type LookupResult = {
   job: { id: string; title: string; company: string } | null;
   application: FillData | null;
+  /** Contact details and fixed answers, for any form. */
+  base: FillData;
   reviewUrl: string | null;
 };
 
@@ -43,6 +46,7 @@ export type Message =
   | { type: "lookup"; url: string }
   | { type: "prepare"; input: PrepareInput }
   | { type: "applied"; applicationId: string }
+  | { type: "cv"; applicationId: string }
   | { type: "open"; url: string };
 
 export type Reply<T> = { ok: true; data: T } | { ok: false; error: string; signedOut?: boolean };

@@ -1,9 +1,8 @@
 "use server";
 
-import { checkTailoredCv, resumeSchema } from "@jobbuddy/shared";
+import { resumeSchema } from "@jobbuddy/shared";
 import { revalidatePath } from "next/cache";
-import { approveWithFiles } from "@/lib/cv/files";
-import { jobText, tailorResume } from "@/lib/cv/tailor";
+import { ensureApprovedCv } from "@/lib/cv/ensure";
 import { requireUser } from "@/lib/data";
 
 export type QuickApplyResult =
@@ -40,7 +39,7 @@ export async function quickApply(jobId: string): Promise<QuickApplyResult> {
 
   let { data: app } = await supabase
     .from("applications")
-    .select("id, cv_approved_at, tailored_cv_pdf")
+    .select("id")
     .eq("user_id", user.id)
     .eq("job_id", job.id)
     .maybeSingle();
@@ -48,22 +47,14 @@ export async function quickApply(jobId: string): Promise<QuickApplyResult> {
     const { data: created, error } = await supabase
       .from("applications")
       .insert({ user_id: user.id, job_id: job.id, status: "prepared" })
-      .select("id, cv_approved_at, tailored_cv_pdf")
+      .select("id")
       .single();
     if (error || !created) return { ok: false, error: "Couldn't start the application." };
     app = created;
   }
 
-  let note: string | undefined;
-  if (!app.cv_approved_at || !app.tailored_cv_pdf) {
-    const tailored = await tailorResume(supabase, user.id, source.data, job);
-    const result = tailored.ok
-      ? tailored
-      : { ...checkTailoredCv(source.data, source.data, jobText(job)), ok: true as const };
-    if (!tailored.ok) note = "No AI available, so I used your CV as it is.";
-    const problem = await approveWithFiles(supabase, user.id, app.id, result.resume, result.report);
-    if (problem) return { ok: false, error: problem };
-  }
+  const { error, note } = await ensureApprovedCv(supabase, user.id, app.id, job, source.data);
+  if (error) return { ok: false, error };
 
   await supabase
     .from("user_job_matches")

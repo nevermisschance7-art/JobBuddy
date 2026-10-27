@@ -16,6 +16,13 @@ export const FIXED_ANSWER_KEYS: FixedAnswerKey[] = [
     kind: "text",
   },
   {
+    key: "work_authorized",
+    label: "Can you legally work for the companies you apply to? (for Yes/No questions)",
+    hint: 'Used when a form asks "Do you have work authorization?" with Yes / No.',
+    kind: "choice",
+    choices: ["Yes", "No"],
+  },
+  {
     key: "visa_status",
     label: "Visa or citizenship status",
     hint: "e.g. British citizen, or Skilled Worker visa until 2027",

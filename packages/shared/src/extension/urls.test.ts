@@ -28,6 +28,14 @@ describe("jobKeyFromUrl", () => {
     ],
   ])("%s", (url, key) => expect(jobKeyFromUrl(url)).toEqual(key));
 
+  it("reads the SmartRecruiters apply form", () => {
+    expect(
+      jobKeyFromUrl(
+        "https://jobs.smartrecruiters.com/oneclick-ui/company/Acme/publication/0f3b2c1d-1111-2222-3333-444455556666?dcr_ci=Acme",
+      ),
+    ).toEqual({ ats: "smartrecruiters", id: "0f3b2c1d-1111-2222-3333-444455556666" });
+  });
+
   it("ignores other pages", () => {
     expect(jobKeyFromUrl("https://boards.greenhouse.io/acme")).toBeNull();
     expect(jobKeyFromUrl("https://www.linkedin.com/jobs/view/123")).toBeNull();

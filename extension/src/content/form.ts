@@ -22,10 +22,17 @@ export type FieldKind =
 type Control = HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
 
 export type FormField = {
-  /** The input, textarea or select; for radio and checkbox groups, the first one. */
+  /**
+   * The input, textarea or select; for radio and checkbox groups, the first one; for button
+   * choices and custom dropdowns, the first button or the dropdown's control.
+   */
   el: Control;
   /** Radio or checkbox group members with their option labels. */
   options?: { el: HTMLInputElement; label: string }[];
+  /** Choice buttons ("Yes" / "No" as buttons, as on Ashby) or custom radios (role=radio). */
+  choices?: { el: HTMLElement; label: string }[];
+  /** A custom dropdown (react-select and similar): typed into, then an option is clicked. */
+  combobox?: boolean;
   label: string;
   kind: FieldKind;
   required: boolean;
@@ -193,9 +200,84 @@ export function collectFields(doc: Document): FormField[] {
         autocomplete: el.getAttribute("autocomplete") ?? "",
       }),
       required: isRequired(el, label, raw),
+      ...(isCombobox(el) ? { combobox: true } : {}),
+    });
+  }
+
+  // Custom dropdowns that aren't inputs: <div role="combobox">, <button aria-haspopup="listbox">.
+  for (const el of doc.querySelectorAll<HTMLElement>(
+    "[role='combobox']:not(input), button[aria-haspopup='listbox']",
+  )) {
+    if (!visible(el) || el.querySelector("input")) continue;
+    const raw = labelFor(el, doc);
+    const label = clean(raw);
+    if (!label) continue;
+    out.push({
+      el: el as unknown as Control,
+      label,
+      kind: classify({ label }),
+      required: isRequired(el, label, raw),
+      combobox: true,
+    });
+  }
+
+  out.push(...choiceGroups(doc));
+  return out;
+}
+
+/** Inputs that open a list of options to pick from instead of taking free text. */
+function isCombobox(el: Element): boolean {
+  return (
+    el.tagName === "INPUT" &&
+    (el.getAttribute("role") === "combobox" ||
+      el.getAttribute("aria-autocomplete") === "list" ||
+      el.getAttribute("aria-haspopup") === "listbox")
+  );
+}
+
+const CHOICE = "button, [role='radio']";
+const NOT_A_CHOICE = /submit|apply|next|back|previous|upload|attach|remove|delete|add|cancel|save/i;
+
+/**
+ * Questions answered by clicking one of a few buttons, like Ashby's "Yes" / "No", or custom
+ * radios (role=radio). Two to six short choices side by side, under a question label.
+ */
+function choiceGroups(doc: Document): FormField[] {
+  const out: FormField[] = [];
+  const seen = new Set<Element>();
+  for (const first of doc.querySelectorAll<HTMLElement>(CHOICE)) {
+    const parent = first.parentElement;
+    if (!parent || seen.has(parent)) continue;
+    seen.add(parent);
+    const choices = [...parent.children].filter((c): c is HTMLElement => c.matches(CHOICE));
+    const labels = choices.map((c) => clean(c.textContent));
+    if (choices.length < 2 || choices.length > 6) continue;
+    if (labels.some((l) => !l || l.length > 40 || NOT_A_CHOICE.test(l))) continue;
+    if (choices.some((c) => (c as HTMLButtonElement).type === "submit")) continue;
+    if (!visible(parent)) continue;
+    const raw = labelFor(parent, doc);
+    const label = clean(raw);
+    if (!label || labels.includes(label)) continue;
+    // The question's own "*" (label text is cleaned above, so look at the raw container text).
+    const around = (parent.parentElement?.textContent ?? "").replace(parent.textContent ?? "", "");
+    out.push({
+      el: choices[0] as unknown as Control,
+      choices: choices.map((el, i) => ({ el, label: labels[i]! })),
+      label,
+      kind: "question",
+      required: isRequired(parent, label, raw) || around.includes("*"),
     });
   }
   return out;
+}
+
+/** A choice button that looks selected (aria-pressed, aria-checked or a "selected" class). */
+function isChosen(el: HTMLElement): boolean {
+  return (
+    el.getAttribute("aria-pressed") === "true" ||
+    el.getAttribute("aria-checked") === "true" ||
+    /(^|[\s_-])(selected|active|checked)/i.test(el.className)
+  );
 }
 
 function labelOwn(el: HTMLInputElement): string {
@@ -240,6 +322,10 @@ export function valueFor(field: FormField, data: FillData): string | null {
     case "question": {
       // Sensitive questions: only the user's fixed answers, never a drafted text.
       const key = fixedKeyFor(field.label);
+      if (key === "right_to_work" && isYesNo(field)) {
+        // "Do you have work authorization...?" with Yes / No: the yes/no fixed answer.
+        return data.fixedAnswers.work_authorized ?? yesNoFrom(data.fixedAnswers.right_to_work);
+      }
       if (key) return data.fixedAnswers[key] ?? null;
       let best: { answer: string; score: number } | null = null;
       for (const a of data.answers) {
@@ -250,6 +336,27 @@ export function valueFor(field: FormField, data: FillData): string | null {
       return best && best.score >= 0.6 ? best.answer : null;
     }
   }
+}
+
+/** The answer choices a field offers, whatever kind of control it is. */
+function choiceLabels(field: FormField): string[] {
+  if (field.options) return field.options.map((o) => o.label);
+  if (field.choices) return field.choices.map((c) => c.label);
+  const el = field.el;
+  if (el.tagName === "SELECT") return [...(el as HTMLSelectElement).options].map((o) => o.text);
+  return [];
+}
+
+function isYesNo(field: FormField): boolean {
+  const labels = choiceLabels(field).map((l) => l.trim().toLowerCase());
+  return labels.some((l) => l.startsWith("yes")) && labels.some((l) => l.startsWith("no"));
+}
+
+function yesNoFrom(text: string | undefined): string | null {
+  if (!text) return null;
+  if (/^\s*yes\b/i.test(text)) return "Yes";
+  if (/^\s*no\b/i.test(text)) return "No";
+  return null;
 }
 
 // ---------------------------------------------------------------- filling
@@ -290,11 +397,80 @@ export function pickOption<T extends { label: string }>(options: T[], answer: st
   );
 }
 
-export type FillReport = { filled: number; missed: FormField[]; resume: FormField | null };
+export type FillReport = {
+  filled: number;
+  missed: FormField[];
+  resume: FormField | null;
+  /** Custom dropdowns with the value to pick, for fillComboboxes. */
+  dropdowns: { field: FormField; value: string }[];
+};
+
+/** A real-looking click: pointer and mouse events, then click (for React handlers). */
+export function click(el: HTMLElement): void {
+  const view = el.ownerDocument.defaultView ?? window;
+  for (const type of ["pointerdown", "mousedown", "pointerup", "mouseup"]) {
+    const Ev =
+      type.startsWith("pointer") && "PointerEvent" in view ? view.PointerEvent : view.MouseEvent;
+    el.dispatchEvent(new Ev(type, { bubbles: true, cancelable: true, button: 0 }));
+  }
+  el.click();
+}
+
+const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** Visible options of the list a dropdown opened (or any open list on the page). */
+function openOptions(control: HTMLElement): HTMLElement[] {
+  const doc = control.ownerDocument;
+  const listId = control.getAttribute("aria-controls") ?? control.getAttribute("aria-owns");
+  const list = listId ? doc.getElementById(listId) : null;
+  const scope: ParentNode = list ?? doc;
+  return [...scope.querySelectorAll<HTMLElement>("[role='option']")].filter(
+    (o) => visible(o) && o.getAttribute("aria-disabled") !== "true",
+  );
+}
+
+/**
+ * Custom dropdowns: open, type to filter, wait for the options, click the best one.
+ * "Warsaw, Poland" also matches an option "Warsaw, Masovian Voivodeship, Poland".
+ */
+export async function fillComboboxes(
+  dropdowns: FillReport["dropdowns"],
+  report: FillReport,
+): Promise<void> {
+  for (const { field, value } of dropdowns) {
+    const control = field.el as unknown as HTMLElement;
+    const input = control.tagName === "INPUT" ? (control as HTMLInputElement) : null;
+    click((input?.closest("[class*='control' i]") as HTMLElement) ?? control);
+    control.focus();
+    const first = value.split(",")[0]!.trim();
+    if (input) setNativeValue(input, first);
+
+    let picked: HTMLElement | null = null;
+    for (let i = 0; i < 15 && !picked; i++) {
+      await wait(150);
+      const options = openOptions(control).map((el) => ({ el, label: clean(el.textContent) }));
+      if (options.length === 0) continue;
+      picked =
+        pickOption(options, value)?.el ??
+        options.find((o) => norm(o.label).includes(norm(first)))?.el ??
+        null;
+      if (!picked && i > 4) break;
+    }
+    if (picked) {
+      click(picked);
+      report.filled++;
+    } else {
+      control.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+      if (input) setNativeValue(input, "");
+      report.missed.push(field);
+    }
+    await wait(100);
+  }
+}
 
 /** Fills every field JobBuddy knows. Leaves non-empty fields alone. Returns what's left. */
 export function fillForm(fields: FormField[], data: FillData): FillReport {
-  const report: FillReport = { filled: 0, missed: [], resume: null };
+  const report: FillReport = { filled: 0, missed: [], resume: null, dropdowns: [] };
   for (const f of fields) {
     if (f.kind === "resume") {
       report.resume ??= f;
@@ -302,6 +478,20 @@ export function fillForm(fields: FormField[], data: FillData): FillReport {
     }
     if (f.kind === "file") continue;
     const value = valueFor(f, data);
+    if (f.choices) {
+      const choice = value ? pickOption(f.choices, value) : null;
+      if (choice && !isChosen(choice.el)) {
+        click(choice.el);
+        report.filled++;
+      } else if (!choice && !f.choices.some((c) => isChosen(c.el))) report.missed.push(f);
+      continue;
+    }
+    if (f.combobox) {
+      // Filled afterwards by fillComboboxes: it has to open the list and wait for options.
+      if (value) report.dropdowns.push({ field: f, value });
+      else report.missed.push(f);
+      continue;
+    }
     if (f.options) {
       const choice = value ? pickOption(f.options, value) : null;
       if (choice && !choice.el.checked) {

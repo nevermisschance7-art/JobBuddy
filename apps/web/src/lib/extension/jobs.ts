@@ -1,5 +1,5 @@
 import "server-only";
-import { jobKeyFromUrl, resumeSchema, type JobKey } from "@jobbuddy/shared";
+import { jobKeyFromUrl, pageAddress, resumeSchema, type JobKey } from "@jobbuddy/shared";
 import type { StoredAnswer } from "@/lib/answers-core";
 import type { createClient } from "@/lib/supabase/server";
 
@@ -16,6 +16,41 @@ const sameKey = (a: JobKey | null, b: JobKey) => a?.ats === b.ats && a.id === b.
 
 /** The stored job behind an application page URL (exact id match), or null. */
 export async function findJobForUrl(supabase: Supabase, url: string): Promise<FoundJob | null> {
+  return (await findByKey(supabase, url)) ?? (await findByAddress(supabase, url));
+}
+
+/** Any site (Workday, company career pages...): the same page address as a stored job. */
+async function findByAddress(supabase: Supabase, url: string): Promise<FoundJob | null> {
+  const address = pageAddress(url);
+  if (!address) return null;
+  // ilike: escape its wildcards in the address, then match any query string after it.
+  const pattern = `${address.replace(/[%_]/g, (c) => `\\${c}`)}%`;
+  const [byCanonical, byApply] = await Promise.all([
+    supabase
+      .from("jobs")
+      .select("id, title, company_name, description_text, canonical_url, apply_url")
+      .ilike("canonical_url", pattern)
+      .limit(5),
+    supabase
+      .from("jobs")
+      .select("id, title, company_name, description_text, canonical_url, apply_url")
+      .ilike("apply_url", pattern)
+      .limit(5),
+  ]);
+  const job = [...(byCanonical.data ?? []), ...(byApply.data ?? [])].find(
+    (j) => pageAddress(j.canonical_url) === address || pageAddress(j.apply_url) === address,
+  );
+  return job
+    ? {
+        id: job.id,
+        title: job.title,
+        company_name: job.company_name,
+        description_text: job.description_text,
+      }
+    : null;
+}
+
+async function findByKey(supabase: Supabase, url: string): Promise<FoundJob | null> {
   const key = jobKeyFromUrl(url);
   if (!key || !/^[a-z0-9-]+$/.test(key.id)) return null;
   const { data } = await supabase
@@ -38,15 +73,21 @@ export async function findJobForUrl(supabase: Supabase, url: string): Promise<Fo
 
 const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
 
-/** Everything the extension needs to fill a form: contact details, fixed answers, answers, CV. */
-export async function fillData(supabase: Supabase, userId: string, applicationId: string) {
+/**
+ * Everything the extension needs to fill a form: contact details, fixed answers and, with an
+ * application, its answers and approved CV. Without one (a job not prepared yet, or any other
+ * site), contact details and fixed answers still fill the basics.
+ */
+export async function fillData(supabase: Supabase, userId: string, applicationId: string | null) {
   const [{ data: app }, { data: cv }, { data: fixed }] = await Promise.all([
-    supabase
-      .from("applications")
-      .select("id, status, answers, tailored_cv_pdf, cv_approved_at")
-      .eq("id", applicationId)
-      .eq("user_id", userId)
-      .maybeSingle(),
+    applicationId
+      ? supabase
+          .from("applications")
+          .select("id, status, answers, tailored_cv_pdf, cv_approved_at")
+          .eq("id", applicationId)
+          .eq("user_id", userId)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
     supabase
       .from("cvs")
       .select("resume_json")
@@ -61,7 +102,7 @@ export async function fillData(supabase: Supabase, userId: string, applicationId
       .eq("user_id", userId)
       .is("applies_to_country", null),
   ]);
-  if (!app) return null;
+  if (applicationId && !app) return null;
 
   const resume = resumeSchema.safeParse(cv?.resume_json);
   const basics = resume.success ? resume.data.basics : null;
@@ -72,7 +113,7 @@ export async function fillData(supabase: Supabase, userId: string, applicationId
     basics?.profiles.find((p) => p.network.toLowerCase().includes(network))?.url ?? null;
 
   let cvFile: { fileName: string; base64: string } | null = null;
-  if (app.tailored_cv_pdf && app.cv_approved_at) {
+  if (app?.tailored_cv_pdf && app.cv_approved_at) {
     const { data: blob } = await supabase.storage.from("cvs").download(app.tailored_cv_pdf);
     if (blob) {
       const safe = name.replace(/[^A-Za-z0-9]+/g, "-").replace(/^-|-$/g, "") || "CV";
@@ -83,7 +124,7 @@ export async function fillData(supabase: Supabase, userId: string, applicationId
     }
   }
 
-  const answers = (Array.isArray(app.answers) ? (app.answers as unknown as StoredAnswer[]) : [])
+  const answers = (Array.isArray(app?.answers) ? (app.answers as unknown as StoredAnswer[]) : [])
     .map((a) => ({
       question: a.question,
       answer: (a.final ?? a.answer ?? "").trim(),
@@ -92,8 +133,8 @@ export async function fillData(supabase: Supabase, userId: string, applicationId
     .filter((a) => a.answer);
 
   return {
-    applicationId: app.id,
-    status: app.status,
+    applicationId: app?.id ?? null,
+    status: app?.status ?? null,
     profile: {
       fullName: str(name),
       firstName: str(first),

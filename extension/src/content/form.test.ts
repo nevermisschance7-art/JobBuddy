@@ -4,6 +4,7 @@ import type { FillData } from "../types";
 import {
   classify,
   collectFields,
+  fillComboboxes,
   fillForm,
   formQuestions,
   isConfirmation,
@@ -171,5 +172,86 @@ describe("helpers", () => {
     expect(isConfirmation(document, "https://jobs.lever.co/acme/123/thanks")).toBe(true);
     document.body.innerHTML = lever + "<p>Thanks for your interest in Acme</p>";
     expect(isConfirmation(document, "https://jobs.lever.co/acme/123/apply")).toBe(false);
+  });
+});
+
+// Ashby: questions answered with buttons; react-select style dropdown (Greenhouse, Lever).
+const ashby = `
+<form>
+  <div class="field"><label for="_systemfield_name">Name</label><input id="_systemfield_name"></div>
+  <div class="field"><label for="_systemfield_email">Email</label><input id="_systemfield_email" type="email"></div>
+  <div class="field">
+    <label class="question-title">Do you have work authorization to work in that country?*</label>
+    <div class="yesno"><button type="button">Yes</button><button type="button">No</button></div>
+  </div>
+  <div class="field">
+    <label id="loc-label">Location</label>
+    <div class="select__control"><input id="loc" role="combobox" aria-autocomplete="list" aria-labelledby="loc-label" aria-controls="loc-list"></div>
+    <div id="loc-list" role="listbox"></div>
+  </div>
+  <button type="submit">Submit Application</button>
+</form>`;
+
+describe("Ashby-style buttons and dropdowns", () => {
+  beforeEach(() => {
+    document.body.innerHTML = ashby;
+    // A dropdown that shows matching options once the user types, like react-select.
+    const input = document.querySelector<HTMLInputElement>("#loc")!;
+    const list = document.querySelector("#loc-list")!;
+    input.addEventListener("input", () => {
+      list.innerHTML = ["Warsaw, Masovian Voivodeship, Poland", "Warsaw, Indiana, United States"]
+        .filter((o) => o.toLowerCase().includes(input.value.toLowerCase()))
+        .map((o) => `<div role="option">${o}</div>`)
+        .join("");
+      list.querySelectorAll("[role=option]").forEach((o) =>
+        o.addEventListener("click", () => {
+          input.value = "";
+          input.setAttribute("data-picked", o.textContent ?? "");
+          list.innerHTML = "";
+        }),
+      );
+    });
+    // Clicking a choice button marks it selected, like Ashby does.
+    document
+      .querySelectorAll(".yesno button")
+      .forEach((b) => b.addEventListener("click", () => b.setAttribute("aria-pressed", "true")));
+  });
+
+  it("finds the button question and the dropdown", () => {
+    const fields = collectFields(document);
+    const yesNo = fields.find((f) => f.choices);
+    expect(yesNo?.label).toBe("Do you have work authorization to work in that country?");
+    expect(yesNo?.choices?.map((c) => c.label)).toEqual(["Yes", "No"]);
+    expect(yesNo?.required).toBe(true);
+    expect(fields.find((f) => f.combobox)?.label).toBe("Location");
+    // The submit button is never taken as a choice.
+    expect(fields.some((f) => f.choices?.some((c) => /submit/i.test(c.label)))).toBe(false);
+  });
+
+  it("clicks Yes from the yes/no fixed answer and picks the dropdown option", async () => {
+    const withLocation: FillData = {
+      ...data,
+      fixedAnswers: { work_authorized: "Yes", location: "Warsaw, Poland" },
+    };
+    const report = fillForm(collectFields(document), withLocation);
+    expect(document.querySelector(".yesno button")!.getAttribute("aria-pressed")).toBe("true");
+    expect(report.dropdowns).toHaveLength(1);
+    await fillComboboxes(report.dropdowns, report);
+    expect(document.querySelector("#loc")!.getAttribute("data-picked")).toBe(
+      "Warsaw, Masovian Voivodeship, Poland",
+    );
+  });
+
+  it("uses a right-to-work answer that starts with yes/no for yes/no buttons", () => {
+    const report = fillForm(collectFields(document), {
+      ...data,
+      fixedAnswers: { right_to_work: "No, I need a visa for the US" },
+    });
+    expect(document.querySelectorAll(".yesno button")[1]!.getAttribute("aria-pressed")).toBe(
+      "true",
+    );
+    expect(report.missed.map((f) => f.label)).not.toContain(
+      "Do you have work authorization to work in that country?",
+    );
   });
 });
