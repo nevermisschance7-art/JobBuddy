@@ -50,7 +50,7 @@ Only the We Work Remotely fixture is synthesised (the feed is blocked from the d
 ## What gets stored
 
 - **Remote tech roles only** (title match), worldwide. Office and hybrid jobs are not stored.
-- **Posted within the last 48 hours**, with a real posting date (no date means no proof of freshness, so it is dropped). Jobs are deleted 4 days after posting (`prune_stale_jobs`, hourly) unless someone applied.
+- **Posted within the last 7 days**, with a real posting date (no date means no proof of freshness, so it is dropped). Jobs are deleted 10 days after posting (`prune_stale_jobs`, hourly) unless someone has an application for them. Why listed jobs were dropped is counted per run in `source_runs.dropped`.
 - Descriptions are capped at 6,000 characters.
 - **Internships are dropped.**
 - **Salary only if stated** by the source, yearly.

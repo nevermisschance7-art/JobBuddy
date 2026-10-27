@@ -35,7 +35,14 @@ class JobStore(Protocol):
     def company_results(self, results: list[dict[str, Any]]) -> None: ...
     def start_run(self, source: str) -> str: ...
     def finish_run(
-        self, run_id: str, seen: int, new: int, updated: int, closed: int, errors: list[str]
+        self,
+        run_id: str,
+        seen: int,
+        new: int,
+        updated: int,
+        closed: int,
+        errors: list[str],
+        dropped: dict[str, int] | None = None,
     ) -> None: ...
 
 
@@ -178,7 +185,14 @@ class SupabaseStore:
         return res.json()[0]["id"]
 
     def finish_run(
-        self, run_id: str, seen: int, new: int, updated: int, closed: int, errors: list[str]
+        self,
+        run_id: str,
+        seen: int,
+        new: int,
+        updated: int,
+        closed: int,
+        errors: list[str],
+        dropped: dict[str, int] | None = None,
     ) -> None:
         self.client.patch(
             f"{self.rest}/source_runs",
@@ -190,6 +204,7 @@ class SupabaseStore:
                 "jobs_updated": updated,
                 "jobs_closed": closed,
                 "errors": errors[:50],
+                "dropped": dropped or {},
             },
         ).raise_for_status()
 
@@ -267,6 +282,15 @@ class MemoryStore:
         return run_id
 
     def finish_run(
-        self, run_id: str, seen: int, new: int, updated: int, closed: int, errors: list[str]
+        self,
+        run_id: str,
+        seen: int,
+        new: int,
+        updated: int,
+        closed: int,
+        errors: list[str],
+        dropped: dict[str, int] | None = None,
     ) -> None:
-        self.runs[run_id].update(seen=seen, new=new, updated=updated, closed=closed, errors=errors)
+        self.runs[run_id].update(
+            seen=seen, new=new, updated=updated, closed=closed, errors=errors, dropped=dropped or {}
+        )

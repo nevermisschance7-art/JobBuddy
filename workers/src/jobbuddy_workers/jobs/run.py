@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import threading
+from collections import Counter
 from collections.abc import Iterable
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
@@ -24,7 +25,7 @@ MAX_DETAILS_PER_RUN = (
     400  # detail requests (SmartRecruiters) per run; the rest wait for the next run
 )
 # Only fresh remote jobs are stored: posted in the last 48 hours (kept 4 days by prune_stale_jobs).
-MAX_AGE_HOURS = 48
+MAX_AGE_DAYS = 7  # store jobs posted within this many days (kept 10 days, see prune_stale_jobs)
 AGGREGATOR_STALE_DAYS = 14  # aggregator jobs close when not seen for this long
 
 
@@ -35,6 +36,8 @@ class SourceStats:
     updated: int = 0
     closed: int = 0
     errors: list[str] = field(default_factory=list)
+    # Why listed jobs were not stored: too_old, no_date, not_remote, not_tech.
+    dropped: Counter[str] = field(default_factory=Counter)
 
 
 @dataclass
@@ -46,17 +49,30 @@ class RunState:
 
 
 def is_recent(posted_at: datetime | None, now: datetime | None = None) -> bool:
-    """Posted in the last 48 hours. Jobs without a real posting date can't prove that."""
+    """Posted in the last 7 days. Jobs without a real posting date can't prove that."""
     if posted_at is None:
         return False
     now = now or datetime.now(UTC)
-    return now - posted_at <= timedelta(hours=MAX_AGE_HOURS)
+    return now - posted_at <= timedelta(days=MAX_AGE_DAYS)
+
+
+def drop_reason(job: Job, now: datetime | None = None) -> str | None:
+    """Why a job is not stored, or None when it is kept."""
+    if not is_tech_role(job.title):
+        return "not_tech"
+    if job.remote_type != "remote":
+        return "not_remote"
+    if job.posted_at is None:
+        return "no_date"
+    if not is_recent(job.posted_at, now):
+        return "too_old"
+    return None
 
 
 def is_relevant(job: Job, wanted: set[str] | None = None, now: datetime | None = None) -> bool:
     """Fresh remote tech jobs, from anywhere. Whether a user may take one (their countries,
     remote_extra_countries) is decided by the matcher, not here."""
-    return is_tech_role(job.title) and job.remote_type == "remote" and is_recent(job.posted_at, now)
+    return drop_reason(job, now) is None
 
 
 def job_row(job: Job, h: str, key: str, embedding: list[float] | None) -> dict[str, Any]:
@@ -179,7 +195,10 @@ class Runner:
                         continue
                 else:
                     draft = src.normalise(r)
-                    if draft is None or not is_relevant(draft, ctx.wanted_countries):
+                    reason = "unreadable" if draft is None else drop_reason(draft)
+                    if reason:
+                        with lock:
+                            stats.dropped[reason] += 1
                         continue
                 if take_detail_slot():
                     out.append(src.fetch_detail(self.http, r))
@@ -230,7 +249,13 @@ class Runner:
         ]
         stats.closed += self.store.mark_missed(missing) if missing else 0
         self.store.finish_run(
-            run_id, stats.seen, stats.new, stats.updated, stats.closed, stats.errors
+            run_id,
+            stats.seen,
+            stats.new,
+            stats.updated,
+            stats.closed,
+            stats.errors,
+            dict(stats.dropped),
         )
         log.info("%s: %s", src.name, stats)
         return stats
@@ -251,7 +276,13 @@ class Runner:
         self._store(jobs, existing, state, stats)
         stats.closed += self.store.close_stale(src.name, AGGREGATOR_STALE_DAYS)
         self.store.finish_run(
-            run_id, stats.seen, stats.new, stats.updated, stats.closed, stats.errors
+            run_id,
+            stats.seen,
+            stats.new,
+            stats.updated,
+            stats.closed,
+            stats.errors,
+            dict(stats.dropped),
         )
         log.info("%s: %s", src.name, stats)
         return stats
@@ -272,7 +303,10 @@ class Runner:
                 job.description_text = job.description_text[:MAX_DESCRIPTION_CHARS]
             if job and raw.company_id and not job.company_id:
                 job.company_id = raw.company_id
-            if job and is_relevant(job, ctx.wanted_countries):
+            reason = "unreadable" if job is None else drop_reason(job)
+            if reason:
+                stats.dropped[reason] += 1
+            else:
                 out.append(job)
         return out
 

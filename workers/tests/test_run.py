@@ -152,11 +152,11 @@ def test_aggregators_only_run_when_due(setup):
 
 def test_relevance_is_fresh_remote_tech_jobs_only():
     now = datetime(2026, 10, 27, 12, tzinfo=UTC)
-    fresh = make_job("x", "1", posted_at=now - timedelta(hours=30))
+    fresh = make_job("x", "1", posted_at=now - timedelta(days=6))
     assert is_relevant(fresh, set(), now=now)
     assert not is_relevant(make_job("x", "2", remote_type="hybrid", posted_at=now), set(), now=now)
     assert not is_relevant(make_job("x", "3", remote_type=None, posted_at=now), set(), now=now)
-    assert not is_relevant(make_job("x", "4", posted_at=now - timedelta(hours=49)), set(), now=now)
+    assert not is_relevant(make_job("x", "4", posted_at=now - timedelta(days=8)), set(), now=now)
     assert not is_relevant(
         make_job("x", "5", posted_at=None), set(), now=now
     )  # no proof it is fresh
