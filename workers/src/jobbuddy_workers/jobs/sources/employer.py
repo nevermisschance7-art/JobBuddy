@@ -433,6 +433,209 @@ def parse_teamtailor_rss(xml: str) -> list[dict[str, Any]]:
     return items
 
 
+# ---------------------------------------------------------------- Workday
+# Slug "tenant|wdN|site", e.g. "nvidia|wd5|NVIDIAExternalCareerSite". The list is sorted
+# newest first and only says "Posted Today" etc.; the detail has the exact posting date
+# (startDate) and the location, so details are fetched for recent tech jobs only.
+
+_WD_AGE = re.compile(r"posted (today|yesterday|(\d+)\+? days? ago)", re.I)
+
+
+def workday_age_days(posted_on: str | None) -> int | None:
+    m = _WD_AGE.search(posted_on or "")
+    if not m:
+        return None
+    word = m.group(1).lower()
+    if word == "today":
+        return 0
+    if word == "yesterday":
+        return 1
+    return int(m.group(2))
+
+
+class Workday:
+    name = "workday"
+    kind = "employer"
+    complete_listing = False  # paged by recency; we stop once postings are older than 2 days
+    MAX_PAGES = 10
+
+    @staticmethod
+    def _base(slug: str) -> tuple[str, str]:
+        tenant, wd, site = slug.split("|")
+        host = f"https://{tenant}.{wd}.myworkdayjobs.com"
+        return host, f"{host}/wday/cxs/{tenant}/{site}"
+
+    def fetch_company(self, http: Http, company: Company) -> list[RawJob]:
+        host, api = self._base(company.slug)
+        out: list[RawJob] = []
+        for page in range(self.MAX_PAGES):
+            body = {"limit": 20, "offset": page * 20, "searchText": "", "appliedFacets": {}}
+            posts = http.post_json(f"{api}/jobs", body).get("jobPostings", [])
+            for p in posts:
+                item = {**p, "_host": host, "_api": api}
+                out.append(RawJob(self.name, p["externalPath"], item, company.id, company.name))
+            ages = [workday_age_days(p.get("postedOn")) for p in posts]
+            if len(posts) < 20 or all(a is not None and a > 2 for a in ages):
+                break
+        return out
+
+    def prefilter(self, raw: RawJob) -> bool:
+        age = workday_age_days(raw.data.get("postedOn"))
+        title = raw.data.get("title") or ""
+        return age is not None and age <= 2 and is_tech_role(title) and not is_internship(title)
+
+    def fetch_detail(self, http: Http, raw: RawJob) -> RawJob:
+        try:
+            detail = http.get_json(raw.data["_api"] + raw.data["externalPath"])
+        except FetchError:
+            return raw
+        data = {**raw.data, "detail": detail.get("jobPostingInfo", {})}
+        return RawJob(raw.source, raw.external_id, data, raw.company_id, raw.company_name)
+
+    def normalise(self, raw: RawJob) -> Job | None:
+        j = raw.data
+        d = j.get("detail")
+        if not d:
+            return None  # the list alone has no date or location
+        title = d.get("title") or j.get("title") or ""
+        if is_internship(title, d.get("timeType")):
+            return None
+        names = [d.get("location"), *(d.get("additionalLocations") or [])]
+        countries, regions, _, locs = _locations(names, [dig(d, "country", "descriptor")])
+        description = html_to_text(d.get("jobDescription"))
+        url = d.get("externalUrl") or j["_host"] + j["externalPath"]
+        return Job(
+            source=self.name,
+            external_id=raw.external_id,
+            canonical_url=canonical_url(url),
+            apply_url=url,
+            title=title,
+            company_name=raw.company_name or "",
+            company_id=raw.company_id,
+            description_text=description,
+            countries=countries,
+            remote_regions=regions,
+            locations=locs,
+            remote_type=remote_type_from(d.get("remoteType"), *names, title, description[:600]),
+            employment_type=employment_from(d.get("timeType")),
+            seniority=seniority_from(title),
+            posted_at=from_iso(d.get("startDate")),
+        )
+
+
+# ---------------------------------------------------------------- Personio (XML feed)
+
+
+def parse_personio_xml(xml: str, host: str) -> list[dict[str, Any]]:
+    items = []
+    for pos in ET.fromstring(xml).iter("position"):
+        item: dict[str, Any] = {c.tag: (c.text or "").strip() for c in pos if len(c) == 0}
+        offices = [o.text for o in pos.iter("office") if o.text]
+        item["additionalOffices"] = offices[1:]
+        item["description"] = "\n\n".join(
+            f"{jd.findtext('name') or ''}\n{jd.findtext('value') or ''}"
+            for jd in pos.iter("jobDescription")
+        )
+        item["_host"] = host
+        items.append(item)
+    return items
+
+
+class Personio:
+    name = "personio"
+    kind = "employer"
+
+    def fetch_company(self, http: Http, company: Company) -> list[RawJob]:
+        host = company.slug if "." in company.slug else f"{company.slug}.jobs.personio.de"
+        xml = http.get_text(f"https://{host}/xml?language=en")
+        return [
+            RawJob(self.name, item.get("id", ""), item, company.id, company.name)
+            for item in parse_personio_xml(xml, host)
+        ]
+
+    def normalise(self, raw: RawJob) -> Job | None:
+        j = raw.data
+        title = j.get("name") or ""
+        if is_internship(title, j.get("employmentType"), j.get("seniority")):
+            return None
+        names = [j.get("office"), *j.get("additionalOffices", [])]
+        countries, regions, _, locs = _locations(names)
+        description = html_to_text(j.get("description"))
+        url = f"https://{j['_host']}/job/{raw.external_id}"
+        return Job(
+            source=self.name,
+            external_id=raw.external_id,
+            canonical_url=canonical_url(url),
+            apply_url=url,
+            title=title,
+            company_name=j.get("subcompany") or raw.company_name or "",
+            company_id=raw.company_id,
+            description_text=description,
+            countries=countries,
+            remote_regions=regions,
+            locations=locs,
+            remote_type=remote_type_from(None, *names, title, j.get("schedule"), description[:600]),
+            employment_type=employment_from(j.get("schedule"), j.get("employmentType")),
+            seniority=seniority_from(title, j.get("seniority")),
+            posted_at=from_iso(j.get("createdAt")),
+        )
+
+
+# ---------------------------------------------------------------- Recruitee
+
+
+class Recruitee:
+    name = "recruitee"
+    kind = "employer"
+
+    def fetch_company(self, http: Http, company: Company) -> list[RawJob]:
+        data = http.get_json(f"https://{company.slug}.recruitee.com/api/offers/")
+        return [
+            RawJob(self.name, str(o["id"]), o, company.id, company.name)
+            for o in data.get("offers", [])
+        ]
+
+    def normalise(self, raw: RawJob) -> Job | None:
+        j = raw.data
+        title = j.get("title") or ""
+        if is_internship(title, j.get("employment_type_code")):
+            return None
+        extra = [loc.get("name") for loc in j.get("locations") or [] if isinstance(loc, dict)]
+        names = [j.get("location"), *extra]
+        countries, regions, _, locs = _locations(names, [j.get("country_code")])
+        description = html_to_text(f"{j.get('description') or ''}\n{j.get('requirements') or ''}")
+        published = (j.get("published_at") or j.get("created_at") or "").replace(" UTC", "+00:00")
+        url = j.get("careers_url") or ""
+        return Job(
+            source=self.name,
+            external_id=raw.external_id,
+            canonical_url=canonical_url(url),
+            apply_url=j.get("careers_apply_url") or url,
+            title=title,
+            company_name=j.get("company_name") or raw.company_name or "",
+            company_id=raw.company_id,
+            description_text=description,
+            countries=countries,
+            remote_regions=regions,
+            locations=locs,
+            remote_type="remote" if j.get("remote") else remote_type_from(None, *names, title),
+            employment_type=employment_from(j.get("employment_type_code")),
+            seniority=seniority_from(title),
+            posted_at=from_iso(published),
+        )
+
+
 EMPLOYER_SOURCES = {
-    s.name: s for s in [Greenhouse(), Lever(), Ashby(), Workable(), SmartRecruiters(), Teamtailor()]
+    s.name: s
+    for s in [
+        Greenhouse(),
+        Lever(),
+        Ashby(),
+        Workable(),
+        SmartRecruiters(),
+        Teamtailor(),
+        Workday(),
+        Personio(),
+        Recruitee(),
+    ]
 }

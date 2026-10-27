@@ -1,0 +1,34 @@
+{
+  "jobPostingInfo": {
+    "id": "68df0993f9661011b3f592bb23410000",
+    "title": "Senior Storage Production Engineer - DGX Cloud",
+    "jobDescription": "<div><p>Production engineering is a field that involves crafting, building, and maintaining large-scale production systems with high efficiency and availability. It encompasses various areas, including software and systems engineering practices, storage, data management, and services. Professionals in the role of Production Engineers hold specialized knowledge and expertise across various domains, including storage architecture, high-performance distributed storage, data management, systems, networking, coding, database management, prioritization, continuous delivery and deployment, along with open-source cloud-enabling technologies such as Kubernetes, containers, and virtualization. Their responsibilities include ensuring storage architectures are reliable, scalable, and efficient. They optimize data placement and access patterns. They manage large-scale distributed storage systems and ensure low-latency data access for HPC and AI/ML workloads.</p></div><div><div><div><div><div><div><div><div><div><p></p><p>Storage Production Engineers at NVIDIA ensure that our internal and external-facing GPU cloud services meet reliability and uptime goals as promised to the users while enabling developers to make changes to the existing system through careful preparation and planning while keeping an eye on capacity, latency, and performance. This role also requires a mindset focused on automating storage operations, improving data access efficiency, and optimizing storage performance. Much of our software development focuses on optimizing operations through automation, enhancing system responsiveness, and improving the efficiency of storage and production systems. Since Production Engineers are responsible for the big picture of how our systems interface with each other, we use a breadth of tools and approaches to tackle a broad spectrum of challenges. Practices such as proactive storage performance monitoring, automated fault detection and remediation, scalable data redundancy methods, and integration of intelligent caching mechanisms factor into iterative improvements that are key to system reliability and efficiency.</p><p></p><p><b>What You Will Be Doing:</b></p><ul><li><p>Design, implement, and support large-scale storage clusters, ensuring scalability, high availability, and data integrity.</p></li><li><p>Develop and maintain storage monitoring, logging, and alerting systems to ensure proactive detection and resolution of performance issues.</p></li><li><p>Work with AI/ML workloads to improve storage architectures for low-latency access, efficient caching, and high-throughput performance.</p></li><li><p>Improve the lifecycle of storage services – from inception and design to deployment, operation, and continuous optimization. Support storage services before they become available through activities such as system build consulting, developing automation frameworks, capacity management, and launch reviews.</p></li><li><p>Maintain production storage infras",
+    "location": "US, CA, Santa Clara",
+    "additionalLocations": [
+      "US, Remote"
+    ],
+    "postedOn": "Posted Today",
+    "startDate": "2026-10-26",
+    "timeType": "Full time",
+    "jobReqId": "JR2019643",
+    "jobPostingId": "Senior-Storage-Production-Engineer---DGX-Cloud_JR2019643",
+    "jobPostingSiteId": "NVIDIAExternalCareerSite",
+    "country": {
+      "descriptor": "United States of America",
+      "id": "bc33aa3152ec42d4995f4791a106ed09"
+    },
+    "canApply": true,
+    "posted": true,
+    "includeResumeParsing": true,
+    "jobRequisitionLocation": {
+      "descriptor": "US, CA, Santa Clara",
+      "country": {
+        "descriptor": "United States of America",
+        "id": "bc33aa3152ec42d4995f4791a106ed09",
+        "alpha2Code": "US"
+      }
+    },
+    "externalUrl": "https://nvidia.wd5.myworkdayjobs.com/NVIDIAExternalCareerSite/job/US-CA-Santa-Clara/Senior-Storage-Production-Engineer---DGX-Cloud_JR2019643",
+    "questionnaireId": "2f2764b3a82910064296831695150000"
+  }
+}

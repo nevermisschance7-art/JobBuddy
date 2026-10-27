@@ -68,7 +68,7 @@ describe("resumeSchema", () => {
 describe("matchBreakdownSchema", () => {
   it("caps each part at its weight", () => {
     const r = matchBreakdownSchema.safeParse({
-      technical: { points: 36, reason: "" },
+      technical: { points: 101, reason: "" },
       seniority: { points: 0, reason: "" },
       eligibility: { points: 0, reason: "" },
       remote: { points: 0, reason: "" },

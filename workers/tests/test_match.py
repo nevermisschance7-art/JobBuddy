@@ -137,20 +137,19 @@ def test_excluded_skills_companies_and_types():
 # ---------------------------------------------------------------- scoring maths
 
 
-def test_score_parts_add_up_and_respect_weights():
+def test_score_is_tech_fit_only():
     r = evaluate(job(), filters(), NOW)
     assert r.passed
-    total = sum(p["points"] for p in r.breakdown.values())
-    assert r.score == round(total)
-    limits = {
-        "technical": 35,
+    assert r.score == round(r.breakdown["technical"]["points"])
+    # Other parts stay as information for the job card but never change the score.
+    worse_info = evaluate(job(posted_at=None, salary_max=None, seniority="unknown"), filters(), NOW)
+    assert worse_info.score == r.score
+    for name, limit in {
+        "technical": 100,
         "seniority": 20,
         "eligibility": 20,
-        "remote": 10,
         "freshness": 10,
-        "compensation": 5,
-    }
-    for name, limit in limits.items():
+    }.items():
         assert 0 <= r.breakdown[name]["points"] <= limit
         assert r.breakdown[name]["reason"]
 
@@ -188,10 +187,13 @@ def test_compensation():
 
 
 def test_similarity_drives_technical_score():
-    low = evaluate(job(similarity=0.25), filters(), NOW).breakdown["technical"]["points"]
-    high = evaluate(job(similarity=0.70), filters(), NOW).breakdown["technical"]["points"]
-    assert high > low
-    assert high == 35  # strong similarity plus the one must-have skill
+    low = evaluate(job(similarity=0.30), filters(), NOW).score
+    mid = evaluate(job(similarity=0.475), filters(), NOW).score
+    high = evaluate(job(similarity=0.70), filters(), NOW).score
+    assert low < mid < high
+    assert low == 30  # nothing from similarity, all 30 from the one must-have skill
+    assert mid == 65  # half of 70 plus the skill
+    assert high == 100
 
 
 def test_sponsorship_unknown_caps_eligibility():
@@ -344,12 +346,10 @@ def test_filter_change_triggers_full_rescore():
     assert store.matched_at == NOW
 
 
-def test_relevance_cap_stops_unrelated_jobs_scoring_high():
+def test_unrelated_jobs_score_low():
     far = evaluate(job(similarity=0.33, description_text="Salesforce admin work."), filters(), NOW)
-    assert far.capped
-    assert far.score < 55
+    assert far.score < 20
     close = evaluate(job(similarity=0.62), filters(), NOW)
-    assert not close.capped
     assert close.score >= 85
 
 

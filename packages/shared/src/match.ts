@@ -11,9 +11,11 @@ export const matchStatusSchema = z.enum([
 
 const part = (max: number) => z.object({ points: z.number().min(0).max(max), reason: z.string() });
 
-// Score weights add up to 100. Unknown or unverified info never gets full points.
+// Unknown or unverified info never gets full points.
+// The score is the technical part only (fit to the CV, 0-100). The other parts are information
+// for the job card; location, seniority and sponsorship are pass/fail filters.
 export const matchBreakdownSchema = z.object({
-  technical: part(35),
+  technical: part(100),
   seniority: part(20),
   eligibility: part(20),
   remote: part(10),

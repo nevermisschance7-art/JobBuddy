@@ -115,3 +115,16 @@ def test_round_robin_mixes_systems():
     }
     order = [k[0] for k, _ in _round_robin(new)[:3]]
     assert set(order) == {"greenhouse", "lever", "ashby"}
+
+
+def test_slugs_for_new_systems():
+    text = """
+    https://nvidia.wd5.myworkdayjobs.com/en-US/NVIDIAExternalCareerSite/job/x
+    https://acme.wd1.myworkdayjobs.com/External
+    https://beta.jobs.personio.de/job/123 https://gamma.recruitee.com/o/backend-dev
+    """
+    found = slugs_in(text)
+    assert ("workday", "nvidia|wd5|NVIDIAExternalCareerSite") in found
+    assert ("workday", "acme|wd1|External") in found
+    assert ("personio", "beta") in found
+    assert ("recruitee", "gamma") in found

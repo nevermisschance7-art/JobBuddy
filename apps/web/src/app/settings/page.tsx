@@ -2,20 +2,18 @@ import { AppHeader } from "@/components/app-header";
 import { DeleteAccountForm, DisplayNameForm } from "@/components/forms/account-forms";
 import { AiKeysForm } from "@/components/forms/ai-keys-form";
 import { CvUpload, RereadCv } from "@/components/forms/cv-upload";
-import { FiltersForm } from "@/components/forms/filters-form";
 import { FixedAnswersForm } from "@/components/forms/fixed-answers-form";
 import { ResumeEditor } from "@/components/forms/resume-editor";
 import { ToneForm } from "@/components/forms/tone-form";
 import { Card } from "@/components/ui/field";
 import { loadProfile } from "@/lib/data";
-import { loadFilters, loadFixedAnswers, loadKeyStatuses, loadLatestCv } from "@/lib/loaders";
+import { loadFixedAnswers, loadKeyStatuses, loadLatestCv } from "@/lib/loaders";
 
 export const metadata = { title: "Settings · JobBuddy" };
 
 const SECTIONS = [
   ["account", "Account"],
   ["cv", "CV"],
-  ["filters", "Filters"],
   ["answers", "Fixed answers"],
   ["ai", "AI keys"],
   ["tone", "Tone"],
@@ -41,9 +39,8 @@ function Section({
 
 export default async function SettingsPage() {
   const { profile } = await loadProfile();
-  const [cv, { filters, minScore }, answers, keys] = await Promise.all([
+  const [cv, answers, keys] = await Promise.all([
     loadLatestCv(),
-    loadFilters(),
     loadFixedAnswers(),
     loadKeyStatuses(),
   ]);
@@ -90,10 +87,6 @@ export default async function SettingsPage() {
               confirmed={cv.confirmed}
             />
           ) : null}
-        </Section>
-
-        <Section id="filters" title="Filters">
-          <FiltersForm filters={filters} minScore={minScore} />
         </Section>
 
         <Section id="answers" title="Fixed answers">

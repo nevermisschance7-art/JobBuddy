@@ -95,43 +95,10 @@ export function FiltersForm({
       </Card>
 
       <Card className="flex flex-col gap-5">
-        <h2 className="text-lg font-semibold">How you want to work</h2>
-        <Field label="Work style" required>
-          <Checks
-            name="remote_types"
-            options={[
-              ["remote", "Remote"],
-              ["hybrid", "Hybrid"],
-              ["onsite", "On-site"],
-            ]}
-            checked={filters.remote_types}
-          />
-        </Field>
-        <div className="grid gap-4 sm:grid-cols-3">
-          <Field label="Max office days a week" htmlFor="office-days">
-            <Input
-              id="office-days"
-              name="hybrid_max_office_days"
-              type="number"
-              min={0}
-              max={5}
-              defaultValue={filters.hybrid_max_office_days ?? ""}
-            />
-          </Field>
-          <Field label="Home city" htmlFor="home">
-            <Input id="home" name="home_location" defaultValue={filters.home_location ?? ""} />
-          </Field>
-          <Field label="Max commute (km)" htmlFor="commute">
-            <Input
-              id="commute"
-              name="max_commute_km"
-              type="number"
-              min={0}
-              max={500}
-              defaultValue={filters.max_commute_km ?? ""}
-            />
-          </Field>
-        </div>
+        <h2 className="text-lg font-semibold">The jobs you want</h2>
+        <p className="text-muted-foreground text-sm">
+          Only remote jobs posted in the last 2 days are collected.
+        </p>
         <Field label="Job type" required>
           <Checks
             name="employment_types"

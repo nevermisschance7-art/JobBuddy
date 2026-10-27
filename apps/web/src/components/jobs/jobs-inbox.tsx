@@ -115,7 +115,7 @@ export function JobsInbox({ initial, minScore, hasCv }: Props) {
         ))}
       </div>
 
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-6">
         <Input
           aria-label="Search title or company"
           placeholder="Search"
@@ -142,18 +142,6 @@ export function JobsInbox({ initial, minScore, hasCv }: Props) {
           <option value="any">Any date</option>
           <option value="new">New (24h)</option>
           <option value="recent">Recent (3 days)</option>
-          <option value="relevant">Last 2 weeks</option>
-          <option value="older">Older</option>
-        </Select>
-        <Select
-          aria-label="Work style"
-          value={query.remote}
-          onChange={(e) => set("remote", e.target.value as MatchQuery["remote"])}
-        >
-          <option value="any">Any style</option>
-          <option value="remote">Remote</option>
-          <option value="hybrid">Hybrid</option>
-          <option value="onsite">On-site</option>
         </Select>
         <Select
           aria-label="Country"

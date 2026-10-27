@@ -3,6 +3,7 @@ on its own schedule (every_hours) to stay inside free limits and terms."""
 
 from __future__ import annotations
 
+import re
 import xml.etree.ElementTree as ET
 from typing import Any
 
@@ -18,6 +19,7 @@ from ..normalize import (
     from_rfc822,
     html_to_text,
     is_internship,
+    is_tech_role,
     remote_type_from,
     seniority_from,
 )
@@ -465,6 +467,130 @@ class Jooble:
         )
 
 
+# ---------------------------------------------------------------- Jobicy (remote only, free API)
+
+
+class Jobicy:
+    name = "jobicy"
+    kind = "aggregator"
+    every_hours = 2
+
+    def available(self, ctx: FetchContext) -> bool:
+        return True
+
+    def fetch(self, http: Http, ctx: FetchContext) -> list[RawJob]:
+        data = http.get_json(
+            "https://jobicy.com/api/v2/remote-jobs", params={"count": 100, "industry": "dev"}
+        )
+        return [RawJob(self.name, str(j["id"]), j) for j in data.get("jobs", [])]
+
+    def normalise(self, raw: RawJob) -> Job | None:
+        j = raw.data
+        geo = j.get("jobGeo")
+        return _remote_job(
+            self.name,
+            raw,
+            title=j.get("jobTitle") or "",
+            company=j.get("companyName") or "",
+            url=j["url"],
+            apply_url=j["url"],
+            description=html_to_text(j.get("jobDescription") or j.get("jobExcerpt")),
+            location=None if (geo or "").lower() in ("anywhere", "") else geo,
+            posted_at=from_iso(j.get("pubDate")),
+            employment=" ".join(j.get("jobType") or []),
+            salary=(j.get("annualSalaryMin"), j.get("annualSalaryMax"), j.get("salaryCurrency")),
+        )
+
+
+# ---------------------------------------------------------------- Working Nomads (remote only)
+
+
+class WorkingNomads:
+    name = "workingnomads"
+    kind = "aggregator"
+    every_hours = 2
+
+    def available(self, ctx: FetchContext) -> bool:
+        return True
+
+    def fetch(self, http: Http, ctx: FetchContext) -> list[RawJob]:
+        data = http.get_json("https://www.workingnomads.com/api/exposed_jobs/")
+        return [
+            RawJob(self.name, j["url"], j) for j in data if isinstance(j, dict) and j.get("url")
+        ]
+
+    def normalise(self, raw: RawJob) -> Job | None:
+        j = raw.data
+        return _remote_job(
+            self.name,
+            raw,
+            title=j.get("title") or "",
+            company=j.get("company_name") or "",
+            url=j["url"],
+            apply_url=j["url"],
+            description=html_to_text(j.get("description")),
+            location=j.get("location") or None,
+            posted_at=from_iso(j.get("pub_date")),
+            tags=[t.strip() for t in (j.get("tags") or "").split(",") if t.strip()],
+        )
+
+
+# ---------------------------------------------------------------- Hacker News "Who is hiring"
+# One thread a month; each top-level comment is one company's posting, and its timestamp is
+# when it was posted. Most start with "Company | Role | Location | REMOTE | ...".
+
+
+class HackerNews:
+    name = "hackernews"
+    kind = "aggregator"
+    every_hours = 2
+
+    def available(self, ctx: FetchContext) -> bool:
+        return True
+
+    def fetch(self, http: Http, ctx: FetchContext) -> list[RawJob]:
+        search = http.get_json(
+            "https://hn.algolia.com/api/v1/search_by_date",
+            params={"tags": "story,author_whoishiring", "hitsPerPage": 5},
+        )
+        thread = next(
+            (h for h in search.get("hits", []) if "who is hiring" in h["title"].lower()), None
+        )
+        if not thread:
+            return []
+        item = http.get_json(f"https://hn.algolia.com/api/v1/items/{thread['objectID']}")
+        return [
+            RawJob(self.name, str(c["id"]), c)
+            for c in item.get("children", [])
+            if c.get("text") and c.get("author")
+        ]
+
+    def normalise(self, raw: RawJob) -> Job | None:
+        j = raw.data
+        text = html_to_text(j.get("text"))
+        first = text.split("\n", 1)[0]
+        parts = [p.strip() for p in re.split(r"\s+[|—–]\s+|\s+-\s+", first) if p.strip()]
+        if len(parts) < 2 or not re.search(r"\bremote\b", first, re.I):
+            return None
+        if re.search(r"\b(no remote|not remote|onsite only|on-site only)\b", first, re.I):
+            return None
+        company = parts[0][:100]
+        role = next((p for p in parts[1:] if is_tech_role(p)), parts[1])
+        location = next((p for p in parts[1:] if re.search(r"\bremote\b", p, re.I)), None)
+        url = f"https://news.ycombinator.com/item?id={raw.external_id}"
+        return _remote_job(
+            self.name,
+            raw,
+            title=role[:200],
+            company=company,
+            url=url,
+            apply_url=url,
+            description=text,
+            location=location,
+            posted_at=from_iso(j.get("created_at")),
+        )
+
+
 AGGREGATOR_SOURCES = {
     s.name: s
     for s in [
@@ -473,6 +599,9 @@ AGGREGATOR_SOURCES = {
         Arbeitnow(),
         RemoteOk(),
         WeWorkRemotely(),
+        Jobicy(),
+        WorkingNomads(),
+        HackerNews(),
         Adzuna(),
         Reed(),
         Jooble(),

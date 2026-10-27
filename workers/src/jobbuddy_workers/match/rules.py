@@ -12,8 +12,11 @@ from datetime import datetime, timedelta
 from ..geo import COUNTRIES, region_covers
 from ..jobs.normalize import norm_key
 
+# The score is tech fit only (0-100). Location, remote, seniority and sponsorship are pass/fail
+# filters; their parts are kept in the breakdown as information for the job card, with the
+# point scales below, but they are not added to the score.
 WEIGHTS = {
-    "technical": 35,
+    "technical": 100,
     "seniority": 20,
     "eligibility": 20,
     "remote": 10,
@@ -24,11 +27,6 @@ SENIORITY_ORDER = ["junior", "mid", "senior", "lead", "principal"]
 HOT_SCORE = 85
 SIM_FLOOR = 0.35
 SIM_FULL = 0.60
-
-
-def relevance_cap(technical_points: float) -> int:
-    """A job far from the CV can't score high just by being remote, senior and fresh."""
-    return round(30 + 2 * technical_points)
 
 
 @dataclass
@@ -191,18 +189,19 @@ def _part(points: float, max_points: int, reason: str) -> dict[str, object]:
 def technical(job: JobFacts, f: UserFilters) -> dict[str, object]:
     # Calibrated on real data (MiniLM, CV vs job): median job ~0.33, top 10% ~0.45+,
     # best matches ~0.60. So 0 points at 0.35 and full points at 0.60.
-    sim_points = 25 * (job.similarity - SIM_FLOOR) / (SIM_FULL - SIM_FLOOR)
+    # 70 points from closeness to the CV, 30 from the skills the job mentions.
+    sim_points = max(0.0, min(70.0, 70 * (job.similarity - SIM_FLOOR) / (SIM_FULL - SIM_FLOOR)))
     text = f"{job.title}\n{job.description_text}\n{' '.join(job.tags)}"
     skills = f.must_have_skills or f.cv_skills[:15]
     if skills:
         found = [s for s in skills if mentions(text, s)]
-        skill_points = 10 * len(found) / len(skills)
+        skill_points = 30 * len(found) / len(skills)
         label = "must-have" if f.must_have_skills else "of your top"
         reason = f"Mentions {len(found)} {label} skills" + (
             f" ({', '.join(found[:3])})" if found else ""
         )
     else:
-        skill_points = 5
+        skill_points = 15
         reason = "Closeness to your CV"
     return _part(sim_points + skill_points, WEIGHTS["technical"], reason)
 
@@ -287,27 +286,20 @@ def evaluate(job: JobFacts, f: UserFilters, now: datetime) -> Result:
         "freshness": freshness(job, now),
         "compensation": compensation(job, f),
     }
-    score = round(sum(float(p["points"]) for p in breakdown.values()))  # type: ignore[arg-type]
-    cap = relevance_cap(float(breakdown["technical"]["points"]))  # type: ignore[arg-type]
-    capped = score > cap
+    score = round(float(breakdown["technical"]["points"]))  # type: ignore[arg-type]
     reasons = hard_filters(job, f)
     return Result(
         passed=not reasons,
-        score=max(0, min(100, cap if capped else score)),
+        score=max(0, min(100, score)),
         breakdown=breakdown,
         reasons_failed=reasons,
-        capped=capped,
     )
 
 
 def top_reasons(result: Result, n: int = 3) -> list[str]:
-    """The strongest parts, as one-liners for the job card."""
-    parts = sorted(
-        result.breakdown.items(),
-        key=lambda kv: float(kv[1]["points"]) / WEIGHTS[kv[0]],  # type: ignore[arg-type]
-        reverse=True,
-    )
-    return [str(p["reason"]) for _, p in parts[:n]]
+    """One-liners for the job card: the tech fit first, then eligibility and freshness."""
+    keys = ["technical", "eligibility", "freshness", "seniority", "compensation"]
+    return [str(result.breakdown[k]["reason"]) for k in keys if k in result.breakdown][:n]
 
 
 def is_hot(result: Result, job: JobFacts, now: datetime) -> bool:

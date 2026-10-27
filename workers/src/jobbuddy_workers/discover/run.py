@@ -27,7 +27,7 @@ log = logging.getLogger(__name__)
 
 FAILS_BEFORE_DEACTIVATE = 5
 RECHECK_INACTIVE_AFTER = timedelta(days=30)
-MAX_NEW_CHECKS = 1500  # per run, to keep the weekly job short
+MAX_NEW_CHECKS = 5000  # per run
 CHECK_CONCURRENCY = 8
 
 CC_PATTERNS = {
@@ -37,6 +37,9 @@ CC_PATTERNS = {
     "workable": ["apply.workable.com/*"],
     "smartrecruiters": ["jobs.smartrecruiters.com/*", "careers.smartrecruiters.com/*"],
     "teamtailor": ["*.teamtailor.com"],
+    "workday": ["*.myworkdayjobs.com"],
+    "personio": ["*.jobs.personio.de", "*.jobs.personio.com"],
+    "recruitee": ["*.recruitee.com"],
 }
 
 

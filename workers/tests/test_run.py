@@ -24,10 +24,10 @@ def make_job(source, ext, title="Backend Engineer", company="Acme", countries=("
         countries=list(countries),
         remote_regions=kw.pop("regions", []),
         locations=[],
-        remote_type=kw.pop("remote_type", "onsite"),
+        remote_type=kw.pop("remote_type", "remote"),
         employment_type="full_time",
         seniority="unknown",
-        posted_at=kw.pop("posted_at", datetime.now(UTC) - timedelta(days=1)),
+        posted_at=kw.pop("posted_at", datetime.now(UTC) - timedelta(hours=3)),
         **kw,
     )
 
@@ -150,21 +150,19 @@ def test_aggregators_only_run_when_due(setup):
     assert "remotive" in runner.run(hour=6)
 
 
-def test_relevance_by_country_and_region():
-    de = make_job("x", "1")
-    assert not is_relevant(de, set())  # no users yet: remote only
-    assert is_relevant(make_job("x", "r", remote_type="remote"), set())
-    assert is_relevant(de, {"DE"})
-    assert not is_relevant(de, {"BR"})
-    eu_remote = make_job("x", "2", countries=(), regions=["EUROPE"], remote_type="remote")
-    assert is_relevant(eu_remote, {"PL"})
-    assert is_relevant(eu_remote, {"US"})  # all recent remote jobs are stored; matching decides
-    anywhere = make_job("x", "3", countries=(), remote_type="remote")
-    assert is_relevant(anywhere, {"US"})
-    sales = make_job("x", "4", title="Account Executive", remote_type="remote")
-    assert not is_relevant(sales, set())
-    old = make_job("x", "5", posted_at=datetime(2026, 8, 1, tzinfo=UTC))
-    assert not is_relevant(old, {"DE"}, now=datetime(2026, 10, 21, tzinfo=UTC))
+def test_relevance_is_fresh_remote_tech_jobs_only():
+    now = datetime(2026, 10, 27, 12, tzinfo=UTC)
+    fresh = make_job("x", "1", posted_at=now - timedelta(hours=30))
+    assert is_relevant(fresh, set(), now=now)
+    assert not is_relevant(make_job("x", "2", remote_type="hybrid", posted_at=now), set(), now=now)
+    assert not is_relevant(make_job("x", "3", remote_type=None, posted_at=now), set(), now=now)
+    assert not is_relevant(make_job("x", "4", posted_at=now - timedelta(hours=49)), set(), now=now)
+    assert not is_relevant(
+        make_job("x", "5", posted_at=None), set(), now=now
+    )  # no proof it is fresh
+    assert not is_relevant(
+        make_job("x", "6", title="Account Executive", posted_at=now), set(), now=now
+    )
 
 
 class FakeDetailSource(FakeEmployer):
@@ -193,7 +191,7 @@ def test_details_only_for_relevant_new_jobs_and_capped(setup, monkeypatch):
         make_job("greenhouse", "1"),
         make_job("greenhouse", "2", title="Data Engineer"),
         make_job("greenhouse", "3", title="SRE"),
-        make_job("greenhouse", "far", countries=("US",)),  # not relevant: no detail fetched
+        make_job("greenhouse", "far", remote_type="onsite"),  # not relevant: no detail fetched
     ]
     first = runner.run(hour=0)["greenhouse"]
     assert src.detail_calls == 2
@@ -223,13 +221,3 @@ def test_a_crashing_source_does_not_stop_the_others(setup, monkeypatch):
     monkeypatch.setattr(store, "upsert_jobs", boom)
     results = runner.run(hour=0)
     assert results["greenhouse"].errors and results["remotive"].errors  # both ran, both reported
-
-
-def test_every_recent_remote_job_is_kept_but_old_ones_are_not():
-    now = datetime(2026, 10, 27, tzinfo=UTC)
-    us_remote = make_job(
-        "x", "u", countries=("US",), remote_type="remote", posted_at=now - timedelta(days=3)
-    )
-    assert is_relevant(us_remote, {"PL"}, now=now)
-    month_old = make_job("x", "o", remote_type="remote", posted_at=now - timedelta(days=31))
-    assert not is_relevant(month_old, {"PL"}, now=now)

@@ -10,7 +10,7 @@ import pytest
 from jobbuddy_workers.jobs.model import RawJob
 from jobbuddy_workers.jobs.sources import AGGREGATOR_SOURCES, EMPLOYER_SOURCES
 from jobbuddy_workers.jobs.sources.aggregators import parse_rss
-from jobbuddy_workers.jobs.sources.employer import parse_teamtailor_rss
+from jobbuddy_workers.jobs.sources.employer import parse_personio_xml, parse_teamtailor_rss
 
 FIX = Path(__file__).parent / "fixtures" / "sources"
 
@@ -69,6 +69,39 @@ def raws_for(source):
             RawJob(source, str(j["id"]), {**j, "_location": "Poland"})
             for j in load("jooble.json")["jobs"]
         ]
+    if source == "workday":
+        posts = load("workday.json")["jobPostings"]
+        detail = load("workday_detail.json")["jobPostingInfo"]
+        base = {
+            "_host": "https://nvidia.wd5.myworkdayjobs.com",
+            "_api": "https://nvidia.wd5.myworkdayjobs.com/wday/cxs/nvidia/x",
+        }
+        return [
+            RawJob(
+                source,
+                posts[0]["externalPath"],
+                {**posts[0], **base, "detail": detail},
+                "c1",
+                "NVIDIA",
+            )
+        ]
+    if source == "personio":
+        xml = (FIX / "personio.xml").read_text(encoding="utf-8")
+        return [
+            RawJob(source, i["id"], i, "c1", "Personio")
+            for i in parse_personio_xml(xml, "personio.jobs.personio.de")
+        ]
+    if source == "recruitee":
+        return [
+            RawJob(source, str(o["id"]), o, "c1", "Channable")
+            for o in load("recruitee.json")["offers"]
+        ]
+    if source == "jobicy":
+        return [RawJob(source, str(j["id"]), j) for j in load("jobicy.json")["jobs"]]
+    if source == "workingnomads":
+        return [RawJob(source, j["url"], j) for j in load("workingnomads.json")]
+    if source == "hackernews":
+        return [RawJob(source, str(c["id"]), c) for c in load("hackernews_item.json")["children"]]
     raise KeyError(source)
 
 
@@ -209,3 +242,45 @@ def test_smartrecruiters_only_fetches_details_for_tech_jobs():
     assert src.wants_detail(dev)
     sales = RawJob("smartrecruiters", "y", {"name": "Key Account Manager"})
     assert not src.wants_detail(sales)
+
+
+def test_workday_uses_detail_start_date_and_needs_detail():
+    from jobbuddy_workers.jobs.sources.employer import workday_age_days
+
+    raw = raws_for("workday")[0]
+    job = norm("workday", raw)
+    assert job.posted_at.date().isoformat() == raw.data["detail"]["startDate"][:10]
+    without_detail = RawJob("workday", "x", {k: v for k, v in raw.data.items() if k != "detail"})
+    assert norm("workday", without_detail) is None
+    assert [
+        workday_age_days(t)
+        for t in (
+            "Posted Today",
+            "Posted Yesterday",
+            "Posted 3 Days Ago",
+            "Posted 30+ Days Ago",
+            None,
+        )
+    ] == [0, 1, 3, 30, None]
+
+
+def test_recruitee_remote_flag_and_published_at():
+    raw = raws_for("recruitee")[0]
+    job = norm("recruitee", raw)
+    assert job.posted_at is not None
+    assert (job.remote_type == "remote") == bool(raw.data["remote"]) or job.remote_type is not None
+
+
+def test_hackernews_only_remote_postings():
+    jobs = [norm("hackernews", r) for r in raws_for("hackernews")]
+    for job in (j for j in jobs if j):
+        assert job.remote_type == "remote"
+        assert job.posted_at is not None
+        assert job.apply_url.startswith("https://news.ycombinator.com/item?id=")
+
+
+def test_remote_boards_jobicy_and_working_nomads():
+    j = norm("jobicy", raws_for("jobicy")[0])
+    assert j.remote_type == "remote" and j.remote_regions == ["WORLDWIDE"] and j.salary_min
+    w = norm("workingnomads", raws_for("workingnomads")[1])
+    assert w.remote_regions == ["EUROPE"]

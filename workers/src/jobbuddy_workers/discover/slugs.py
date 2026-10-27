@@ -20,7 +20,14 @@ PATTERNS: list[tuple[str, re.Pattern[str]]] = [
     ("workable", re.compile(r"apply\.workable\.com/" + _SLUG, re.I)),
     ("smartrecruiters", re.compile(r"(?:jobs|careers)\.smartrecruiters\.com/" + _SLUG, re.I)),
     ("teamtailor", re.compile(r"//([a-z0-9-]+)\.teamtailor\.com", re.I)),
+    ("personio", re.compile(r"//([a-z0-9-]+)\.jobs\.personio\.(?:de|com)", re.I)),
+    ("recruitee", re.compile(r"//([a-z0-9-]+)\.recruitee\.com", re.I)),
 ]
+
+# Workday: tenant.wdN.myworkdayjobs.com/[locale/]site -> slug "tenant|wdN|site".
+_WORKDAY = re.compile(
+    r"//([a-z0-9-]+)\.(wd\d+)\.myworkdayjobs\.com/(?:[a-z]{2}-[A-Z]{2}/)?([A-Za-z0-9_-]+)"
+)
 
 # Path segments that are part of the site, not a company.
 RESERVED = {
@@ -31,7 +38,7 @@ RESERVED = {
 }  # fmt: skip
 
 # Slugs are matched case-sensitively only on SmartRecruiters.
-CASE_SENSITIVE = {"smartrecruiters"}
+CASE_SENSITIVE = {"smartrecruiters", "workday"}
 
 
 def slugs_in(text: str) -> set[tuple[str, str]]:
@@ -50,4 +57,8 @@ def slugs_in(text: str) -> set[tuple[str, str]]:
             if bare.lower() in RESERVED or len(bare) < 2 or bare.isdigit():
                 continue
             found.add((ats, slug))
+    for m in _WORKDAY.finditer(text):
+        tenant, wd, site = m.group(1).lower(), m.group(2).lower(), m.group(3)
+        if site.lower() not in RESERVED and site.lower() not in {"wday", "job", "details"}:
+            found.add(("workday", f"{tenant}|{wd}|{site}"))
     return found

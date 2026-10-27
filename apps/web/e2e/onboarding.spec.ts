@@ -92,7 +92,6 @@ test("sign up, onboard, edit settings, delete account", async ({ page }, info) =
     await countries.fill("United Kingdom");
     await countries.press("Enter");
     await expect(page.getByRole("button", { name: "Remove United Kingdom" })).toBeVisible();
-    await page.getByLabel("Remote", { exact: true }).check();
     await shot(page, "06-filters");
     await page.getByRole("button", { name: "Save and continue" }).click();
 
@@ -166,8 +165,13 @@ test("sign up, onboard, edit settings, delete account", async ({ page }, info) =
     // Settings keep what onboarding saved.
     await page.locator("header").getByRole("link", { name: "Settings" }).click();
     await expect(page.getByLabel("Notice period")).toHaveValue("1 month");
-    await expect(page.getByRole("button", { name: "Remove United Kingdom" })).toBeVisible();
     await shot(page, "11-settings");
+
+    // Filters live on the job board, in one place.
+    await page.locator("header").getByRole("link", { name: "Jobs" }).click();
+    await page.getByText("Filters", { exact: true }).click();
+    await expect(page.getByRole("button", { name: "Remove United Kingdom" })).toBeVisible();
+    await shot(page, "11b-filters-on-job-board");
 
     // Signing out and back in with the same username returns to the same account.
     await page.getByRole("button", { name: "Sign out" }).click();

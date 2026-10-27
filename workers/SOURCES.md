@@ -17,6 +17,16 @@ Each lists every open job of one company, so a job missing from **2 successful r
 | SmartRecruiters | `api.smartrecruiters.com/v1/companies/{slug}/postings` | `releasedDate` (ISO) | | List has no description: detail (`ref`) is fetched only for jobs not stored yet |
 | Teamtailor | `https://{slug}.teamtailor.com/jobs.rss` (or a custom host as slug) | RSS `pubDate` | | `remoteStatus` (none, hybrid, fully), `tt:locations` |
 
+## More employer systems
+
+| System | Endpoint | Posting date | Notes |
+|---|---|---|---|
+| Workday | `POST https://{tenant}.{wdN}.myworkdayjobs.com/wday/cxs/{tenant}/{site}/jobs`, slug `tenant\|wdN\|site` | detail `startDate` | List says only "Posted Today" etc. and has no location; details are fetched for recent tech jobs only. Listing is paged newest first and treated as partial |
+| Personio | `https://{slug}.jobs.personio.de/xml?language=en` | `createdAt` | Remote from office names and text |
+| Recruitee | `https://{slug}.recruitee.com/api/offers/` | `published_at` | `remote` flag |
+
+Not used: JustJoin.it and NoFluffJobs disallow `/api/` in robots.txt.
+
 ## Aggregators and boards (partial listings)
 
 They return only their newest pages, so absence proves nothing: their jobs close when **not seen for 14 days**. Each runs on its own schedule to stay inside free limits.
@@ -25,6 +35,9 @@ They return only their newest pages, so absence proves nothing: their jobs close
 |---|---|---|---|---|---|
 | Remotive | Remote, worldwide | 6 h | `publication_date` | | Asks for max 4 calls a day. `candidate_required_location` gives the region |
 | Himalayas | Remote, worldwide | 2 h | `pubDate` (epoch s) | `expiryDate` | `locationRestrictions`, salary with `salaryPeriod` |
+| Jobicy | Remote, worldwide | 2 h | `pubDate` | | Free API, `industry=dev`. Fixture from documented shape (blocked from dev network) |
+| Working Nomads | Remote, worldwide | 2 h | `pub_date` | | Fixture from documented shape (blocked from dev network) |
+| Hacker News "Who is hiring" | Remote postings, worldwide | 2 h | comment `created_at` | | Monthly thread via the Algolia API; only comments that say remote |
 | Arbeitnow | Germany and EU | 2 h | `created_at` (epoch s) | | `remote` flag |
 | RemoteOK | Remote, worldwide | 4 h | `date` (ISO), `epoch` | | First array item is a legal notice. Terms: link back, name RemoteOK |
 | We Work Remotely | Remote, worldwide | 4 h | RSS `pubDate` | | Title is "Company: Role". Fixture synthesised (blocked from dev network) |
@@ -36,8 +49,8 @@ Only the We Work Remotely fixture is synthesised (the feed is blocked from the d
 
 ## What gets stored
 
-- **Tech roles only** (title match): every remote job, plus office and hybrid jobs in countries at least one user can work in.
-- **Posted within 30 days** (unknown dates are kept). Open jobs posted more than 30 days ago are deleted daily (`prune_stale_jobs`) unless someone applied.
+- **Remote tech roles only** (title match), worldwide. Office and hybrid jobs are not stored.
+- **Posted within the last 48 hours**, with a real posting date (no date means no proof of freshness, so it is dropped). Jobs are deleted 4 days after posting (`prune_stale_jobs`, hourly) unless someone applied.
 - Descriptions are capped at 6,000 characters.
 - **Internships are dropped.**
 - **Salary only if stated** by the source, yearly.

@@ -80,7 +80,7 @@ export function NotForMeDialog({
       {hint ? (
         <p className="text-muted-foreground mb-4 text-sm">
           {hint}{" "}
-          <Link href="/settings#filters" className="underline">
+          <Link href="/app#filters" className="underline">
             Open filters
           </Link>
         </p>

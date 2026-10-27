@@ -11,7 +11,6 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from ..embed import Embedder, job_text, to_pgvector
-from ..geo import region_covers
 from ..http import Http
 from .model import Job, RawJob
 from .normalize import MAX_DESCRIPTION_CHARS, content_hash, dedupe_key, is_tech_role
@@ -24,7 +23,8 @@ EMPLOYER_CONCURRENCY = 16  # parallel companies per employer system (public, cac
 MAX_DETAILS_PER_RUN = (
     400  # detail requests (SmartRecruiters) per run; the rest wait for the next run
 )
-MAX_AGE_DAYS = 30  # older postings are rarely still worth applying to; keeps the free DB small
+# Only fresh remote jobs are stored: posted in the last 48 hours (kept 4 days by prune_stale_jobs).
+MAX_AGE_HOURS = 48
 AGGREGATOR_STALE_DAYS = 14  # aggregator jobs close when not seen for this long
 
 
@@ -45,22 +45,18 @@ class RunState:
     urls: set[str]
 
 
-def is_relevant(job: Job, wanted: set[str], now: datetime | None = None) -> bool:
-    """Recent tech roles that at least one user could take. With no users yet, remote only."""
-    if not is_tech_role(job.title):
+def is_recent(posted_at: datetime | None, now: datetime | None = None) -> bool:
+    """Posted in the last 48 hours. Jobs without a real posting date can't prove that."""
+    if posted_at is None:
         return False
     now = now or datetime.now(UTC)
-    if job.posted_at and now - job.posted_at > timedelta(days=MAX_AGE_DAYS):
-        return False
-    # Every recent remote tech job is kept: anyone may want it, even if it is limited to
-    # another country (filters.remote_extra_countries, e.g. "US remote" for contractors).
-    if job.remote_type == "remote":
-        return True
-    if not wanted:
-        return False
-    if wanted & set(job.countries):
-        return True
-    return any(region_covers(r, c) for r in job.remote_regions for c in wanted)
+    return now - posted_at <= timedelta(hours=MAX_AGE_HOURS)
+
+
+def is_relevant(job: Job, wanted: set[str] | None = None, now: datetime | None = None) -> bool:
+    """Fresh remote tech jobs, from anywhere. Whether a user may take one (their countries,
+    remote_extra_countries) is decided by the matcher, not here."""
+    return is_tech_role(job.title) and job.remote_type == "remote" and is_recent(job.posted_at, now)
 
 
 def job_row(job: Job, h: str, key: str, embedding: list[float] | None) -> dict[str, Any]:
@@ -176,9 +172,15 @@ class Runner:
                 if r.external_id in existing or not wants(r):
                     out.append(r)
                     continue
-                draft = src.normalise(r)
-                if draft is None or not is_relevant(draft, ctx.wanted_countries):
-                    continue
+                # Sources whose list lacks location (Workday) decide from the list item itself.
+                prefilter = getattr(src, "prefilter", None)
+                if prefilter is not None:
+                    if not prefilter(r):
+                        continue
+                else:
+                    draft = src.normalise(r)
+                    if draft is None or not is_relevant(draft, ctx.wanted_countries):
+                        continue
                 if take_detail_slot():
                     out.append(src.fetch_detail(self.http, r))
             return out
@@ -216,10 +218,15 @@ class Runner:
         self._store(jobs, existing, state, stats)
 
         # Complete listings: a stored job missing from its company's successful listing.
+        # (Workday is paged by recency, so its listing is partial and absence proves nothing.)
+        complete = getattr(src, "complete_listing", True)
         missing = [
             e.id
             for e in existing.values()
-            if not e.closed and e.company_id in ok_companies and e.external_id not in seen_external
+            if complete
+            and not e.closed
+            and e.company_id in ok_companies
+            and e.external_id not in seen_external
         ]
         stats.closed += self.store.mark_missed(missing) if missing else 0
         self.store.finish_run(
