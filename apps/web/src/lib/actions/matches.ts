@@ -176,3 +176,15 @@ export async function prepareApplication(jobId: string): Promise<void> {
   revalidatePath("/app");
   redirect(applicationId ? `/applications/${applicationId}` : "/applications");
 }
+
+/** The user opened a job: it is no longer "New". */
+export async function markSeen(jobIds: string[]): Promise<void> {
+  if (jobIds.length === 0) return;
+  const { supabase, user } = await requireUser();
+  await supabase
+    .from("user_job_matches")
+    .update({ status: "seen" })
+    .eq("user_id", user.id)
+    .eq("status", "new")
+    .in("job_id", jobIds.slice(0, 100));
+}

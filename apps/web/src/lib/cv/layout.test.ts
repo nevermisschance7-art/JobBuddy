@@ -33,3 +33,25 @@ describe("cv layout", () => {
     expect(cvFileName(resume, "Acme & Co.")).toBe("Lukasz-Nowak-CV-Acme-Co");
   });
 });
+
+describe("tidy CV text", () => {
+  it("removes pasted bullet signs and evens out endings", () => {
+    const r = resumeSchema.parse({
+      basics: { name: "Sam  Tester" },
+      work: [
+        {
+          name: "Acme",
+          position: "Engineer",
+          highlights: ["• built APIs .", "- Led  a team", "● Cut costs by 10%."],
+        },
+      ],
+    });
+    const bullets = cvBlocks(r).filter((b) => b.kind === "bullet");
+    expect(bullets.map((b) => b.kind === "bullet" && b.text)).toEqual([
+      "Built APIs.",
+      "Led a team.",
+      "Cut costs by 10%.",
+    ]);
+    expect(cvBlocks(r)[0]).toEqual({ kind: "name", text: "Sam Tester" });
+  });
+});

@@ -29,9 +29,9 @@ export function TailorButtons({
           onClick={() => setMode("ai")}
         >
           {pending && mode === "ai"
-            ? "Tailoring, about 20 seconds..."
+            ? "Tailoring, about 10 seconds..."
             : tailored
-              ? "Tailor again with AI"
+              ? "Tailor again"
               : "Tailor with AI"}
         </Button>
         <Button
@@ -42,7 +42,7 @@ export function TailorButtons({
           disabled={pending}
           onClick={() => setMode("plain")}
         >
-          {pending && mode === "plain" ? "Copying..." : "Use my CV as it is"}
+          {pending && mode === "plain" ? "Making files..." : "Use my CV as it is"}
         </Button>
       </div>
       <FormMessage error={state.error} ok={state.message} />

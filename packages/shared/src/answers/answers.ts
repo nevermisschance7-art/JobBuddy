@@ -162,95 +162,125 @@ export type DraftDeps = {
   fixedAnswers: Partial<Record<string, string>>;
   memory: PastAnswer[];
   company: string;
-  /** Drafts one answer with the AI. Never receives fixed answers. */
+  /** Drafts one answer with the AI (the cover letter, or every answer without draftMany). */
   draft: (input: DraftInput) => Promise<{ text: string }>;
-  /** Lightly adapts a reused answer to this job; optional (no AI: reused as is). */
-  adapt?: (answer: string, question: string) => Promise<{ text: string }>;
+  /**
+   * Drafts several answers in ONE AI call, in order. Saves free-tier quota: a whole form
+   * costs one request. Never receives fixed answers.
+   */
+  draftMany?: (inputs: DraftInput[]) => Promise<string[]>;
   /** Lists claims in a draft that the CV doesn't support (see unsupportedIn). */
   check?: (text: string) => string[];
   /** Most AI drafts in one call, so a long form fits in one web request. Default 12. */
   maxDrafts?: number;
 };
 
-/** AI calls running at once: quick enough for a web request, gentle on free rate limits. */
-const PARALLEL = 4;
+/** A past answer for another company, with that company's name changed to this one. */
+export function adaptAnswer(answer: string, from: string | null | undefined, to: string): string {
+  if (!from || !to || from.toLowerCase() === to.toLowerCase()) return answer;
+  const escaped = from.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return answer.replace(new RegExp(`\\b${escaped}\\b`, "gi"), to);
+}
+
+type Pending = { index: number; input: DraftInput };
 
 export async function answerQuestions(
   questions: { text: string; coverLetter?: boolean }[],
   deps: DraftDeps,
 ): Promise<DraftedAnswer[]> {
   const out: DraftedAnswer[] = new Array(questions.length);
-  let next = 0;
+  const pending: Pending[] = [];
   let budget = deps.maxDrafts ?? 12;
-  const takeDraft = () => budget-- > 0;
-  const worker = async () => {
-    while (next < questions.length) {
-      const i = next++;
-      out[i] = await answerOne(questions[i]!, deps, takeDraft);
+
+  questions.forEach((q, index) => {
+    const isCoverLetter = Boolean(q.coverLetter);
+    const maxWords = isCoverLetter
+      ? COVER_LETTER_MAX_WORDS
+      : (wordLimitIn(q.text) ?? DEFAULT_MAX_WORDS);
+    const base = { question: q.text, maxWords, ...(isCoverLetter ? { isCoverLetter } : {}) };
+
+    // 1. Sensitive: the user's fixed answer only, never an AI.
+    const key = isCoverLetter ? null : fixedKeyFor(q.text);
+    if (key) {
+      const value = deps.fixedAnswers[key]?.trim();
+      out[index] = value
+        ? { ...base, kind: "fixed", fixedKey: key, answer: value }
+        : { ...base, kind: "missing_fixed", fixedKey: key, answer: "" };
+      return;
     }
-  };
-  await Promise.all(Array.from({ length: Math.min(PARALLEL, questions.length) }, worker));
-  return out;
-}
 
-async function answerOne(
-  q: { text: string; coverLetter?: boolean },
-  deps: DraftDeps,
-  takeDraft: () => boolean,
-): Promise<DraftedAnswer> {
-  const isCoverLetter = Boolean(q.coverLetter);
-  const maxWords = isCoverLetter
-    ? COVER_LETTER_MAX_WORDS
-    : (wordLimitIn(q.text) ?? DEFAULT_MAX_WORDS);
-  const base = { question: q.text, maxWords, ...(isCoverLetter ? { isCoverLetter } : {}) };
-
-  const key = isCoverLetter ? null : fixedKeyFor(q.text);
-  if (key) {
-    const value = deps.fixedAnswers[key]?.trim();
-    return value
-      ? { ...base, kind: "fixed", fixedKey: key, answer: value }
-      : { ...base, kind: "missing_fixed", fixedKey: key, answer: "" };
-  }
-
-  const ranked = deps.memory
-    .map((m) => ({
-      m,
-      score: questionSimilarity(q.text, m.question, deps.company, m.company ?? undefined),
-    }))
-    .sort((a, b) => b.score - a.score);
-  const best = ranked[0];
-  if (!isCoverLetter && best && best.score >= REUSE_THRESHOLD) {
-    let answer = best.m.answer;
-    if (deps.adapt) {
-      try {
-        answer = (await deps.adapt(best.m.answer, q.text)).text;
-      } catch {
-        // Adapting is a nicety; the user's own answer is fine as it is.
-      }
+    // 2. Answered before: the user's own words, with the company name swapped.
+    const ranked = deps.memory
+      .map((m) => ({
+        m,
+        score: questionSimilarity(q.text, m.question, deps.company, m.company ?? undefined),
+      }))
+      .sort((a, b) => b.score - a.score);
+    const best = ranked[0];
+    if (!isCoverLetter && best && best.score >= REUSE_THRESHOLD) {
+      const answer = adaptAnswer(best.m.answer, best.m.company, deps.company);
+      out[index] = {
+        ...base,
+        kind: "reused",
+        answer,
+        reusedFrom: best.m.question,
+        overLimit: countWords(answer) > maxWords,
+      };
+      return;
     }
-    return {
-      ...base,
-      kind: "reused",
-      answer,
-      reusedFrom: best.m.question,
-      overLimit: countWords(answer) > maxWords,
-    };
-  }
 
-  // Over the limit: left for the user, who can press Draft again for the rest.
-  if (!takeDraft()) return { ...base, kind: "failed", answer: "" };
-  try {
+    // 3. The AI drafts it. Over the limit: left for the user to draft again or write.
+    if (budget-- <= 0) {
+      out[index] = { ...base, kind: "failed", answer: "" };
+      return;
+    }
     const examples = ranked.slice(0, 5).map((r) => r.m);
-    const { text } = await deps.draft({ question: q.text, maxWords, examples, isCoverLetter });
+    pending.push({ index, input: { question: q.text, maxWords, examples, isCoverLetter } });
+  });
+
+  const done = (p: Pending, text: string | null) => {
+    const base = {
+      question: p.input.question,
+      maxWords: p.input.maxWords,
+      ...(p.input.isCoverLetter ? { isCoverLetter: true } : {}),
+    };
+    if (!text?.trim()) {
+      out[p.index] = { ...base, kind: "failed", answer: "" };
+      return;
+    }
     const unsupported = deps.check?.(text) ?? [];
-    return {
+    out[p.index] = {
       ...base,
       kind: "drafted",
-      answer: text,
-      overLimit: countWords(text) > maxWords,
+      answer: text.trim(),
+      overLimit: countWords(text) > p.input.maxWords,
       ...(unsupported.length > 0 ? { unsupported } : {}),
     };
-  } catch {
-    return { ...base, kind: "failed", answer: "" };
-  }
+  };
+
+  const one = async (p: Pending) => {
+    try {
+      done(p, (await deps.draft(p.input)).text);
+    } catch {
+      done(p, null);
+    }
+  };
+
+  const answers = pending.filter((p) => !p.input.isCoverLetter);
+  const letters = pending.filter((p) => p.input.isCoverLetter);
+  const batch = async () => {
+    if (answers.length === 0) return;
+    if (!deps.draftMany || answers.length === 1) {
+      await Promise.all(answers.map(one));
+      return;
+    }
+    try {
+      const texts = await deps.draftMany(answers.map((p) => p.input));
+      answers.forEach((p, i) => done(p, texts[i] ?? null));
+    } catch {
+      answers.forEach((p) => done(p, null));
+    }
+  };
+  await Promise.all([batch(), ...letters.map(one)]);
+  return out;
 }

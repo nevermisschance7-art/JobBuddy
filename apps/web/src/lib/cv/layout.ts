@@ -32,7 +32,64 @@ const join = (parts: (string | undefined)[], sep: string) =>
     .filter(Boolean)
     .join(sep);
 
+// Bullet signs people paste from Word or PDFs: "- ", "\u2022 ", "\u25cf ", "* ", "\u2013 "...
+const LEADING_MARK =
+  /^\s*(?:[-*+>~\u2022\u2023\u25aa\u25ab\u25cf\u25cb\u25e6\u2043\u2219\u00b7\u2013\u2014\u25a0\u25a1\u2713\u2714\u27a2\u27a4]|\d{1,2}[.)])\s*/u;
+
+/** Plain, tidy text: one space between words, no space before punctuation, no em dashes. */
+export function tidy(text: string): string {
+  return text
+    .replace(/\s+/g, " ")
+    .replace(/\s+([,.;:!?])/g, "$1")
+    .replace(/\s*\u2014\s*/g, ", ")
+    .replace(/\.{2,}$/, ".")
+    .trim();
+}
+
+/** A bullet's own text, without a pasted bullet sign (the layout draws its own). */
+export function bulletText(text: string): string {
+  let t = tidy(text);
+  while (LEADING_MARK.test(t)) t = t.replace(LEADING_MARK, "").trim();
+  return t ? t[0]!.toUpperCase() + t.slice(1) : t;
+}
+
+/** Same ending for every bullet: full stops on all when most have one, otherwise on none. */
+function evenEndings(blocks: CvBlock[]): CvBlock[] {
+  const bullets = blocks.filter(
+    (b): b is Extract<CvBlock, { kind: "bullet" }> => b.kind === "bullet",
+  );
+  const withStop = bullets.filter((b) => b.text.endsWith(".")).length;
+  const stops = withStop * 2 >= bullets.length;
+  return blocks.map((b) => {
+    if (b.kind !== "bullet") return b;
+    const bare = b.text.replace(/\.$/, "");
+    return { ...b, text: stops && !/[!?]$/.test(bare) ? `${bare}.` : bare };
+  });
+}
+
+/** Every block tidied: no stray bullet signs, spaces or mixed endings. */
 export function cvBlocks(r: Resume): CvBlock[] {
+  const blocks = rawBlocks(r)
+    .map((b): CvBlock => {
+      switch (b.kind) {
+        case "bullet":
+          return { ...b, text: bulletText(b.text) };
+        case "entry":
+          return {
+            ...b,
+            title: tidy(b.title),
+            right: b.right && tidy(b.right),
+            sub: b.sub && tidy(b.sub),
+          };
+        default:
+          return { ...b, text: tidy(b.text) };
+      }
+    })
+    .filter((b) => (b.kind === "entry" ? b.title : b.text));
+  return evenEndings(blocks);
+}
+
+function rawBlocks(r: Resume): CvBlock[] {
   const out: CvBlock[] = [{ kind: "name", text: r.basics.name }];
   const b = r.basics;
   const place = join([b.location?.city, b.location?.countryCode], ", ");
@@ -118,9 +175,9 @@ export function cvBlocks(r: Resume): CvBlock[] {
 export function cvFileName(r: Resume, company: string): string {
   const slug = (s: string) =>
     s
-      .replace(/ł/g, "l")
-      .replace(/Ł/g, "L")
-      .replace(/ß/g, "ss")
+      .replace(/\u0142/g, "l")
+      .replace(/\u0141/g, "L")
+      .replace(/\u00df/g, "ss")
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
       .replace(/[^A-Za-z0-9]+/g, "-")

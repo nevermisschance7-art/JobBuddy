@@ -40,8 +40,7 @@ export function AnswersPanel({
 
   return (
     <div className="flex flex-col gap-4">
-      <Card className="flex flex-col gap-3">
-        <h2 className="text-lg font-semibold">4. Answers to the form&apos;s questions</h2>
+      <div className="flex flex-col gap-3">
         <form action={draftAction} className="flex flex-col gap-3">
           <input type="hidden" name="application_id" value={applicationId} />
           <Field
@@ -65,7 +64,7 @@ export function AnswersPanel({
             {drafting ? "Writing answers..." : "Draft answers"}
           </Button>
         </form>
-      </Card>
+      </div>
 
       {/* Starts fresh when new drafts arrive; the draft form above keeps its message. */}
       <AnswersList

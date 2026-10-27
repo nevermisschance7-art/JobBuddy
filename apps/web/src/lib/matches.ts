@@ -24,10 +24,10 @@ export const JOB_SOURCES = [
 ] as const;
 
 export const matchQuerySchema = z.object({
-  view: z.enum(["inbox", "saved", "hidden"]).default("inbox"),
+  view: z.enum(["inbox", "new", "saved", "hidden"]).default("inbox"),
   minScore: z.coerce.number().int().min(0).max(100).optional(),
   maxScore: z.coerce.number().int().min(0).max(100).default(100),
-  freshness: z.enum(["any", "new", "recent", "relevant", "older"]).default("any"),
+  freshness: z.enum(["any", "new", "recent", "week"]).default("any"),
   remote: z.enum(["any", "remote", "hybrid", "onsite"]).default("any"),
   country: z
     .string()
@@ -68,11 +68,12 @@ export type MatchCard = {
     salary_currency: string | null;
     source: string;
     apply_url: string;
+    description_text: string;
   };
 };
 
 const JOB_COLUMNS =
-  "id,title,company_name,countries,remote_regions,remote_type,posted_at,salary_min,salary_max,salary_currency,source,apply_url";
+  "id,title,company_name,countries,remote_regions,remote_type,posted_at,salary_min,salary_max,salary_currency,source,apply_url,description_text";
 
 /** Safe for PostgREST filter strings: letters, digits, spaces and a few symbols only. */
 function clean(text: string | undefined): string | null {
@@ -96,7 +97,8 @@ export async function loadMatches(
     .gte("score", query.minScore ?? defaultMin)
     .lte("score", query.maxScore);
 
-  if (query.view === "saved") q = q.eq("status", "saved");
+  if (query.view === "new") q = q.eq("status", "new");
+  else if (query.view === "saved") q = q.eq("status", "saved");
   else if (query.view === "hidden") q = q.eq("status", "dismissed");
   else q = q.in("status", ["new", "seen", "preparing"]);
 
@@ -113,8 +115,7 @@ export async function loadMatches(
   const hoursAgo = (h: number) => new Date(Date.now() - h * 3_600_000).toISOString();
   if (query.freshness === "new") q = q.gte("jobs.posted_at", hoursAgo(24));
   else if (query.freshness === "recent") q = q.gte("jobs.posted_at", hoursAgo(72));
-  else if (query.freshness === "relevant") q = q.gte("jobs.posted_at", hoursAgo(24 * 14));
-  else if (query.freshness === "older") q = q.lt("jobs.posted_at", hoursAgo(24 * 14));
+  else if (query.freshness === "week") q = q.gte("jobs.posted_at", hoursAgo(24 * 7));
 
   const { data, error } = await q
     .order("score", { ascending: false })
@@ -122,4 +123,41 @@ export async function loadMatches(
     .range(offset, offset + PAGE_SIZE - 1);
   if (error) throw new Error(`Loading matches failed: ${error.message}`);
   return (data ?? []) as unknown as MatchCard[];
+}
+
+export type MatchCounts = {
+  inbox: number;
+  new: number;
+  saved: number;
+  hidden: number;
+  below: number;
+};
+
+/** Sidebar counts. "below": jobs that pass the filters but score under the user's minimum. */
+export async function countMatches(
+  supabase: Supabase,
+  userId: string,
+  minScore: number,
+): Promise<MatchCounts> {
+  const base = () =>
+    supabase
+      .from("user_job_matches")
+      .select("id, jobs!inner(id)", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .eq("passed_filters", true)
+      .is("jobs.closed_at", null);
+  const [inbox, fresh, saved, hidden, below] = await Promise.all([
+    base().gte("score", minScore).in("status", ["new", "seen", "preparing"]),
+    base().gte("score", minScore).eq("status", "new"),
+    base().eq("status", "saved"),
+    base().eq("status", "dismissed"),
+    base().lt("score", minScore).in("status", ["new", "seen"]),
+  ]);
+  return {
+    inbox: inbox.count ?? 0,
+    new: fresh.count ?? 0,
+    saved: saved.count ?? 0,
+    hidden: hidden.count ?? 0,
+    below: below.count ?? 0,
+  };
 }

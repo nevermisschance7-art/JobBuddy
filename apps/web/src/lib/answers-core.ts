@@ -6,7 +6,8 @@ import {
   type Resume,
   unsupportedIn,
 } from "@jobbuddy/shared";
-import type { LlmRouter, PersonalInfo } from "@jobbuddy/shared/llm";
+import { applyStyle, type LlmRouter, type PersonalInfo } from "@jobbuddy/shared/llm";
+import { z } from "zod";
 
 // Pure (no server-only imports) so the AI check workflow can run it against real models.
 
@@ -62,6 +63,41 @@ ${examples ? `\nThe candidate's past answers (copy their style, not their conten
 ${input.isCoverLetter ? `Write a short cover letter for this job, at most ${input.maxWords} words. No address block, no date. Start with "Hi" or "Dear Hiring Team".` : `Question: ${input.question}\nAnswer in at most ${input.maxWords} words.`}`;
 }
 
+const SYSTEM_MANY = SYSTEM.replace(
+  "- Return only the answer text.",
+  '- Return JSON: {"answers": [{"n": 1, "answer": "..."}, ...]}, one answer per numbered question, each within its word limit.',
+);
+
+const manySchema = z.object({
+  answers: z.array(z.object({ n: z.number().int(), answer: z.string() })),
+});
+
+function manyPrompt(
+  inputs: DraftInput[],
+  examples: PastAnswer[],
+  job: AnswerJob,
+  cv: Resume,
+): string {
+  const past = examples.map((e) => `Q: ${e.question}\nA: ${e.answer}`).join("\n\n");
+  const questions = inputs
+    .map((x, i) => `${i + 1}. ${x.question} (at most ${x.maxWords} words)`)
+    .join("\n");
+  const pastBlock = past
+    ? `\nThe candidate's past answers (copy their style, not their content):\n${past}\n`
+    : "";
+  return `Job: ${job.title} at ${job.company_name}
+Job description (shortened):
+"""
+${job.description_text.slice(0, 2500)}
+"""
+
+The candidate's CV:
+${cvFacts(cv)}
+${pastBlock}
+Answer each question as the candidate:
+${questions}`;
+}
+
 /** Fixed answers first, then reuse, then the AI. Fixed answers never reach the AI. */
 export async function draftWithRouter(
   router: LlmRouter,
@@ -89,20 +125,22 @@ export async function draftWithRouter(
           personal,
         },
       ),
-    adapt: (answer, question) =>
-      router.generateText(
+    // One request for every answer on the form (free tiers allow ~1,000 requests a day).
+    draftMany: async (inputs) => {
+      const examples = [
+        ...new Map(inputs.flatMap((x) => x.examples).map((e) => [e.question, e])).values(),
+      ].slice(0, 5);
+      const result = await router.generateJson(
         "draft_answer",
-        `The candidate answered a very similar question before. Adapt their answer to this job with as few changes as possible: keep their words, only fix names of the company or role.
-
-Job: ${job.title} at ${job.company_name}
-Question: ${question}
-Their past answer:
-"""
-${answer}
-"""`,
-        Math.max(40, answer.split(/\s+/).length + 10),
+        manySchema,
+        manyPrompt(inputs, examples, job, cv),
         userId,
-        { system: SYSTEM, personal },
-      ),
+        { system: SYSTEM_MANY, personal },
+      );
+      return inputs.map((input, i) => {
+        const raw = result.answers.find((a) => a.n === i + 1)?.answer ?? "";
+        return raw ? applyStyle(raw, input.maxWords).text : "";
+      });
+    },
   });
 }

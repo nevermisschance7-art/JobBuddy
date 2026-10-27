@@ -138,43 +138,50 @@ test("sign up, onboard, edit settings, delete account", async ({ page }, info) =
     await page.reload();
     const card = page.locator("article").first();
     await expect(card).toBeVisible();
+    await expect(card.getByText("New", { exact: true })).toBeVisible();
+    await shot(page, "10b-dashboard-match");
+    // Opening the job shows the details (and it's no longer "New").
+    await card.getByRole("button", { name: "E2E Backend Engineer" }).click();
     await expect(card.getByText("Eligibility indicated")).toBeVisible();
     await expect(card.getByText("Mentions 1 must-have skills (Python)")).toBeVisible();
-    await shot(page, "10b-dashboard-match");
+    await expect(card.getByText("New", { exact: true })).toHaveCount(0);
 
     // Explain match needs an AI key; without one it says so kindly.
+    await card.getByText("More", { exact: true }).click();
     await card.getByRole("button", { name: /Explain match/ }).click();
     await expect(card.getByText(/need a working AI key/)).toBeVisible({ timeout: 30_000 });
 
-    // Save, then find it in the Saved tab.
+    // Save, then find it in the Saved list.
     await card.getByRole("button", { name: "Save" }).click();
     await expect(card.getByRole("button", { name: "Saved" })).toBeVisible();
-    await page.getByRole("tab", { name: "Saved" }).click();
+    await page.getByRole("tab", { name: /Saved/ }).click();
     await expect(page.locator("article")).toHaveCount(1);
 
     // Not for me: hide it with a reason, then restore it from Hidden.
+    await page.locator("article").getByText("More", { exact: true }).click();
     await page.getByRole("button", { name: "Not for me" }).click();
     await page.getByRole("button", { name: "Wrong level" }).click();
     await expect(page.getByText(/seniority levels/)).toBeVisible();
     await shot(page, "10c-not-for-me");
     await page.getByRole("button", { name: "Hide this job" }).click();
     await expect(page.locator("article")).toHaveCount(0);
-    await page.getByRole("tab", { name: "Hidden" }).click();
+    await page.getByRole("tab", { name: /Hidden/ }).click();
     await page.getByRole("button", { name: "Show again" }).click();
-    await page.getByRole("tab", { name: "Matches" }).click();
+    await page.getByRole("tab", { name: /Best matches/ }).click();
     await expect(page.locator("article")).toHaveCount(1);
 
-    // Prepare application: use the CV as it is (no AI key here), approve, get the files.
-    await page.getByRole("button", { name: "Prepare application" }).click();
+    // Quick apply: makes the CV (as it is: no AI key here) and opens the form in a new tab.
+    const popupPromise = page.waitForEvent("popup");
+    await page.getByRole("button", { name: "Quick apply" }).click();
+    const popup = await popupPromise;
+    await expect(page.getByText(/CV ready \(No AI available/)).toBeVisible({ timeout: 30_000 });
+    await expect.poll(() => popup.url(), { timeout: 15_000 }).toContain("e2etestco");
+    await popup.close();
+    await shot(page, "10d-quick-apply");
+    await page.getByRole("link", { name: "Check CV" }).click();
     await expect(page).toHaveURL(/\/applications\/[0-9a-f-]+$/);
-    await shot(page, "10d-application-start");
-    await page.getByRole("button", { name: "Use my CV as it is" }).click();
-    await expect(page.getByText(/Using your CV as it is/)).toBeVisible();
-    await page.getByRole("button", { name: "Approve and create files" }).click();
-    await expect(page.getByText(/^Approved/)).toBeVisible({ timeout: 30_000 });
-    await page.reload();
+    await expect(page.getByText("Your CV for this job is ready")).toBeVisible();
     const pdfLink = page.getByRole("link", { name: "Download PDF" });
-    await expect(pdfLink).toBeVisible();
     await shot(page, "10e-application-cv");
     const pdf = await page.request.get((await pdfLink.getAttribute("href"))!);
     expect(pdf.status()).toBe(200);
@@ -186,6 +193,7 @@ test("sign up, onboard, edit settings, delete account", async ({ page }, info) =
     expect(docx.status()).toBe(200);
 
     // Answers: sensitive questions come from fixed answers, never an AI.
+    await page.getByText("Answers to the form's questions").click();
     await page
       .getByLabel("Paste the questions, one per line")
       .fill(
@@ -239,14 +247,15 @@ test("sign up, onboard, edit settings, delete account", async ({ page }, info) =
       ).status(),
     ).toBe(404);
 
-    // Then move it on the board.
+    // Applications: it waits under "Ready to apply"; "I applied" moves it to Applied.
     await page.getByRole("link", { name: "Back to applications" }).click();
     await expect(page).toHaveURL(/\/applications$/);
     const status = page.getByRole("combobox", { name: /^Status of / });
     await expect(status).toHaveValue("prepared");
-    await status.selectOption("applied");
-    // The card's date line, not the "Applied" column heading.
-    await expect(page.getByText(/^Applied \d+\/\d+\/\d+/)).toBeVisible();
+    await page.getByRole("button", { name: "I applied" }).click();
+    await expect(status).toHaveValue("applied");
+    await page.getByRole("link", { name: /^Applied/ }).click();
+    await expect(page.locator("li", { hasText: "E2E Backend Engineer" })).toBeVisible();
     await shot(page, "10f-applications");
 
     await page.goto("/usage");
@@ -260,7 +269,7 @@ test("sign up, onboard, edit settings, delete account", async ({ page }, info) =
 
     // Filters live on the job board, in one place.
     await page.locator("header").getByRole("link", { name: "Jobs" }).click();
-    await page.getByText("Filters", { exact: true }).click();
+    await page.getByRole("button", { name: "Edit my filters" }).click();
     await expect(page.getByRole("button", { name: "Remove United Kingdom" })).toBeVisible();
     await shot(page, "11b-filters-on-job-board");
 

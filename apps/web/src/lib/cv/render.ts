@@ -134,7 +134,7 @@ export async function renderPdf(resume: Resume): Promise<Uint8Array> {
         break;
       case "bullet": {
         ensure(13);
-        page.drawText("-", { x: margin + 4, y: y - 13, size: 10, font: regular, color: ink });
+        page.drawText("\u2022", { x: margin + 4, y: y - 13, size: 10, font: regular, color: ink });
         write(block.text, regular, 10, { indent: 14, gap: 1 });
         break;
       }

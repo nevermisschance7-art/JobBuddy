@@ -1,17 +1,20 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import { Bookmark, EyeOff, Inbox, RefreshCw, SlidersHorizontal, Sparkle } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { MascotSays } from "@/components/mascot";
+import { Button } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/field";
-import { loadMoreMatches } from "@/lib/actions/matches";
+import { loadMoreMatches, markSeen } from "@/lib/actions/matches";
 import { COUNTRY_OPTIONS } from "@/lib/countries";
-import type { MatchCard, MatchQuery } from "@/lib/matches";
+import type { MatchCard, MatchCounts, MatchQuery } from "@/lib/matches";
 import { cn } from "@/lib/utils";
 import { JobCard } from "./job-card";
 
 const SOURCES = [
-  "greenhouse", "lever", "ashby", "workable", "smartrecruiters", "teamtailor", "adzuna",
-  "reed", "jooble", "remotive", "himalayas", "arbeitnow", "remoteok", "weworkremotely",
+  "greenhouse", "lever", "ashby", "workable", "smartrecruiters", "teamtailor", "workday",
+  "personio", "recruitee", "adzuna", "reed", "jooble", "remotive", "himalayas", "arbeitnow",
+  "remoteok", "weworkremotely", "jobicy", "workingnomads", "hackernews",
 ]; // prettier-ignore
 
 const PAGE_SIZE = 20;
@@ -20,9 +23,48 @@ type Props = {
   initial: MatchCard[];
   minScore: number;
   hasCv: boolean;
+  counts: MatchCounts;
+  userTerms: string[];
+  /** When this user's matches were last refreshed (ISO), or null. */
+  matchedAt: string | null;
+  /** The saved-filters form, shown when "Edit my filters" is open. */
+  filtersPanel: React.ReactNode;
 };
 
-export function JobsInbox({ initial, minScore, hasCv }: Props) {
+/** "12 min ago", "3 h ago". */
+function ago(iso: string | null, now: number): string {
+  if (!iso) return "not yet";
+  const mins = Math.max(0, Math.round((now - Date.parse(iso)) / 60_000));
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins} min ago`;
+  const h = Math.round(mins / 60);
+  return h < 24 ? `${h} h ago` : `${Math.round(h / 24)} days ago`;
+}
+
+/** Searches start every 2 hours at :15 UTC and finish ~20 minutes later. */
+function nextUpdate(now: number): string {
+  const d = new Date(now);
+  d.setUTCMinutes(35, 0, 0);
+  while (d.getTime() <= now || d.getUTCHours() % 2 !== 0) d.setTime(d.getTime() + 3_600_000);
+  return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
+const VIEWS = [
+  ["inbox", "Best matches", Inbox],
+  ["new", "New", Sparkle],
+  ["saved", "Saved", Bookmark],
+  ["hidden", "Hidden", EyeOff],
+] as const;
+
+export function JobsInbox({
+  initial,
+  minScore,
+  hasCv,
+  counts,
+  userTerms,
+  matchedAt,
+  filtersPanel,
+}: Props) {
   const [query, setQuery] = useState<MatchQuery>({
     view: "inbox",
     maxScore: 100,
@@ -32,10 +74,35 @@ export function JobsInbox({ initial, minScore, hasCv }: Props) {
   const [items, setItems] = useState<MatchCard[]>(initial);
   const [done, setDone] = useState(initial.length < PAGE_SIZE);
   const [error, setError] = useState<string | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
+  const [newCount, setNewCount] = useState(counts.new);
+  const [now, setNow] = useState(() => Date.now());
   const [loading, startLoading] = useTransition();
   const sentinel = useRef<HTMLDivElement>(null);
   const firstRender = useRef(true);
   const requestId = useRef(0);
+  const seenQueue = useRef<Set<string>>(new Set());
+  const terms = useMemo(() => new Set(userTerms), [userTerms]);
+
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(t);
+  }, []);
+
+  // "Seen" is saved in small batches.
+  useEffect(() => {
+    const t = setInterval(() => {
+      const ids = [...seenQueue.current];
+      if (ids.length === 0) return;
+      seenQueue.current.clear();
+      void markSeen(ids);
+    }, 1500);
+    return () => clearInterval(t);
+  }, []);
+  const onSeen = useCallback((jobId: string) => {
+    seenQueue.current.add(jobId);
+    setNewCount((n) => Math.max(0, n - 1));
+  }, []);
 
   const fetchPage = useCallback((q: MatchQuery, offset: number, replace: boolean) => {
     const id = ++requestId.current;
@@ -88,121 +155,201 @@ export function JobsInbox({ initial, minScore, hasCv }: Props) {
     );
   }
 
+  const countFor = (view: MatchQuery["view"]) =>
+    view === "inbox"
+      ? counts.inbox
+      : view === "new"
+        ? newCount
+        : view === "saved"
+          ? counts.saved
+          : counts.hidden;
+  const effectiveMin = query.minScore ?? minScore;
+
   return (
-    <div className="flex flex-col gap-5">
-      <div role="tablist" aria-label="Job lists" className="border-border flex gap-1 border-b">
-        {(
-          [
-            ["inbox", "Matches"],
-            ["saved", "Saved"],
-            ["hidden", "Hidden"],
-          ] as const
-        ).map(([view, label]) => (
-          <button
-            key={view}
-            role="tab"
-            aria-selected={query.view === view}
-            onClick={() => set("view", view)}
-            className={cn(
-              "-mb-px border-b-2 px-4 py-2 text-sm",
-              query.view === view
-                ? "border-foreground font-medium"
-                : "text-muted-foreground hover:text-foreground border-transparent",
-            )}
+    <div className="grid gap-6 lg:grid-cols-[250px_minmax(0,1fr)]">
+      {/* Sidebar: lists and quick filters */}
+      <aside className="flex flex-col gap-5 lg:sticky lg:top-4 lg:self-start">
+        <nav
+          role="tablist"
+          aria-label="Job lists"
+          className="flex gap-1 overflow-x-auto lg:flex-col"
+        >
+          {VIEWS.map(([view, label, Icon]) => (
+            <button
+              key={view}
+              role="tab"
+              aria-selected={query.view === view}
+              onClick={() => set("view", view)}
+              className={cn(
+                "flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-sm",
+                query.view === view
+                  ? "bg-brand-soft text-primary font-semibold"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
+              )}
+            >
+              <Icon size={15} />
+              <span className="flex-1 text-left">{label}</span>
+              <span className="text-xs tabular-nums">{countFor(view)}</span>
+            </button>
+          ))}
+        </nav>
+
+        <div className="border-border bg-card flex flex-col gap-3 rounded-xl border p-4">
+          <Input
+            aria-label="Search title or company"
+            placeholder="Search title or company"
+            value={query.search ?? ""}
+            onChange={(e) => set("search", e.target.value)}
+          />
+          <label className="flex flex-col gap-1 text-xs font-medium">
+            Posted
+            <Select
+              aria-label="Freshness"
+              value={query.freshness}
+              onChange={(e) => set("freshness", e.target.value as MatchQuery["freshness"])}
+            >
+              <option value="any">Any time (7 days)</option>
+              <option value="new">Last 24 hours</option>
+              <option value="recent">Last 3 days</option>
+            </Select>
+          </label>
+          <label className="flex flex-col gap-1 text-xs font-medium">
+            Tech fit
+            <Select
+              aria-label="Minimum score"
+              value={effectiveMin}
+              onChange={(e) => set("minScore", Number(e.target.value))}
+            >
+              {[30, 40, 50, 55, 60, 70, 80, 90].map((s) => (
+                <option key={s} value={s}>
+                  {s}+
+                </option>
+              ))}
+            </Select>
+          </label>
+          <label className="flex flex-col gap-1 text-xs font-medium">
+            Country
+            <Select
+              aria-label="Country"
+              value={query.country ?? ""}
+              onChange={(e) => set("country", e.target.value || undefined)}
+            >
+              <option value="">Any country</option>
+              {COUNTRY_OPTIONS.map((c) => (
+                <option key={c.value} value={c.value}>
+                  {c.label}
+                </option>
+              ))}
+            </Select>
+          </label>
+          <label className="flex flex-col gap-1 text-xs font-medium">
+            Source
+            <Select
+              aria-label="Source"
+              value={query.source ?? ""}
+              onChange={(e) => set("source", (e.target.value || undefined) as MatchQuery["source"])}
+            >
+              <option value="">Any source</option>
+              {SOURCES.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </Select>
+          </label>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowFilters((s) => !s)}
+            aria-expanded={showFilters}
           >
-            {label}
-          </button>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-6">
-        <Input
-          aria-label="Search title or company"
-          placeholder="Search"
-          className="col-span-2"
-          value={query.search ?? ""}
-          onChange={(e) => set("search", e.target.value)}
-        />
-        <Select
-          aria-label="Minimum score"
-          value={query.minScore ?? minScore}
-          onChange={(e) => set("minScore", Number(e.target.value))}
-        >
-          {[30, 40, 50, 55, 60, 70, 80, 90].map((s) => (
-            <option key={s} value={s}>
-              Score {s}+
-            </option>
-          ))}
-        </Select>
-        <Select
-          aria-label="Freshness"
-          value={query.freshness}
-          onChange={(e) => set("freshness", e.target.value as MatchQuery["freshness"])}
-        >
-          <option value="any">Any date</option>
-          <option value="new">New (24h)</option>
-          <option value="recent">Recent (3 days)</option>
-        </Select>
-        <Select
-          aria-label="Country"
-          value={query.country ?? ""}
-          onChange={(e) => set("country", e.target.value || undefined)}
-        >
-          <option value="">Any country</option>
-          {COUNTRY_OPTIONS.map((c) => (
-            <option key={c.value} value={c.value}>
-              {c.label}
-            </option>
-          ))}
-        </Select>
-        <Select
-          aria-label="Source"
-          value={query.source ?? ""}
-          onChange={(e) => set("source", (e.target.value || undefined) as MatchQuery["source"])}
-        >
-          <option value="">Any source</option>
-          {SOURCES.map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </Select>
-      </div>
-
-      {error ? (
-        <p role="alert" className="text-destructive text-sm">
-          {error}
-        </p>
-      ) : null}
-
-      {items.length === 0 && !loading ? (
-        <MascotSays mood={query.view === "inbox" ? "sleepy" : "thinking"}>
-          {query.view === "saved"
-            ? "Nothing saved yet. Tap Save on a job to keep it here."
-            : query.view === "hidden"
-              ? "No hidden jobs."
-              : "No matches yet. I start a search right after you change your CV or filters, and results arrive within about 15 minutes. I also check every 2 hours."}
-        </MascotSays>
-      ) : (
-        <div className="flex flex-col gap-3">
-          {items.map((m) => (
-            <JobCard
-              key={m.id}
-              match={m}
-              onGone={(jobId) => setItems((prev) => prev.filter((x) => x.jobs.id !== jobId))}
-            />
-          ))}
+            <SlidersHorizontal size={14} /> {showFilters ? "Close my filters" : "Edit my filters"}
+          </Button>
         </div>
-      )}
+      </aside>
 
-      <div ref={sentinel} aria-hidden className="h-8" />
-      {loading ? (
-        <div className="flex flex-col gap-3" aria-label="Loading jobs">
-          {[0, 1].map((i) => (
-            <div key={i} className="bg-muted h-40 animate-pulse rounded-xl" />
-          ))}
+      {/* Main column */}
+      <section className="flex min-w-0 flex-col gap-4">
+        <div className="text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+          <span className="inline-flex items-center gap-1.5">
+            <RefreshCw size={13} /> Updated {ago(matchedAt, now)}
+          </span>
+          <span aria-hidden>·</span>
+          <span>Next update around {nextUpdate(now)}</span>
+          {newCount > 0 ? (
+            <>
+              <span aria-hidden>·</span>
+              <button
+                type="button"
+                className="text-primary font-medium hover:underline"
+                onClick={() => set("view", "new")}
+              >
+                {newCount} new
+              </button>
+            </>
+          ) : null}
         </div>
-      ) : null}
+
+        {showFilters ? (
+          <div id="filters" className="border-border bg-card rounded-xl border p-4">
+            <h2 className="mb-3 font-semibold">My filters</h2>
+            {filtersPanel}
+          </div>
+        ) : null}
+
+        {query.view === "inbox" && counts.below > 0 && effectiveMin > 30 ? (
+          <p className="bg-brand-soft rounded-lg px-3 py-2 text-sm">
+            {counts.below} more job{counts.below === 1 ? "" : "s"} pass your filters with a tech fit
+            under {effectiveMin}.{" "}
+            <button
+              type="button"
+              className="text-primary font-medium underline"
+              onClick={() => set("minScore", 30)}
+            >
+              Show them too
+            </button>
+          </p>
+        ) : null}
+
+        {error ? (
+          <p role="alert" className="text-destructive text-sm">
+            {error}
+          </p>
+        ) : null}
+
+        {items.length === 0 && !loading ? (
+          <MascotSays mood={query.view === "inbox" ? "sleepy" : "thinking"}>
+            {query.view === "saved"
+              ? "Nothing saved yet. Tap Save on a job to keep it here."
+              : query.view === "hidden"
+                ? "No hidden jobs."
+                : query.view === "new"
+                  ? "You've seen every new job. New ones arrive every 2 hours."
+                  : "No matches yet. I search right after you change your CV or filters (results in about 15 minutes), and every 2 hours."}
+          </MascotSays>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {items.map((m) => (
+              <JobCard
+                key={m.id}
+                match={m}
+                userTerms={terms}
+                onSeen={onSeen}
+                onGone={(jobId) => setItems((prev) => prev.filter((x) => x.jobs.id !== jobId))}
+              />
+            ))}
+          </div>
+        )}
+
+        <div ref={sentinel} aria-hidden className="h-8" />
+        {loading ? (
+          <div className="flex flex-col gap-3" aria-label="Loading jobs">
+            {[0, 1].map((i) => (
+              <div key={i} className="bg-muted h-40 animate-pulse rounded-xl" />
+            ))}
+          </div>
+        ) : null}
+      </section>
     </div>
   );
 }

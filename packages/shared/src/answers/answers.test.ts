@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  adaptAnswer,
   answerQuestions,
   fixedKeyFor,
   questionSimilarity,
@@ -121,6 +122,41 @@ describe("answerQuestions", () => {
     );
     expect(d.draft).toHaveBeenCalledTimes(2);
     expect(out.map((a) => a.kind)).toEqual(["drafted", "fixed", "drafted", "failed"]);
+  });
+
+  it("drafts all answers in one AI call when draftMany is given; cover letter separately", async () => {
+    const draftMany = vi.fn(async (inputs: { question: string }[]) =>
+      inputs.map((i) => `A: ${i.question}`),
+    );
+    const d = deps({ draftMany });
+    const out = await answerQuestions(
+      [
+        { text: "Why us?" },
+        { text: "Salary?" },
+        { text: "Best project?" },
+        { text: "Cover letter", coverLetter: true },
+      ],
+      d,
+    );
+    expect(draftMany).toHaveBeenCalledTimes(1);
+    expect(draftMany.mock.calls[0]![0].map((i) => i.question)).toEqual([
+      "Why us?",
+      "Best project?",
+    ]);
+    expect(d.draft).toHaveBeenCalledTimes(1);
+    expect(out.map((a) => a.answer)).toEqual([
+      "A: Why us?",
+      "70,000 GBP",
+      "A: Best project?",
+      "Draft for: Cover letter",
+    ]);
+  });
+
+  it("swaps the company name in a reused answer, without AI", () => {
+    expect(adaptAnswer("I love Beta's product. Beta ships fast.", "Beta", "Acme")).toBe(
+      "I love Acme's product. Acme ships fast.",
+    );
+    expect(adaptAnswer("Betamax rocks", "Beta", "Acme")).toBe("Betamax rocks");
   });
 
   it("marks a failed draft instead of throwing", async () => {
