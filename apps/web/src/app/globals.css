@@ -5,6 +5,7 @@
 @custom-variant dark (@media (prefers-color-scheme: dark));
 
 :root {
+  color-scheme: light;
   --radius: 0.625rem;
   /* Page is light grey, cards white, actions indigo (same as the extension). */
   --background: oklch(0.975 0.004 270);
@@ -22,10 +23,15 @@
   --success: oklch(0.6 0.15 155);
   --warning: oklch(0.72 0.15 75);
   --info: oklch(0.6 0.12 245);
+  /* Chart series (validated categorical slots 1 and 2: blue, orange). */
+  --viz-1: #2a78d6;
+  --viz-2: #eb6834;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
+    /* Native controls (dropdown lists, scrollbars) follow the dark theme too. */
+    color-scheme: dark;
     --background: oklch(0.16 0.01 270);
     --foreground: oklch(0.97 0 0);
     --card: oklch(0.21 0.012 270);
@@ -41,6 +47,8 @@
     --success: oklch(0.72 0.15 155);
     --warning: oklch(0.8 0.14 80);
     --info: oklch(0.72 0.12 245);
+    --viz-1: #3987e5;
+    --viz-2: #d95926;
   }
 }
 
@@ -60,10 +68,23 @@
   --color-success: var(--success);
   --color-warning: var(--warning);
   --color-info: var(--info);
+  --color-viz-1: var(--viz-1);
+  --color-viz-2: var(--viz-2);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+}
+
+/* Rows of tabs or links that may scroll sideways on narrow screens: never show a scrollbar
+   (and never scroll up and down because of a 1px underline). */
+@utility scroll-x {
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 @layer base {

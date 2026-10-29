@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AppHeader } from "@/components/app-header";
 import { AppList, type AppRow } from "@/components/applications/app-list";
+import { DailyColumns } from "@/components/charts/daily-columns";
 import { MascotSays } from "@/components/mascot";
 import { loadProfile } from "@/lib/data";
 import { cn } from "@/lib/utils";
@@ -32,6 +33,7 @@ export default async function ApplicationsPage({
     .trim()
     .slice(0, 80);
   const { supabase, user, profile } = await loadProfile();
+  const { data: activity } = await supabase.rpc("my_daily_activity", { p_days: 10 });
 
   // Counts per tab, one small query each.
   const { data: statusRows } = await supabase
@@ -84,10 +86,22 @@ export default async function ApplicationsPage({
           </p>
         </div>
 
-        <nav
-          aria-label="Application status"
-          className="border-border flex gap-1 overflow-x-auto border-b"
-        >
+        <div className="grid gap-3 sm:grid-cols-2">
+          <DailyColumns
+            title="Jobs posted for you"
+            series={1}
+            unit="job"
+            points={(activity ?? []).map((a) => ({ day: a.day, value: a.jobs_posted }))}
+          />
+          <DailyColumns
+            title="You applied"
+            series={2}
+            unit="application"
+            points={(activity ?? []).map((a) => ({ day: a.day, value: a.applied }))}
+          />
+        </div>
+
+        <nav aria-label="Application status" className="border-border scroll-x flex gap-1 border-b">
           {TABS.map(([t, label]) => (
             <Link
               key={t}

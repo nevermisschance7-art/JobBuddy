@@ -76,6 +76,8 @@ jobs:
     if: github.event_name != 'pull_request'
     needs: js
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # pushes the screenshots to the e2e-shots branch
     timeout-minutes: 20
     env:
       NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -107,6 +109,16 @@ jobs:
         run: pnpm build
       - if: steps.lock.outputs.ok
         run: pnpm e2e
+      # Screenshots also go to the e2e-shots branch (replaced each run), so they can be
+      # fetched with git where artifact downloads are blocked.
+      - name: Publish screenshots to the e2e-shots branch
+        if: always() && steps.lock.outputs.ok && github.ref == 'refs/heads/main'
+        working-directory: apps/web/e2e-screenshots
+        run: |
+          git init -q -b e2e-shots
+          git add -A
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com"             commit -qm "e2e screenshots ${GITHUB_SHA::7}"
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" e2e-shots
       - name: Upload screenshots and report
         if: always() && steps.lock.outputs.ok
         uses: actions/upload-artifact@v4

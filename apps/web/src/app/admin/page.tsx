@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { AppHeader } from "@/components/app-header";
 import { AdminPassword, AdminUsers, type AdminUserRow } from "@/components/admin/admin-users";
+import { DailyColumns } from "@/components/charts/daily-columns";
 import { adminAccess } from "@/lib/admin";
 import { createAdminClient } from "@/lib/supabase/server";
 
@@ -24,14 +25,21 @@ export default async function AdminPage() {
   }
 
   const admin = createAdminClient();
-  const [{ data: auth }, { data: profiles }, { data: apps }, { data: cvs }, { data: blocked }] =
-    await Promise.all([
-      admin.auth.admin.listUsers({ perPage: 1000 }),
-      admin.from("profiles").select("user_id, username, created_at"),
-      admin.from("applications").select("user_id"),
-      admin.from("cvs").select("user_id, original_file").not("original_file", "is", null),
-      admin.from("blocked_users").select("user_id"),
-    ]);
+  const [
+    { data: auth },
+    { data: profiles },
+    { data: apps },
+    { data: cvs },
+    { data: blocked },
+    { data: activity },
+  ] = await Promise.all([
+    admin.auth.admin.listUsers({ perPage: 1000 }),
+    admin.from("profiles").select("user_id, username, created_at"),
+    admin.from("applications").select("user_id"),
+    admin.from("cvs").select("user_id, original_file").not("original_file", "is", null),
+    admin.from("blocked_users").select("user_id"),
+    admin.rpc("team_daily_activity", { p_days: 10 }),
+  ]);
 
   const count = new Map<string, number>();
   for (const a of apps ?? []) count.set(a.user_id, (count.get(a.user_id) ?? 0) + 1);
@@ -62,6 +70,20 @@ export default async function AdminPage() {
             extension; Kick signs someone out everywhere; Delete removes the account and all its
             data.
           </p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <DailyColumns
+            title="Jobs posted (all sources)"
+            series={1}
+            unit="job"
+            points={(activity ?? []).map((a) => ({ day: a.day, value: a.jobs_posted }))}
+          />
+          <DailyColumns
+            title="Team applications"
+            series={2}
+            unit="application"
+            points={(activity ?? []).map((a) => ({ day: a.day, value: a.applied }))}
+          />
         </div>
         <AdminUsers users={users} selfId={access.user.id} />
       </main>

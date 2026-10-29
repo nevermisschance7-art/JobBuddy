@@ -777,10 +777,26 @@ export type Database = {
       }
       mark_jobs_missed: { Args: { ids: string[] }; Returns: number }
       mark_jobs_seen: { Args: { ids: string[] }; Returns: undefined }
+      my_daily_activity: {
+        Args: { p_days?: number }
+        Returns: {
+          applied: number
+          day: string
+          jobs_posted: number
+        }[]
+      }
       prune_closed_jobs: { Args: never; Returns: number }
       prune_stale_jobs: { Args: never; Returns: number }
       record_company_results: { Args: { results: Json }; Returns: undefined }
       start_fetch_run: { Args: never; Returns: number }
+      team_daily_activity: {
+        Args: { p_days?: number }
+        Returns: {
+          applied: number
+          day: string
+          jobs_posted: number
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

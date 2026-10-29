@@ -108,7 +108,7 @@ function Row({ item }: { item: AppRow }) {
           aria-label={`Status of ${item.jobs.title}`}
           value={status}
           disabled={pending}
-          className="ml-auto h-8 w-auto text-xs"
+          className="ml-auto h-9 w-auto py-1 text-sm"
           onChange={(e) => move(e.target.value)}
         >
           {Object.entries(STATUS_LABEL).map(([value, label]) => (

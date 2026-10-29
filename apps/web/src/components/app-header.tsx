@@ -11,7 +11,7 @@ export function AppHeader({ username }: { username: string | null }) {
         <Link href="/app" className="flex items-center gap-2 font-semibold">
           <Mascot size={30} /> <span className="hidden sm:inline">JobBuddy</span>
         </Link>
-        <nav className="flex items-center gap-0.5 overflow-x-auto text-sm">
+        <nav className="scroll-x flex items-center gap-0.5 text-sm">
           <NavLinks />
           <form action={signOut}>
             <Button type="submit" variant="ghost" size="sm" title={username ?? undefined}>

@@ -184,11 +184,7 @@ export function JobsInbox({
     <div className="grid gap-6 lg:grid-cols-[250px_minmax(0,1fr)]">
       {/* Sidebar: lists and quick filters */}
       <aside className="flex flex-col gap-5 lg:sticky lg:top-4 lg:self-start">
-        <nav
-          role="tablist"
-          aria-label="Job lists"
-          className="flex gap-1 overflow-x-auto lg:flex-col"
-        >
+        <nav role="tablist" aria-label="Job lists" className="scroll-x flex gap-1 lg:flex-col">
           {VIEWS.map(([view, label, Icon]) => (
             <button
               key={view}
