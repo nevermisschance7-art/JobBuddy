@@ -1,6 +1,6 @@
 import { LearnedAnswers } from "@/components/forms/learned-answers";
 import { AppHeader } from "@/components/app-header";
-import { DeleteAccountForm, DisplayNameForm } from "@/components/forms/account-forms";
+import { DeleteAccountForm, DisplayNameForm, TimeZoneForm } from "@/components/forms/account-forms";
 import { AiKeysForm } from "@/components/forms/ai-keys-form";
 import { CvUpload, RereadCv } from "@/components/forms/cv-upload";
 import { FixedAnswersForm } from "@/components/forms/fixed-answers-form";
@@ -83,6 +83,7 @@ export default async function SettingsPage() {
               Username: <strong>{username}</strong>
             </p>
             <DisplayNameForm displayName={profile?.display_name ?? username} />
+            <TimeZoneForm timeZone={profile?.time_zone ?? "UTC"} />
           </Card>
         </Section>
 
@@ -120,9 +121,9 @@ export default async function SettingsPage() {
         <Section id="extension" title="Chrome extension">
           <Card className="flex flex-col gap-3 text-sm">
             <p>
-              The extension fills application forms on Greenhouse, Lever, Ashby, Workable and
-              SmartRecruiters with your details, fixed answers, drafted answers and tailored CV, and
-              shows your alerts. It never presses Submit: you always do.
+              The extension fills application forms on any site (Greenhouse, Lever, Ashby, Workday,
+              BambooHR and more) with your details, fixed answers, drafted answers and tailored CV,
+              and shows your alerts. It never presses Submit: you always do.
             </p>
             <ol className="flex list-decimal flex-col gap-1 pl-5">
               <li>

@@ -201,6 +201,19 @@ describe("LlmRouter", () => {
       AllProvidersFailedError,
     );
     expect(alerts).toHaveLength(1);
+    expect(alerts[0]).toMatch(/out of quota/);
+  });
+
+  it("says the AI is busy, not that the keys are broken, when providers only time out", async () => {
+    const { router, fakes, alerts } = setup({ gemini: {}, groq: {} });
+    for (let i = 0; i < 4; i++) {
+      fakes.gemini.queue(new LlmError("network", "The operation was aborted due to timeout"));
+      fakes.groq.queue(new LlmError("server", "503"));
+    }
+    await expect(router.generateJson("t", schema, "p", "u1")).rejects.toBeInstanceOf(
+      AllProvidersFailedError,
+    );
+    expect(alerts[0]).toMatch(/too busy/);
   });
 
   it("explains that a key is needed when the user has none", async () => {

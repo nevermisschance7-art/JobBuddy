@@ -187,6 +187,17 @@ def test_all_failing_raises_alert():
     with pytest.raises(AllProvidersFailedError):
         router.generate_json("t", Thing, "p", "u1")
     assert len(sinks.alerts) == 1
+    assert "out of quota" in sinks.alerts[0]
+
+
+def test_only_timeouts_say_the_ai_is_busy():
+    router, fakes, _, sinks = make([key("gemini"), key("groq")])
+    for _ in range(4):
+        fakes["gemini"].queue(LlmError("network", "timeout"))
+        fakes["groq"].queue(LlmError("server", "503"))
+    with pytest.raises(AllProvidersFailedError):
+        router.generate_json("t", Thing, "p", "u1")
+    assert "too busy" in sinks.alerts[0]
 
 
 def test_retry_with_validation_error_then_success():

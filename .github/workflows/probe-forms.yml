@@ -1,10 +1,14 @@
 name: Probe forms
 
-# Manual: opens real application forms from stored jobs in headless Chrome, runs the
+# Weekly and manual: opens real application forms from stored jobs in headless Chrome, runs the
 # extension's form code with sample data and reports found / filled / missed fields.
 # Never submits a form. The forms (without scripts) are committed as test fixtures to
-# extension/test/fixtures/real, so tests can check them offline from then on.
+# extension/test/fixtures/real, so tests can check them offline from then on. If the form
+# code no longer handles this week's forms, the run fails (GitHub emails the owner) and
+# nothing is committed.
 on:
+  schedule:
+    - cron: "30 5 * * 1" # Mondays
   workflow_dispatch:
     inputs:
       per_source:
@@ -21,7 +25,7 @@ jobs:
     env:
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-      PER_SOURCE: ${{ inputs.per_source }}
+      PER_SOURCE: ${{ inputs.per_source || '3' }}
     steps:
       - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v4
@@ -54,6 +58,10 @@ jobs:
             });
             require('fs').writeFileSync('extension/test/fixtures/real/index.json', JSON.stringify(keep, null, 2) + '\n');
           "
+      - name: The form code still handles them
+        run: pnpm --filter extension exec vitest run src/content/real-forms.test.ts
+      - name: Commit the forms
+        run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add extension/test/fixtures/real

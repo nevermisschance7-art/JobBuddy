@@ -9,6 +9,7 @@ import { loadMoreMatches, markSeen, saveMinScore } from "@/lib/actions/matches";
 import { COUNTRY_OPTIONS } from "@/lib/countries";
 import type { MatchCard, MatchCounts, MatchQuery } from "@/lib/matches";
 import { cn } from "@/lib/utils";
+import { companyKey, type AppliedBefore } from "@/lib/company";
 import { JobCard } from "./job-card";
 
 const SOURCES = [
@@ -25,6 +26,8 @@ type Props = {
   hasCv: boolean;
   counts: MatchCounts;
   userTerms: string[];
+  /** Companies applied to in the last 30 days (by companyKey), to warn before a second try. */
+  recentApplied: Record<string, AppliedBefore>;
   /** When this user's matches were last refreshed (ISO), or null. */
   matchedAt: string | null;
   /** rescoring: CV or filters changed since the last scoring; running: a search is on now. */
@@ -64,6 +67,7 @@ export function JobsInbox({
   hasCv,
   counts,
   userTerms,
+  recentApplied,
   matchedAt,
   runState,
   filtersPanel,
@@ -371,6 +375,7 @@ export function JobsInbox({
                 key={m.id}
                 match={m}
                 userTerms={terms}
+                appliedBefore={recentApplied[companyKey(m.jobs.company_name)]}
                 onSeen={onSeen}
                 onGone={(jobId) => setItems((prev) => prev.filter((x) => x.jobs.id !== jobId))}
               />

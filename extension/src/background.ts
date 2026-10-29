@@ -25,10 +25,39 @@ const MAX_PER_POLL = 3;
 
 chrome.runtime.onInstalled.addListener(() => {
   void chrome.alarms.create(POLL, { periodInMinutes: 15, delayInMinutes: 1 });
+  void syncEverySite();
 });
 chrome.runtime.onStartup.addListener(() => {
   void chrome.alarms.create(POLL, { periodInMinutes: 15, delayInMinutes: 1 });
+  void syncEverySite();
 });
+
+// "Work on every site" (popup switch, optional permission): the form filler loads on every
+// page, so the next page of a form and its thank-you page are seen on any site. It stays
+// idle on pages where nothing was filled.
+const EVERY_SITE = "every-site";
+const ALL_URLS = { origins: ["<all_urls>"] };
+
+async function syncEverySite(): Promise<void> {
+  const granted = await chrome.permissions.contains(ALL_URLS);
+  const registered = await chrome.scripting.getRegisteredContentScripts({ ids: [EVERY_SITE] });
+  if (granted && registered.length === 0) {
+    await chrome.scripting.registerContentScripts([
+      {
+        id: EVERY_SITE,
+        matches: ["<all_urls>"],
+        js: ["content.js"],
+        allFrames: true,
+        runAt: "document_idle",
+        persistAcrossSessions: true,
+      },
+    ]);
+  } else if (!granted && registered.length > 0) {
+    await chrome.scripting.unregisterContentScripts({ ids: [EVERY_SITE] });
+  }
+}
+chrome.permissions.onAdded.addListener(() => void syncEverySite());
+chrome.permissions.onRemoved.addListener(() => void syncEverySite());
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === POLL) void poll();
 });

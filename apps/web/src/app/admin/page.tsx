@@ -33,6 +33,10 @@ export default async function AdminPage() {
     admin.from("blocked_users").select("user_id"),
     admin.rpc("team_daily_activity", { p_days: 10 }),
   ]);
+  const aiDays = await aiCallsPerDay(
+    admin,
+    (activity ?? []).map((a) => a.day),
+  );
 
   const count = new Map<string, number>();
   for (const a of apps ?? []) count.set(a.user_id, (count.get(a.user_id) ?? 0) + 1);
@@ -85,8 +89,49 @@ export default async function AdminPage() {
             points={(activity ?? []).map((a) => ({ day: a.day, value: a.applied }))}
           />
         </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <DailyColumns
+            title="AI answers (whole team)"
+            series={1}
+            unit="AI answer"
+            points={aiDays.map((d) => ({ day: d.day, value: d.ok }))}
+          />
+          <div className="border-border bg-card flex flex-col justify-center gap-2 rounded-xl border p-4 text-sm">
+            <p>
+              Today: <strong>{aiDays.at(-1)?.ok ?? 0}</strong> AI answers,{" "}
+              <strong>{aiDays.at(-1)?.failed ?? 0}</strong> failed attempts.
+            </p>
+            <p className="text-muted-foreground">
+              Free limits per day, roughly: each person&apos;s Gemini key about 1,000 requests; the
+              shared Groq backup about 1,000 for the whole team. An application uses about 2. Failed
+              attempts are mostly a busy Gemini; the backup then answers.
+            </p>
+          </div>
+        </div>
         <AdminUsers users={users} />
       </main>
     </>
+  );
+}
+
+/** Successful and failed AI calls per UTC day (counted in the database, not downloaded). */
+async function aiCallsPerDay(admin: ReturnType<typeof createAdminClient>, days: string[]) {
+  const next = (day: string) =>
+    new Date(Date.parse(`${day}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10);
+  const count = async (day: string, ok: boolean) => {
+    const { count } = await admin
+      .from("llm_calls")
+      .select("id", { count: "exact", head: true })
+      .eq("ok", ok)
+      .gte("created_at", `${day}T00:00:00Z`)
+      .lt("created_at", `${next(day)}T00:00:00Z`);
+    return count ?? 0;
+  };
+  return Promise.all(
+    days.map(async (day) => ({
+      day,
+      ok: await count(day, true),
+      failed: await count(day, false),
+    })),
   );
 }

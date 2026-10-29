@@ -30,6 +30,9 @@ export const CALL_BUDGET_MS = 20_000;
 /** Longest one attempt at one model may take (ms); a hang is retried once, then skipped. */
 export const ATTEMPT_TIMEOUT_MS = 10_000;
 
+/** Attempts that failed only because the provider was slow or down, not because of a key. */
+const BUSY_ATTEMPT = /: (network|server|out of time)$/;
+
 /** Every provider failed or was cooling down. The user gets a "needs fixing" alert. */
 export class AllProvidersFailedError extends Error {
   constructor(readonly attempts: string[]) {
@@ -227,7 +230,9 @@ export class LlmRouter {
     const message =
       attempts.length === 0
         ? "No AI key is set up. Add a free Gemini key in Settings."
-        : "All your AI keys are out of quota or not working right now. Check Settings, or add a backup key.";
+        : attempts.every((a) => BUSY_ATTEMPT.test(a))
+          ? "The free AI was too busy to answer just now. Your keys are fine; it usually passes within the hour."
+          : "All your AI keys are out of quota or not working right now. Check Settings, or add a backup key.";
     await this.opts.sinks.needsFixing(userId, message);
     throw new AllProvidersFailedError(attempts);
   }

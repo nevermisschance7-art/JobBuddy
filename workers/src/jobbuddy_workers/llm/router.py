@@ -36,6 +36,11 @@ _ALL_FAILED = (
     "All your AI keys are out of quota or not working right now. "
     "Check Settings, or add a backup key."
 )
+_BUSY = (
+    "The free AI was too busy to answer just now. Your keys are fine; "
+    "it usually passes within the hour."
+)
+_BUSY_KINDS = ("network", "server")
 
 
 class AllProvidersFailedError(Exception):
@@ -183,7 +188,13 @@ class LlmRouter:
                     elif error.kind == "auth":
                         self.keys.mark_broken(user_id, name, str(error))
 
-        self.sinks.needs_fixing(user_id, _NO_KEY if not attempts else _ALL_FAILED)
+        if not attempts:
+            message = _NO_KEY
+        elif all(a.endswith(tuple(f": {k}" for k in _BUSY_KINDS)) for a in attempts):
+            message = _BUSY
+        else:
+            message = _ALL_FAILED
+        self.sinks.needs_fixing(user_id, message)
         raise AllProvidersFailedError(attempts)
 
     def _try_provider(

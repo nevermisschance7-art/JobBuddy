@@ -7,7 +7,7 @@ import { MascotSays } from "@/components/mascot";
 import { loadProfile } from "@/lib/data";
 import { createAdminClient } from "@/lib/supabase/server";
 import { loadFilters } from "@/lib/loaders";
-import { countMatches, loadMatches } from "@/lib/matches";
+import { countMatches, loadMatches, loadRecentApplied } from "@/lib/matches";
 
 export const metadata = { title: "Jobs · JobBuddy" };
 
@@ -16,7 +16,7 @@ export default async function Dashboard() {
   if (!profile?.onboarded_at) redirect("/onboarding");
 
   const minScore = profile.min_score;
-  const [{ data: cv }, initial, counts, { filters }] = await Promise.all([
+  const [{ data: cv }, initial, counts, { filters }, recentApplied] = await Promise.all([
     supabase
       .from("cvs")
       .select("resume_json, updated_at")
@@ -34,6 +34,7 @@ export default async function Dashboard() {
     ),
     countMatches(supabase, user.id, minScore),
     loadFilters(),
+    loadRecentApplied(supabase, user.id),
   ]);
   const runState = await searchState(
     profile.matched_at ?? null,
@@ -69,6 +70,7 @@ export default async function Dashboard() {
           hasCv={Boolean(cv)}
           counts={counts}
           userTerms={userTerms}
+          recentApplied={recentApplied}
           matchedAt={profile.matched_at ?? null}
           runState={runState}
           filtersPanel={<FiltersForm filters={filters} />}

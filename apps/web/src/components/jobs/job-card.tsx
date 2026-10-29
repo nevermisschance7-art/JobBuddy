@@ -25,6 +25,7 @@ import {
   salaryLabel,
   type EligibilityChip,
 } from "@/lib/job-display";
+import type { AppliedBefore } from "@/lib/company";
 import type { MatchCard } from "@/lib/matches";
 import { cn } from "@/lib/utils";
 import { NotForMeDialog } from "./not-for-me-dialog";
@@ -64,15 +65,21 @@ const SOURCE_LABEL: Record<string, string> = {
   hackernews: "Hacker News",
 };
 
+const appliedOn = (iso: string) =>
+  new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+
 type Applied = { applicationId: string; note?: string; done?: boolean };
 
 export function JobCard({
   match,
   userTerms,
+  appliedBefore,
   onGone,
   onSeen,
 }: {
   match: MatchCard;
+  /** The user applied to this company in the last 30 days. */
+  appliedBefore?: AppliedBefore;
   /** Technologies in the user's CV (canonical, lower case), to highlight on the card. */
   userTerms: Set<string>;
   /** Called when the card should leave the current list (dismissed, restored, unsaved, applied). */
@@ -185,6 +192,11 @@ export function JobCard({
               {salary ? ` · ${salary}` : ""}
             </span>
           </p>
+          {appliedBefore ? (
+            <p className="bg-warning/20 mt-2 inline-block rounded-md px-2 py-0.5 text-xs">
+              {`You applied to ${job.company_name} on ${appliedOn(appliedBefore.appliedAt)} (${appliedBefore.title}).`}
+            </p>
+          ) : null}
         </div>
         <div className="flex shrink-0 flex-col items-center">
           <ScoreRing score={match.score} size={52} />

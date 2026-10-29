@@ -13,6 +13,7 @@ type Summary = {
 };
 
 const root = document.getElementById("root")!;
+const ALL_URLS = { origins: ["<all_urls>"] };
 
 const LINES: Record<Summary["tone"], string[]> = {
   kind: [
@@ -111,6 +112,8 @@ async function show(): Promise<void> {
       ${alerts}
       <button id="fill" class="primary">⚡ Fill this page</button>
       <p id="fill-status" class="muted center">Works on any application form. You always press Submit.</p>
+      <label class="switch"><input type="checkbox" id="every"> Work on every site
+        <span class="muted">Spots the next page and the thank-you page on any job site. Chrome asks once.</span></label>
       <div class="links">
         <a href="${APP_URL}/app" target="_blank">Find jobs</a>
         <a href="${APP_URL}/applications" target="_blank">Applications</a>
@@ -119,6 +122,14 @@ async function show(): Promise<void> {
       <div class="mascot"><span aria-hidden="true">🐱</span><p>${esc(line)}</p></div>
       <p class="muted foot">Signed in as <b>${esc(session.username)}</b> · <a href="#" id="out">Sign out</a></p>`;
     document.getElementById("fill")!.addEventListener("click", () => void fillThisPage());
+    const every = document.getElementById("every") as HTMLInputElement;
+    every.checked = await chrome.permissions.contains(ALL_URLS);
+    every.addEventListener("change", async () => {
+      // Asked from the click itself, so Chrome shows its prompt (only the first time).
+      every.checked = every.checked
+        ? await chrome.permissions.request(ALL_URLS)
+        : !(await chrome.permissions.remove(ALL_URLS));
+    });
     document.getElementById("out")!.addEventListener("click", async (e) => {
       e.preventDefault();
       await setSession(null);
