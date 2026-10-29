@@ -14,6 +14,11 @@ export type FieldKind =
   | "linkedin"
   | "github"
   | "website"
+  | "country"
+  | "current_company"
+  | "current_title"
+  | "headline"
+  | "summary"
   | "resume"
   | "cover_letter"
   | "file"
@@ -33,6 +38,8 @@ export type FormField = {
   choices?: { el: HTMLElement; label: string }[];
   /** A custom dropdown (react-select and similar): typed into, then an option is clicked. */
   combobox?: boolean;
+  /** A rich text editor (contenteditable). */
+  editable?: boolean;
   label: string;
   kind: FieldKind;
   required: boolean;
@@ -43,7 +50,8 @@ const cssId = (id: string) => id.replace(/["\\]/g, "\\$&");
 const clean = (s: string | null | undefined) =>
   (s ?? "")
     .replace(/\s+/g, " ")
-    .replace(/\s*\*\s*$/, "")
+    // Required marks: "*", "✱", "(required)".
+    .replace(/\s*(\*|✱|\(required\))\s*$/i, "")
     .trim();
 
 function textOf(el: Element | null): string {
@@ -103,9 +111,11 @@ export function classify(meta: {
   id?: string;
   type?: string;
   autocomplete?: string;
+  /** Test hooks forms carry (data-ui="resume", data-automation-id="email"...). */
+  extra?: string;
 }): FieldKind {
   const label = meta.label.toLowerCase();
-  const hints = `${label} ${meta.name ?? ""} ${meta.id ?? ""}`
+  const hints = `${label} ${meta.name ?? ""} ${meta.id ?? ""} ${meta.extra ?? ""}`
     .toLowerCase()
     .replace(/[_\-[\]]+/g, " ");
   const auto = (meta.autocomplete ?? "").toLowerCase();
@@ -132,7 +142,16 @@ export function classify(meta: {
     if (/linked\s?in/.test(hints)) return "linkedin";
     if (/git\s?hub/.test(hints)) return "github";
     if (/portfolio|website|personal (site|url)|^url$|other website/.test(hints)) return "website";
-    if (/^(current )?(location|city)$|^location \(city\)$/.test(label)) return "location";
+    if (/^(current )?(location|city)$|^location \(city\)$|^(street |home )?address$/.test(label))
+      return "location";
+    if (/^(country|country of residence|country\/region)$/.test(label)) return "country";
+    if (/^(current |most recent )?(company|employer|organi[sz]ation)( name)?$/.test(label))
+      return "current_company";
+    if (/^(current |most recent )?(job )?title$|^current (role|position)$/.test(label))
+      return "current_title";
+    if (/^headline$|^professional headline$/.test(label)) return "headline";
+    if (/^(profile |professional )?summary$|^about (you|yourself|me)$/.test(label))
+      return "summary";
   }
   if (/cover letter/.test(label)) return "cover_letter";
   return "question";
@@ -198,6 +217,7 @@ export function collectFields(doc: Document): FormField[] {
         id: el.id,
         type,
         autocomplete: el.getAttribute("autocomplete") ?? "",
+        extra: HOOK_ATTRS.map((a) => el.getAttribute(a) ?? "").join(" "),
       }),
       required: isRequired(el, label, raw),
       ...(isCombobox(el) ? { combobox: true } : {}),
@@ -221,9 +241,52 @@ export function collectFields(doc: Document): FormField[] {
     });
   }
 
+  // Rich text editors (cover letters, long answers): contenteditable boxes.
+  for (const el of doc.querySelectorAll<HTMLElement>(
+    "[contenteditable='true'], [contenteditable=''], [contenteditable='plaintext-only']",
+  )) {
+    if (!visible(el) || el.parentElement?.closest("[contenteditable]")) continue;
+    const raw = labelFor(el, doc);
+    const label = clean(raw);
+    if (!label) continue;
+    out.push({
+      el: el as unknown as Control,
+      label,
+      kind: classify({ label }),
+      required: isRequired(el, label, raw),
+      editable: true,
+    });
+  }
+
   out.push(...choiceGroups(doc));
   return out;
 }
+
+/** Types into a rich text editor the way a person does, so the editor's own code notices. */
+export function setEditableText(el: HTMLElement, text: string): void {
+  el.focus();
+  const doc = el.ownerDocument;
+  const selection = doc.getSelection();
+  if (selection) {
+    const range = doc.createRange();
+    range.selectNodeContents(el);
+    selection.removeAllRanges();
+    selection.addRange(range);
+  }
+  let inserted = false;
+  try {
+    inserted = doc.execCommand?.("insertText", false, text) ?? false;
+  } catch {
+    inserted = false;
+  }
+  if (!inserted || !el.textContent?.trim()) {
+    el.textContent = text;
+    el.dispatchEvent(new (doc.defaultView ?? window).Event("input", { bubbles: true }));
+  }
+}
+
+/** Attributes forms use as stable hooks; they often say what a field is better than its label. */
+const HOOK_ATTRS = ["data-ui", "data-automation-id", "data-testid", "data-qa", "data-field"];
 
 /** Inputs that open a list of options to pick from instead of taking free text. */
 function isCombobox(el: Element): boolean {
@@ -312,8 +375,19 @@ export function valueFor(field: FormField, data: FillData): string | null {
       return p.website;
     case "location":
       return (
-        data.fixedAnswers.location ?? ([p.city, p.countryCode].filter(Boolean).join(", ") || null)
+        data.fixedAnswers.location ??
+        ([p.city, p.country ?? p.countryCode].filter(Boolean).join(", ") || null)
       );
+    case "country":
+      return p.country ?? null;
+    case "current_company":
+      return p.currentCompany ?? null;
+    case "current_title":
+      return p.currentTitle ?? null;
+    case "headline":
+      return p.headline ?? null;
+    case "summary":
+      return p.summary ?? null;
     case "cover_letter":
       return data.answers.find((a) => a.isCoverLetter)?.answer ?? null;
     case "resume":
@@ -386,9 +460,32 @@ const norm = (s: string) =>
     .trim();
 
 /** The option that best matches an answer ("No" matches "No, I don't need sponsorship"). */
+/** "I prefer not to say", "Decline to self identify", "I don't wish to answer"... */
+const DECLINE =
+  /prefer not|decline|don ?t (want|wish)|do not (want|wish)|rather not|not to (say|disclose|answer|specify)|choose not/;
+
 export function pickOption<T extends { label: string }>(options: T[], answer: string): T | null {
+  const whole = pickOne(options, answer);
+  if (whole || !answer.includes(",")) return whole;
+  // "Manchester, United Kingdom" in a country list: try the parts, the last (widest) first.
+  for (const part of answer
+    .split(",")
+    .map((p) => p.trim())
+    .reverse()) {
+    const hit = pickOne(options, part);
+    if (hit) return hit;
+  }
+  return null;
+}
+
+function pickOne<T extends { label: string }>(options: T[], answer: string): T | null {
   const a = norm(answer);
   if (!a) return null;
+  // A "prefer not to say" answer matches whatever wording the form uses for it.
+  if (DECLINE.test(a)) {
+    const decline = options.find((o) => DECLINE.test(norm(o.label)));
+    if (decline) return decline;
+  }
   return (
     options.find((o) => norm(o.label) === a) ??
     options.find((o) => norm(o.label).startsWith(`${a} `) || a.startsWith(`${norm(o.label)} `)) ??
@@ -484,6 +581,15 @@ export function fillForm(fields: FormField[], data: FillData): FillReport {
         click(choice.el);
         report.filled++;
       } else if (!choice && !f.choices.some((c) => isChosen(c.el))) report.missed.push(f);
+      continue;
+    }
+    if (f.editable) {
+      const box = f.el as unknown as HTMLElement;
+      if (box.textContent?.trim()) continue;
+      if (value) {
+        setEditableText(box, value);
+        report.filled++;
+      } else report.missed.push(f);
       continue;
     }
     if (f.combobox) {

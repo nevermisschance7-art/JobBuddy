@@ -60,6 +60,11 @@ const data: FillData = {
     linkedin: "https://linkedin.com/in/sam",
     github: "https://github.com/sam",
     website: null,
+    country: "United Kingdom",
+    currentCompany: "Brightbank",
+    currentTitle: "Backend Engineer",
+    headline: "Backend Engineer",
+    summary: "Backend engineer with 6 years of Python.",
   },
   fixedAnswers: { needs_sponsorship: "No", right_to_work: "Yes" },
   answers: [

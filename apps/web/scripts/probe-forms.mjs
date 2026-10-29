@@ -93,7 +93,7 @@ function formUrl(job) {
 
 // Only buttons/links that OPEN a form. Anything that could send one is never clicked.
 const OPENERS =
-  /^(apply|apply now|apply for this (job|position|role)|apply to this job|apply here|i'?m interested|start application|start your application|apply manually|easy apply)$/i;
+  /^(apply|apply now|apply for this (job|position|role)|apply to this job|apply here|apply on company (site|website)|i'?m interested|start application|start your application|apply manually|easy apply|aplicar|aplicar ahora|postular(se)?|solicitar|inscribirse|bewerben|jetzt bewerben|hier bewerben|postuler|candidater|candidatar(-se)?|aplikuj|ansök|solliciteer|candidati)$/i;
 const NEVER = /submit|send|finish|complete|confirm/i;
 
 async function openForm(page) {
@@ -152,7 +152,19 @@ async function probeJob(browser, job, n) {
     await page.goto(start, { timeout: 30000, waitUntil: "domcontentloaded" });
     await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
     await openForm(page);
-    await page.waitForTimeout(2500);
+    // Forms built by scripts appear late: wait up to 12 s for one in any frame.
+    for (let t = 0; t < 12; t++) {
+      let most = 0;
+      for (const frame of page.frames()) {
+        const n = await frame
+          .locator("input:not([type=hidden]), textarea, select")
+          .count()
+          .catch(() => 0);
+        most = Math.max(most, n);
+      }
+      if (most >= 3) break;
+      await page.waitForTimeout(1000);
+    }
     result.final = page.url();
 
     let best = null;
@@ -170,6 +182,20 @@ async function probeJob(browser, job, n) {
       if (!r) continue;
       result.frames.push(r);
       if (!r.error && (!best || r.fields.length > best.r.fields.length)) best = { r, html };
+    }
+    if (!best) {
+      // What the page shows instead of a form, to see why.
+      result.seen = await page
+        .evaluate(() => ({
+          title: document.title,
+          buttons: [...document.querySelectorAll("a, button, [role=button]")]
+            .map((b) => (b.textContent || "").replace(/\s+/g, " ").trim())
+            .filter((t) => t && t.length < 40)
+            .slice(0, 25),
+          iframes: [...document.querySelectorAll("iframe")].map((f) => f.src).slice(0, 5),
+          text: (document.body?.innerText || "").replace(/\s+/g, " ").slice(0, 300),
+        }))
+        .catch(() => null);
     }
     if (best?.html) {
       writeFileSync(`${outDir}/html/${job.source}-${n}.html`, best.html);
@@ -199,7 +225,11 @@ for (const job of jobs) {
       (r.error ? `\n  ERROR ${r.error}` : "") +
       `\n  fields ${f.fields?.length ?? 0}, filled ${f.filled ?? 0}, resume ${f.resume ?? false}` +
       `\n  missed: ${(f.missed ?? []).slice(0, 15).join(" | ")}` +
-      `\n  kinds: ${(f.fields ?? []).map((x) => `${x.kind}[${x.control}]`).join(", ")}`,
+      `\n  kinds: ${(f.fields ?? []).map((x) => `${x.kind}[${x.control}]`).join(", ")}` +
+      (r.seen
+        ? `\n  SEEN title="${r.seen.title}" iframes=${JSON.stringify(r.seen.iframes)}` +
+          `\n  buttons: ${r.seen.buttons.join(" | ")}\n  text: ${r.seen.text}`
+        : ""),
   );
 }
 await browser.close();

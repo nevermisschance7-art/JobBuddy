@@ -1,4 +1,4 @@
-import { fixedKeyFor, jobKeyFromUrl } from "@jobbuddy/shared";
+import { fixedKeyFor, isFormHost, jobKeyFromUrl } from "@jobbuddy/shared";
 import type { FillData, LookupResult, Message, PrepareResult, Reply } from "../types";
 import {
   attachFile,
@@ -193,8 +193,48 @@ function draftable(missed: FormField[]): string[] {
 
 // ---------------------------------------------------------------- the one-button flow
 
+// ---------------------------------------------------------------- multi-page forms
+
+// After the first fill, this tab remembers the application for a while, so the next pages of
+// a multi-page form (Workday, iCIMS...) are filled with the same application automatically.
+const SESSION = "jobbuddy-session";
+const SESSION_MS = 2 * 3_600_000;
+
+function session(): string | null {
+  try {
+    const s = JSON.parse(sessionStorage.getItem(SESSION) ?? "null") as {
+      id: string;
+      at: number;
+    } | null;
+    return s && Date.now() - s.at < SESSION_MS ? s.id : null;
+  } catch {
+    return null;
+  }
+}
+
+function remember(applicationId: string): void {
+  sessionStorage.setItem(SESSION, JSON.stringify({ id: applicationId, at: Date.now() }));
+}
+
+/** Labels of the fields already handled on this page, to notice when a new step appears. */
+const handled = new Set<string>();
+let busy = false;
+
+function newStepAppeared(): boolean {
+  const fresh = collectFields(document).filter((f) => {
+    if (handled.has(f.label)) return false;
+    const el = f.el as unknown as HTMLInputElement;
+    return f.options || f.choices || f.combobox || f.editable ? true : !el.value?.trim();
+  });
+  return fresh.length >= 2;
+}
+
 async function lookup(): Promise<LookupResult | null> {
-  const reply = await send<LookupResult>({ type: "lookup", url: location.href });
+  const reply = await send<LookupResult>({
+    type: "lookup",
+    url: location.href,
+    applicationId: session() ?? undefined,
+  });
   if (!reply.ok) {
     showError(reply);
     return null;
@@ -203,6 +243,17 @@ async function lookup(): Promise<LookupResult | null> {
 }
 
 async function run(): Promise<void> {
+  if (busy) return;
+  busy = true;
+  try {
+    await runSteps();
+  } finally {
+    for (const f of collectFields(document)) handled.add(f.label);
+    busy = false;
+  }
+}
+
+async function runSteps(): Promise<void> {
   const info = pageInfo();
   const list: Step[] = [
     { label: "Getting your application ready", state: "now" },
@@ -231,6 +282,7 @@ async function run(): Promise<void> {
     if (!prep.ok) return showError(prep);
     applicationId = prep.data.applicationId;
   }
+  remember(applicationId);
 
   // 2 and 3. CV and answers at the same time (two separate requests).
   go(1);
@@ -238,7 +290,10 @@ async function run(): Promise<void> {
   const [cv, drafts] = await Promise.all([
     needsCv ? send<{ note: string | null }>({ type: "cv", applicationId }) : Promise.resolve(null),
     questions.length > 0
-      ? send<PrepareResult>({ type: "prepare", input: { url: location.href, ...info, questions } })
+      ? send<PrepareResult>({
+          type: "prepare",
+          input: { url: location.href, ...info, questions, applicationId },
+        })
       : Promise.resolve(null),
   ]);
   go(2);
@@ -378,8 +433,20 @@ function boot(): void {
   chrome.runtime.onMessage.addListener((message: { type?: string }) => {
     if (message.type === "fill-here" && hasForm()) void intro();
   });
+  // The next page of a form already being filled: carry on by itself.
+  if (session()) whenFormAppears(() => void run());
   // Known employer systems: offer it right away, only where the form is.
-  if (jobKeyFromUrl(location.href)) whenFormAppears(() => void intro());
+  else if (jobKeyFromUrl(location.href) || isFormHost(location.hostname)) {
+    whenFormAppears(() => void intro());
+  }
+  // A new step on the same page (single-page forms): fill it too.
+  let timer: number | undefined;
+  new MutationObserver(() => {
+    clearTimeout(timer);
+    timer = window.setTimeout(() => {
+      if (session() && !busy && handled.size > 0 && newStepAppeared()) void run();
+    }, 1500);
+  }).observe(document.documentElement, { childList: true, subtree: true });
 }
 
 boot();

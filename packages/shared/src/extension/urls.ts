@@ -92,3 +92,36 @@ export function pageAddress(raw: string): string | null {
     return null;
   }
 }
+
+/**
+ * Other application systems where the extension offers itself without being asked (the box
+ * shows only when a form is on the page). Matched as the host or any subdomain of it.
+ * Keep in sync with the manifest (built from this list).
+ */
+export const FORM_HOSTS = [
+  "myworkdayjobs.com",
+  "myworkdaysite.com",
+  "icims.com",
+  "bamboohr.com",
+  "breezy.hr",
+  "recruitee.com",
+  "teamtailor.com",
+  "jobs.personio.de",
+  "jobs.personio.com",
+  "applytojob.com",
+  "jobvite.com",
+  "smartrecruiters.com",
+  "workable.com",
+  "join.com",
+  "pinpointhq.com",
+  "comeet.com",
+  "freshteam.com",
+  "homerun.co",
+  "dover.com",
+  "rippling.com",
+];
+
+export function isFormHost(host: string): boolean {
+  const h = host.toLowerCase();
+  return FORM_HOSTS.some((d) => h === d || h.endsWith(`.${d}`));
+}

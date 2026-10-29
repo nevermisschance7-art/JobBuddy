@@ -86,7 +86,10 @@ chrome.notifications.onClicked.addListener((id) => {
 async function handle(message: Message): Promise<unknown> {
   switch (message.type) {
     case "lookup":
-      return api("lookup", { method: "POST", body: { url: message.url } });
+      return api("lookup", {
+        method: "POST",
+        body: { url: message.url, applicationId: message.applicationId },
+      });
     case "prepare":
       return api("prepare", { method: "POST", body: message.input });
     case "applied":

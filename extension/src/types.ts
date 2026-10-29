@@ -11,6 +11,12 @@ export type FillProfile = {
   linkedin: string | null;
   github: string | null;
   website: string | null;
+  /** Country name, e.g. "United Kingdom". */
+  country: string | null;
+  currentCompany: string | null;
+  currentTitle: string | null;
+  headline: string | null;
+  summary: string | null;
 };
 
 export type FillData = {
@@ -37,13 +43,14 @@ export type PrepareInput = {
   company: string;
   description: string;
   questions: string[];
+  applicationId?: string;
 };
 
 export type PrepareResult = { applicationId: string; drafted: number; reviewUrl: string };
 
 /** Messages from content scripts and the popup to the background worker. */
 export type Message =
-  | { type: "lookup"; url: string }
+  | { type: "lookup"; url: string; applicationId?: string }
   | { type: "prepare"; input: PrepareInput }
   | { type: "applied"; applicationId: string }
   | { type: "cv"; applicationId: string }

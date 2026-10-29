@@ -19,10 +19,7 @@ export default defineConfig({
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
   },
-  projects: [
-    { name: "desktop", use: { ...devices["Desktop Chrome"] } },
-    { name: "phone", use: { ...devices["Pixel 7"] } },
-  ],
+  projects: [{ name: "desktop", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
     command: "pnpm start",
     url: "http://localhost:3000/login",

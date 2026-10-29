@@ -71,6 +71,16 @@ async function findByKey(supabase: Supabase, url: string): Promise<FoundJob | nu
     : null;
 }
 
+/** "GB" -> "United Kingdom". */
+function countryName(code: string | undefined): string | null {
+  if (!code) return null;
+  try {
+    return new Intl.DisplayNames(["en"], { type: "region" }).of(code.toUpperCase()) ?? null;
+  } catch {
+    return null;
+  }
+}
+
 const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
 
 /**
@@ -109,6 +119,9 @@ export async function fillData(supabase: Supabase, userId: string, applicationId
   const fixedAnswers = Object.fromEntries((fixed ?? []).map((f) => [f.key, f.value]));
   const name = basics?.name ?? "";
   const [first, ...rest] = name.split(/\s+/).filter(Boolean);
+  // The current job: one without an end date, else the most recent.
+  const work = resume.success ? resume.data.work : [];
+  const current = work.find((w) => !w.endDate) ?? work[0];
   const profileUrl = (network: string) =>
     basics?.profiles.find((p) => p.network.toLowerCase().includes(network))?.url ?? null;
 
@@ -146,6 +159,11 @@ export async function fillData(supabase: Supabase, userId: string, applicationId
       linkedin: str(fixedAnswers.linkedin_url) ?? profileUrl("linkedin"),
       github: str(fixedAnswers.github_url) ?? profileUrl("github"),
       website: str(fixedAnswers.portfolio_url) ?? str(basics?.url),
+      country: countryName(basics?.location?.countryCode),
+      currentCompany: str(current?.name),
+      currentTitle: str(current?.position),
+      headline: str(basics?.label) ?? str(current?.position),
+      summary: str(basics?.summary),
     },
     fixedAnswers,
     answers,

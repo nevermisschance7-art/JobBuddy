@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { jobKeyFromUrl } from "./urls";
+import { isFormHost, jobKeyFromUrl } from "./urls";
 
 describe("jobKeyFromUrl", () => {
   it.each([
@@ -40,5 +40,15 @@ describe("jobKeyFromUrl", () => {
     expect(jobKeyFromUrl("https://boards.greenhouse.io/acme")).toBeNull();
     expect(jobKeyFromUrl("https://www.linkedin.com/jobs/view/123")).toBeNull();
     expect(jobKeyFromUrl("not a url")).toBeNull();
+  });
+});
+
+describe("isFormHost", () => {
+  it("matches application systems and their subdomains only", () => {
+    expect(isFormHost("acme.wd3.myworkdayjobs.com")).toBe(true);
+    expect(isFormHost("careers-acme.icims.com")).toBe(true);
+    expect(isFormHost("acme.jobs.personio.de")).toBe(true);
+    expect(isFormHost("notmyworkdayjobs.com")).toBe(false);
+    expect(isFormHost("www.linkedin.com")).toBe(false);
   });
 });

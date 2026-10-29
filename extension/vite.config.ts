@@ -1,15 +1,18 @@
 import { fileURLToPath } from "node:url";
 import { defineConfig, loadEnv, type Plugin } from "vite";
-import { ATS_HOSTS } from "../packages/shared/src/extension/urls";
+import { ATS_HOSTS, FORM_HOSTS } from "../packages/shared/src/extension/urls";
 
 const root = (p: string) => fileURLToPath(new URL(p, import.meta.url));
 
 /** manifest.json, with the app URL and employer-system hosts filled in at build time. */
 function manifest(appUrl: string): Plugin {
   const app = new URL(appUrl);
-  const atsMatches = Object.values(ATS_HOSTS)
-    .flat()
-    .map((h) => `https://${h}/*`);
+  const atsMatches = [
+    ...Object.values(ATS_HOSTS)
+      .flat()
+      .map((h) => `https://${h}/*`),
+    ...FORM_HOSTS.flatMap((d) => [`https://${d}/*`, `https://*.${d}/*`]),
+  ];
   return {
     name: "jobbuddy-manifest",
     generateBundle() {

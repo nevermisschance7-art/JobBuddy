@@ -16,6 +16,8 @@ const body = z.object({
   company: z.string().min(1).max(200),
   description: z.string().max(20_000).default(""),
   questions: z.array(z.string().min(2).max(1000)).max(40).default([]),
+  /** Later pages of a multi-page form: add to this application (the address differs). */
+  applicationId: z.string().uuid().optional(),
 });
 
 export async function POST(request: Request) {
@@ -32,7 +34,17 @@ export async function POST(request: Request) {
   if (!known && !address) return NextResponse.json({ error: "Bad page address." }, { status: 400 });
   const externalId = known ? `${known.ats}:${known.id}` : `web:${address}`;
 
-  let found = await findJobForUrl(supabase, input.url);
+  let found: FoundJob | null = null;
+  if (input.applicationId) {
+    const { data } = await supabase
+      .from("applications")
+      .select("jobs(id, title, company_name, description_text)")
+      .eq("id", input.applicationId)
+      .eq("user_id", userId)
+      .maybeSingle();
+    found = (data?.jobs as unknown as FoundJob | null) ?? null;
+  }
+  found ??= await findJobForUrl(supabase, input.url);
   if (!found) {
     // A job the fetchers haven't seen. Jobs are shared and written by the service role; the
     // posting date is unknown, so it is stored as unknown (never the time we saw it).

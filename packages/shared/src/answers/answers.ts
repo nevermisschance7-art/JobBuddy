@@ -40,14 +40,14 @@ const FIXED_RULES: [FixedKey, RegExp][] = [
   ["pronouns", /pronoun/i],
   [
     "demographics",
-    /\b(gender|sex|ethnic(ity)?|race|racial|disab(led|ility)|veteran|sexual orientation|transgender|religio(n|us)|age range|date of birth|hispanic|latino)\b/i,
+    /\b(gender|sex|ethnic(ity)?|race|racial|disab(led|ility|ilities)|veteran|sexual orientation|transgender|religio(n|us)|age range|date of birth|hispanic|latino)\b/i,
   ],
   ["linkedin_url", /linked\s?in/i],
   ["github_url", /git\s?hub/i],
   ["portfolio_url", /portfolio|personal (web)?site|website/i],
   [
     "location",
-    /where are you (currently |now )?(based|located|living)|current (location|city|country)|country of residence|which (city|country)|time ?zone|located in|reside in|based in/i,
+    /where are you (currently |now )?(based|located|living)|current (location|city|country)|country of residence|which (city|country)|time ?zone|located in|reside in|based in|\byour (current )?location\b/i,
   ],
 ];
 

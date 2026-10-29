@@ -68,8 +68,8 @@ async function shot(page: Page, name: string) {
 }
 
 test("sign up, onboard, edit settings, delete account", async ({ page }, info) => {
-  // The whole journey in one test (sign-up to account deletion); slower on the phone profile.
-  test.setTimeout(180_000);
+  // The whole journey in one test, from sign-up to account deletion.
+  test.setTimeout(150_000);
   const username = `e2e-${info.project.name}-${randomUUID().slice(0, 6)}`;
   const jobUrl = `https://boards.greenhouse.io/e2etestco/jobs/${Date.now()}${Math.floor(Math.random() * 1000)}`;
 

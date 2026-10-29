@@ -26,6 +26,8 @@ describe("fixedKeyFor", () => {
     ["What is your notice period?", "notice_period"],
     ["Are you willing to relocate to Berlin?", "willing_to_relocate"],
     ["Where are you currently based?", "location"],
+    ["What is your location?", "location"],
+    ["Do you have one or more disabilities as described in the Equality Act 2010?", "demographics"],
     ["Gender", "demographics"],
     ["Do you identify as having a disability?", "demographics"],
     ["LinkedIn profile", "linkedin_url"],
