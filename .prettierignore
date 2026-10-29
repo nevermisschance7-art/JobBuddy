@@ -8,3 +8,6 @@ packages/shared/src/database.types.ts
 workers
 docs/job-hunt-assistant-prompts.md
 packages/shared/src/llm/test-vectors.json
+
+# Real application forms saved by the "Probe forms" workflow: kept exactly as captured.
+extension/test/fixtures/
