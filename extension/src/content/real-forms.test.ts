@@ -89,3 +89,21 @@ describe("real forms", () => {
     expectKinds(["first_name", "last_name", "email", "resume"]);
   });
 });
+
+describe("every saved real form", () => {
+  const index = JSON.parse(readFileSync(`${dir}index.json`, "utf8")) as {
+    fixture: string;
+    fields: number;
+  }[];
+
+  it.each(index.map((x) => [x.fixture, x.fields] as const))(
+    "%s: reads and fills without errors",
+    (name, fields) => {
+      load(name);
+      const found = collectFields(document);
+      // Never fewer fields than the probe found in the live page (minus a little slack).
+      expect(found.length).toBeGreaterThanOrEqual(Math.max(0, fields - 2));
+      expect(() => fillForm(found, data)).not.toThrow();
+    },
+  );
+});

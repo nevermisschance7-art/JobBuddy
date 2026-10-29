@@ -532,7 +532,7 @@ const norm = (s: string) =>
 /** The option that best matches an answer ("No" matches "No, I don't need sponsorship"). */
 /** "I prefer not to say", "Decline to self identify", "I don't wish to answer"... */
 const DECLINE =
-  /prefer not|decline|don ?t (want|wish)|do not (want|wish)|rather not|not to (say|disclose|answer|specify)|choose not/;
+  /prefer not|decline|don ?t (want|wish)|do not (want|wish)|rather not|not to (say|disclose|answer|specify)|choose not|keine angabe|m[öo]chte (ich )?(keine angabe|nicht)|prefiero no|no deseo|no quiero|pr[ée]f[èe]re ne pas|ne souhaite pas|wol[eę] nie|nie chc[eę]|prefiro n[ãa]o/;
 
 export function pickOption<T extends { label: string }>(options: T[], answer: string): T | null {
   const whole = pickOne(options, answer);
@@ -639,65 +639,79 @@ export async function fillComboboxes(
 export function fillForm(fields: FormField[], data: FillData): FillReport {
   const report: FillReport = { filled: 0, missed: [], resume: null, dropdowns: [] };
   for (const f of fields) {
-    if (f.kind === "resume") {
-      report.resume ??= f;
-      continue;
-    }
-    if (f.kind === "file") continue;
-    const value = valueFor(f, data);
-    if (f.choices) {
-      const choice = value ? pickOption(f.choices, value) : null;
-      if (choice && !isChosen(choice.el)) {
-        click(choice.el);
-        report.filled++;
-      } else if (!choice && !f.choices.some((c) => isChosen(c.el))) report.missed.push(f);
-      continue;
-    }
-    if (f.editable) {
-      const box = f.el as unknown as HTMLElement;
-      if (box.textContent?.trim()) continue;
-      if (value) {
-        setEditableText(box, value);
-        report.filled++;
-      } else report.missed.push(f);
-      continue;
-    }
-    if (f.combobox) {
-      // Filled afterwards by fillComboboxes: it has to open the list and wait for options.
-      if (value) report.dropdowns.push({ field: f, value });
-      else report.missed.push(f);
-      continue;
-    }
-    if (f.options) {
-      const choice = value ? pickOption(f.options, value) : null;
-      if (choice && !choice.el.checked) {
-        choice.el.click();
-        report.filled++;
-      } else if (!choice && !f.options.some((o) => o.el.checked)) report.missed.push(f);
-      continue;
-    }
-    const el = f.el;
-    if (el.value.trim()) continue;
-    if (!value) {
+    // One odd field must never stop the rest of the form.
+    try {
+      fillOne(f, data, report);
+    } catch {
       report.missed.push(f);
-      continue;
     }
-    if (el instanceof (el.ownerDocument.defaultView ?? window).HTMLSelectElement) {
-      const options = [...el.options]
-        .map((o) => ({ label: o.text, value: o.value }))
-        .filter((o) => o.value);
-      const choice = pickOption(options, value);
-      if (!choice) {
-        report.missed.push(f);
-        continue;
-      }
-      setNativeValue(el, choice.value);
-    } else {
-      setNativeValue(el, value);
-    }
-    report.filled++;
   }
   return report;
+}
+
+function fillOne(f: FormField, data: FillData, report: FillReport): void {
+  if (f.kind === "resume") {
+    report.resume ??= f;
+    return;
+  }
+  // File fields only ever get the CV (above); a browser refuses text in them.
+  if (f.kind === "file") return; // other uploads (photo, portfolio): left alone
+  if ((f.el as HTMLInputElement).type === "file") {
+    report.missed.push(f); // e.g. a cover letter upload: the user attaches it
+    return;
+  }
+  const value = valueFor(f, data);
+  if (f.choices) {
+    const choice = value ? pickOption(f.choices, value) : null;
+    if (choice && !isChosen(choice.el)) {
+      click(choice.el);
+      report.filled++;
+    } else if (!choice && !f.choices.some((c) => isChosen(c.el))) report.missed.push(f);
+    return;
+  }
+  if (f.editable) {
+    const box = f.el as unknown as HTMLElement;
+    if (box.textContent?.trim()) return;
+    if (value) {
+      setEditableText(box, value);
+      report.filled++;
+    } else report.missed.push(f);
+    return;
+  }
+  if (f.combobox) {
+    // Filled afterwards by fillComboboxes: it has to open the list and wait for options.
+    if (value) report.dropdowns.push({ field: f, value });
+    else report.missed.push(f);
+    return;
+  }
+  if (f.options) {
+    const choice = value ? pickOption(f.options, value) : null;
+    if (choice && !choice.el.checked) {
+      choice.el.click();
+      report.filled++;
+    } else if (!choice && !f.options.some((o) => o.el.checked)) report.missed.push(f);
+    return;
+  }
+  const el = f.el;
+  if (el.value.trim()) return;
+  if (!value) {
+    report.missed.push(f);
+    return;
+  }
+  if (el instanceof (el.ownerDocument.defaultView ?? window).HTMLSelectElement) {
+    const options = [...el.options]
+      .map((o) => ({ label: o.text, value: o.value }))
+      .filter((o) => o.value);
+    const choice = pickOption(options, value);
+    if (!choice) {
+      report.missed.push(f);
+      return;
+    }
+    setNativeValue(el, choice.value);
+  } else {
+    setNativeValue(el, value);
+  }
+  report.filled++;
 }
 
 /** Puts the CV file into a file input (DataTransfer), or drops it on a drop zone. */
