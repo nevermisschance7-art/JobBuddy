@@ -338,6 +338,33 @@ describe("Camunda / RevenueCat style questions and learning", () => {
     expect(currentAnswer(collectFields(document)[0]!)).toBe("NR1 1AA");
   });
 
+  it("reads the dropdown's shown text, not the hidden code behind it (Workday)", () => {
+    document.body.innerHTML = `
+      <label id="n">Primary Nationality</label>
+      <div class="select-container"><button role="combobox" aria-labelledby="n">Moldovan</button>
+      <input type="hidden" value="db69d266446c11de98360015c5e6daf6"></div>`;
+    const f = collectFields(document).find((x) => x.combobox)!;
+    expect(currentAnswer(f)).toBe("Moldovan");
+    document.querySelector("button")!.textContent = "Select One";
+    expect(currentAnswer(f)).toBeNull();
+  });
+
+  it("never changes an answer the user already picked", () => {
+    document.body.innerHTML = `
+      <fieldset><legend>Do you require visa sponsorship?</legend>
+        <label><input type="radio" name="v" value="yes" checked> Yes</label>
+        <label><input type="radio" name="v" value="no"> No</label></fieldset>
+      <label for="s">Are you legally authorised to work in the UK?</label>
+      <select id="s"><option value="">Select</option><option>Yes</option><option>No</option></select>`;
+    (document.querySelector("#s") as HTMLSelectElement).value = "No"; // the user's pick
+    fillForm(collectFields(document), {
+      ...data,
+      fixedAnswers: { ...data.fixedAnswers, needs_sponsorship: "No", work_authorized: "Yes" },
+    });
+    expect((document.querySelector("input[value=yes]") as HTMLInputElement).checked).toBe(true);
+    expect((document.querySelector("#s") as HTMLSelectElement).selectedOptions[0]!.text).toBe("No");
+  });
+
   it("picks from a dropdown list without option markers", async () => {
     document.body.innerHTML = `
       <label id="l">What location do you plan to work from?</label>

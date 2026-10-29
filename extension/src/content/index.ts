@@ -5,6 +5,7 @@ import {
   choiceLabels,
   collectFields,
   currentAnswer,
+  PLACEHOLDER,
   fillComboboxes,
   fillForm,
   isConfirmation,
@@ -223,13 +224,36 @@ function remember(applicationId: string): void {
   sessionStorage.setItem(SESSION, JSON.stringify({ id: applicationId, at: Date.now() }));
 }
 
-/** Labels of the fields already handled on this page, to notice when a new step appears. */
+/** Fields already handled on this page, to notice when a new step appears. By element and by
+ * label: clicking a field often re-renders it or adds "This field is required" to its label. */
 const handled = new Set<string>();
+const handledEls = new WeakSet<object>();
 let busy = false;
+
+/** When the user last typed, clicked or moved into a field: no automatic fill around then. */
+let lastUserAction = 0;
+for (const type of ["keydown", "mousedown", "focusin", "input", "change"]) {
+  document.addEventListener(
+    type,
+    (e) => {
+      if (e.isTrusted && !(e.target as Element | null)?.closest?.("#jobbuddy-box")) {
+        lastUserAction = Date.now();
+      }
+    },
+    true,
+  );
+}
+
+function userIsWorking(): boolean {
+  const active = document.activeElement as HTMLElement | null;
+  const inField =
+    !!active && (/^(INPUT|TEXTAREA|SELECT)$/.test(active.tagName) || active.isContentEditable);
+  return inField || Date.now() - lastUserAction < 4000;
+}
 
 function newStepAppeared(): boolean {
   const fresh = collectFields(document).filter((f) => {
-    if (handled.has(f.label)) return false;
+    if (handledEls.has(f.el) || handled.has(f.label)) return false;
     const el = f.el as unknown as HTMLInputElement;
     return f.options || f.choices || f.combobox || f.editable ? true : !el.value?.trim();
   });
@@ -255,7 +279,10 @@ async function run(): Promise<void> {
   try {
     await runSteps();
   } finally {
-    for (const f of collectFields(document)) handled.add(f.label);
+    for (const f of collectFields(document)) {
+      handled.add(f.label);
+      handledEls.add(f.el);
+    }
     busy = false;
   }
 }
@@ -409,10 +436,32 @@ let lastMissed: FormField[] = [];
  * code, "which status allows you to work"...), so next time they are filled by themselves.
  * Kept per user, never sent to any AI.
  */
+/** Not learned: tick boxes (consent and terms are the user's to give each time), and
+ * "questions" that are only a dropdown's placeholder ("Select One"). */
+function worthLearning(f: FormField): boolean {
+  if ((f.el as unknown as HTMLInputElement).type === "checkbox") return false;
+  if (f.options?.every((o) => o.el.type === "checkbox")) return false;
+  return !PLACEHOLDER.test(f.label);
+}
+
+/** An internal option id ("db69d266446c11de98360015c5e6daf6"), not words the user picked. */
+function looksLikeCode(answer: string): boolean {
+  return (
+    !/\s/.test(answer) &&
+    answer.length >= 12 &&
+    /\d/.test(answer) &&
+    /[a-z]/i.test(answer) &&
+    /^[\w-]+$/.test(answer)
+  );
+}
+
 function learnFromUser(): void {
   const items = lastMissed
+    .filter((f) => worthLearning(f))
     .map((f) => ({ question: f.label, answer: currentAnswer(f) ?? "" }))
-    .filter((i) => i.question.length > 2 && i.answer && i.answer.length <= 300);
+    .filter((i) => i.question.length > 2 && i.answer && i.answer.length <= 300)
+    .filter((i) => !looksLikeCode(i.answer) && !PLACEHOLDER.test(i.answer))
+    .filter((i) => i.answer.toLowerCase() !== i.question.toLowerCase());
   if (items.length === 0) return;
   const done = new Set(items.map((i) => i.question));
   lastMissed = lastMissed.filter((f) => !done.has(f.label));
@@ -577,9 +626,11 @@ function boot(): void {
   }
   // A new step on the same page (single-page forms): fill it too.
   let timer: number | undefined;
-  new MutationObserver(() => {
+  const onChange = () => {
     clearTimeout(timer);
     timer = window.setTimeout(() => {
+      // Never while the user is typing or picking: wait until they pause.
+      if (session() && !busy && handled.size > 0 && userIsWorking()) return onChange();
       if (session() && !busy && handled.size > 0 && newStepAppeared()) void run();
       // A form that opens later, e.g. in a pop-up after "Apply" (Teamtailor, Personio).
       else if (
@@ -590,7 +641,11 @@ function boot(): void {
       )
         void intro();
     }, 1500);
-  }).observe(document.documentElement, { childList: true, subtree: true });
+  };
+  new MutationObserver(onChange).observe(document.documentElement, {
+    childList: true,
+    subtree: true,
+  });
 }
 
 boot();

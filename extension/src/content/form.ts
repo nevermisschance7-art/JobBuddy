@@ -460,6 +460,8 @@ export function currentAnswer(field: FormField): string | null {
   if (field.choices) return field.choices.find((c) => isChosen(c.el))?.label ?? null;
   const el = field.el as unknown as HTMLInputElement | HTMLSelectElement | HTMLElement;
   if (field.editable) return (el as HTMLElement).textContent?.trim() || null;
+  // Custom dropdowns: the text shown, never the hidden input's internal code.
+  if (field.combobox) return comboboxText(el as HTMLElement);
   if (el instanceof (el.ownerDocument.defaultView ?? window).HTMLSelectElement) {
     const option = el.selectedOptions[0];
     return option && option.value ? option.text.trim() : null;
@@ -682,6 +684,38 @@ function openOptions(control: HTMLElement): HTMLElement[] {
  * Custom dropdowns: open, type to filter, wait for the options, click the best one.
  * "Warsaw, Poland" also matches an option "Warsaw, Masovian Voivodeship, Poland".
  */
+/** The value a custom dropdown shows as picked (react-select, Workday...), or null. */
+export function comboboxText(control: HTMLElement): string | null {
+  const box =
+    (control.closest("[class*='container' i], [class*='control' i]") as HTMLElement | null) ??
+    control.parentElement ??
+    control;
+  const value = box.querySelector(
+    "[class*='singleValue' i], [class*='single-value' i], [class*='multiValue' i], [class*='multi-value' i], [data-automation-id='promptOption'], [data-automation-id='selectedItem']",
+  );
+  if (value?.textContent?.trim()) return value.textContent.trim();
+  // A button-style dropdown shows its value as its own text (the hidden input holds a code).
+  const shown =
+    control.tagName === "INPUT"
+      ? ""
+      : [...control.childNodes]
+          .map((n) =>
+            n.nodeType === 1 && /placeholder/i.test((n as Element).className?.toString() ?? "")
+              ? ""
+              : (n.textContent ?? ""),
+          )
+          .join(" ")
+          .replace(/\s+/g, " ")
+          .trim();
+  return shown && !PLACEHOLDER.test(shown) ? shown : null;
+}
+
+/** "Select One", "Choose...", "--": a dropdown's placeholder, not a value or a question. */
+export const PLACEHOLDER =
+  /^(select|choose|please (select|choose)|pick|start typing|--)( one| an? (option|answer)| from the list)?\W*$/i;
+
+export const comboboxHasValue = (control: HTMLElement) => comboboxText(control) !== null;
+
 export async function fillComboboxes(
   dropdowns: FillReport["dropdowns"],
   report: FillReport,
@@ -746,6 +780,11 @@ function fillOne(f: FormField, data: FillData, report: FillReport): void {
     report.missed.push(f); // e.g. a cover letter upload: the user attaches it
     return;
   }
+  // A field that already has an answer (picked by the user, or by an earlier fill) is never
+  // changed: JobBuddy only fills gaps.
+  if (f.choices?.some((c) => isChosen(c.el))) return;
+  if (f.options?.some((o) => o.el.checked)) return;
+  if (f.combobox && comboboxHasValue(f.el as unknown as HTMLElement)) return;
   const value = valueFor(f, data);
   if (f.choices) {
     const choice = value ? pickOption(f.choices, value) : null;
