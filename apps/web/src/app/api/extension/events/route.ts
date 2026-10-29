@@ -4,7 +4,8 @@ import { z } from "zod";
 import { extensionUser, unauthorized } from "@/lib/extension/auth";
 
 // GET ?since=<ISO>: alert events created after `since` (for notifications) and the unread
-// count (for the badge). POST { ids }: mark those events read.
+// count (for the badge). POST { ids }: mark those events read; POST { all: true }: all of them
+// (the popup was opened, so they have been seen).
 
 export async function GET(request: Request) {
   const auth = await extensionUser(request);
@@ -34,14 +35,24 @@ export async function GET(request: Request) {
   return NextResponse.json({ events: events ?? [], unread: count ?? 0 });
 }
 
-const markRead = z.object({ ids: z.array(z.string().uuid()).max(100) });
+const markRead = z.union([
+  z.object({ ids: z.array(z.string().uuid()).max(100) }),
+  z.object({ all: z.literal(true) }),
+]);
 
 export async function POST(request: Request) {
   const auth = await extensionUser(request);
   if (!auth) return unauthorized();
   const parsed = markRead.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Bad request" }, { status: 400 });
-  if (parsed.data.ids.length > 0) {
+  if ("all" in parsed.data) {
+    await auth.supabase
+      .from("events")
+      .update({ read: true })
+      .eq("user_id", auth.userId)
+      .in("type", [...ALERT_TYPES])
+      .eq("read", false);
+  } else if (parsed.data.ids.length > 0) {
     await auth.supabase
       .from("events")
       .update({ read: true })

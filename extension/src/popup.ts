@@ -1,7 +1,9 @@
+import { alertMessage, type AlertEvent } from "@jobbuddy/shared";
 import { api, APP_URL, getSession, setSession, signIn, SignedOutError } from "./api";
 
-// Popup: sign in with your JobBuddy username; then today's numbers, "Fill this page" for any
-// application form, and links into the app.
+// Popup: sign in with your JobBuddy username; then today's numbers, unread alerts (opening the
+// popup marks them read and clears the badge), "Fill this page" for any application form, and
+// links into the app.
 
 type Summary = {
   username: string | null;
@@ -79,7 +81,26 @@ async function show(): Promise<void> {
   if (!session) return signedOutView();
   root.innerHTML = `<p class="muted">Loading...</p>`;
   try {
-    const s = await api<Summary>("summary");
+    const [s, { events }] = await Promise.all([
+      api<Summary>("summary"),
+      api<{ events: AlertEvent[] }>(
+        `events?since=${encodeURIComponent(new Date(0).toISOString())}`,
+      ),
+    ]);
+    const recent = events.slice(-4).reverse();
+    const alerts = recent.length
+      ? `<div class="alerts">${recent
+          .map((e) => {
+            const { title, message } = alertMessage(e, s.tone);
+            return `<p><b>${esc(title)}</b>${esc(message)}</p>`;
+          })
+          .join("")}</div>`
+      : "";
+    if (events.length) {
+      // Seen now: mark every unread alert read so the number on the icon goes away.
+      await chrome.action.setBadgeText({ text: "" });
+      void api("events", { method: "POST", body: { all: true } }).catch(() => {});
+    }
     const lines = LINES[s.tone] ?? LINES.kind;
     const line = lines[new Date().getDate() % lines.length] ?? "";
     root.innerHTML = `
@@ -87,6 +108,7 @@ async function show(): Promise<void> {
         <a class="stat" href="${APP_URL}/app" target="_blank"><b>${s.newMatches}</b><span>new matches (24 h)</span></a>
         <a class="stat" href="${APP_URL}/applications" target="_blank"><b>${s.toReview}</b><span>ready to apply</span></a>
       </div>
+      ${alerts}
       <button id="fill" class="primary">⚡ Fill this page</button>
       <p id="fill-status" class="muted center">Works on any application form. You always press Submit.</p>
       <div class="links">

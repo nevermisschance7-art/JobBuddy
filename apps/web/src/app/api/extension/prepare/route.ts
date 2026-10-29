@@ -92,7 +92,6 @@ export async function POST(request: Request) {
     .eq("job_id", job.id)
     .maybeSingle();
   let applicationId = existing?.id;
-  const isNew = !applicationId;
   if (!applicationId) {
     const { data: created, error } = await supabase
       .from("applications")
@@ -151,15 +150,6 @@ export async function POST(request: Request) {
       drafted = fresh.length;
       chosen = picked.length;
     }
-  }
-
-  // Only a new application is news; extra answers drafted during a fill are not.
-  if (isNew) {
-    await supabase.from("events").insert({
-      user_id: userId,
-      type: "application_ready",
-      payload: { title: job.title, application_id: applicationId },
-    });
   }
 
   return NextResponse.json({
