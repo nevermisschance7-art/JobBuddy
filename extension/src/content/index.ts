@@ -372,7 +372,10 @@ function showError(reply: { error: string; signedOut?: boolean }): void {
   );
 }
 
+let offered = false;
+
 async function intro(): Promise<void> {
+  offered = true;
   const result = await lookup();
   if (!result) return;
   const app = result.application;
@@ -445,6 +448,14 @@ function boot(): void {
     clearTimeout(timer);
     timer = window.setTimeout(() => {
       if (session() && !busy && handled.size > 0 && newStepAppeared()) void run();
+      // A form that opens later, e.g. in a pop-up after "Apply" (Teamtailor, Personio).
+      else if (
+        !offered &&
+        !session() &&
+        (jobKeyFromUrl(location.href) || isFormHost(location.hostname)) &&
+        hasForm()
+      )
+        void intro();
     }, 1500);
   }).observe(document.documentElement, { childList: true, subtree: true });
 }

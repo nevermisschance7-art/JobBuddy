@@ -37,6 +37,11 @@ const SAMPLE = {
     linkedin: "https://www.linkedin.com/in/sam-tester",
     github: "https://github.com/samtester",
     website: "https://samtester.dev",
+    country: "United Kingdom",
+    currentCompany: "Brightbank",
+    currentTitle: "Backend Engineer",
+    headline: "Backend Engineer",
+    summary: "Backend engineer with 6 years of Python and cloud work.",
   },
   fixedAnswers: {
     work_authorized: "Yes",
@@ -93,19 +98,26 @@ function formUrl(job) {
 
 // Only buttons/links that OPEN a form. Anything that could send one is never clicked.
 const OPENERS =
-  /^(apply|apply now|apply for this (job|position|role)|apply to this job|apply here|apply on company (site|website)|i'?m interested|start application|start your application|apply manually|easy apply|aplicar|aplicar ahora|postular(se)?|solicitar|inscribirse|bewerben|jetzt bewerben|hier bewerben|postuler|candidater|candidatar(-se)?|aplikuj|ansök|solliciteer|candidati)$/i;
+  /^(apply|apply now|apply for this (job|position|role)|apply to this job|apply here|apply on company (site|website)|i'?m interested|start application|start your application|apply manually|easy apply|aplicar|aplicar ahora|postular(se)?|solicitar|inscribirse|bewerben|jetzt bewerben|hier bewerben|postuler|candidater|candidatar(-se)?|aplikuj|ansök|solliciteer|candidati|enviar solicitud|auf diese stelle bewerben|zur bewerbung|bewerbung starten|postuler à cette offre)$/i;
 const NEVER = /submit|send|finish|complete|confirm/i;
 
 async function openForm(page) {
-  for (let i = 0; i < 2; i++) {
+  const clicked = new Set();
+  for (let i = 0; i < 3; i++) {
     const candidates = page.locator("a, button, [role='button']");
     const count = Math.min(await candidates.count(), 400);
-    let clicked = false;
+    let didClick = false;
     for (let j = 0; j < count; j++) {
       const el = candidates.nth(j);
       const text = ((await el.innerText().catch(() => "")) || "").trim();
-      if (!OPENERS.test(text) || NEVER.test(text) || !(await el.isVisible().catch(() => false)))
+      if (
+        !OPENERS.test(text) ||
+        NEVER.test(text) ||
+        clicked.has(text.toLowerCase()) ||
+        !(await el.isVisible().catch(() => false))
+      )
         continue;
+      clicked.add(text.toLowerCase());
       const popup = page
         .context()
         .waitForEvent("page", { timeout: 3000 })
@@ -117,10 +129,10 @@ async function openForm(page) {
         await opened.close().catch(() => {});
       }
       await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
-      clicked = true;
+      didClick = true;
       break;
     }
-    if (!clicked) return;
+    if (!didClick) return;
     const inputs = await page.locator("input:not([type=hidden]), textarea").count();
     if (inputs >= 3) return;
   }
@@ -135,6 +147,9 @@ const CLEAN_HTML = `(() => {
 
 async function probeJob(browser, job, n) {
   const context = await browser.newContext({
+    // The extension's content scripts are not bound by a page's Content Security Policy;
+    // the probe's injected copy must not be either.
+    bypassCSP: true,
     userAgent:
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0 Safari/537.36",
     viewport: { width: 1280, height: 900 },
