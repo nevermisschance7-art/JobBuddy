@@ -176,7 +176,7 @@ test("sign up, onboard, edit settings, delete account", async ({ page }, info) =
     const popupPromise = page.waitForEvent("popup");
     await page.getByRole("button", { name: "Quick apply" }).click();
     const popup = await popupPromise;
-    await expect(page.getByText(/CV ready \(No AI available/)).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText(/CV ready \(The AI was busy or isn't set up/)).toBeVisible({ timeout: 30_000 });
     await expect.poll(() => popup.url(), { timeout: 15_000 }).toContain("e2etestco");
     await popup.close();
     await shot(page, "10d-quick-apply");
