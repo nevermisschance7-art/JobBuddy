@@ -448,20 +448,62 @@ async function intro(): Promise<void> {
 
 // ---------------------------------------------------------------- confirmation
 
+function markApplied(): void {
+  const id = sessionStorage.getItem(PENDING);
+  if (!id) return;
+  sessionStorage.removeItem(PENDING);
+  void send({ type: "applied", applicationId: id });
+  render(`<div class="row ok">✓ Nice one. Marked as applied in JobBuddy.</div>`);
+}
+
+/** Error messages a form shows when Submit didn't go through. */
+function formErrorsShown(): boolean {
+  const invalid = document.querySelectorAll("[aria-invalid='true'], :invalid:not(form)").length;
+  const messages = [...document.querySelectorAll("[role='alert'], [class*='error' i]")].some(
+    (el) => (el.textContent ?? "").trim().length > 0 && (el as HTMLElement).offsetParent !== null,
+  );
+  return invalid > 0 || messages;
+}
+
 function watchForConfirmation(): void {
   let timer: number | undefined;
   const check = () => {
-    const id = sessionStorage.getItem(PENDING);
-    if (!id || !isConfirmation(document, location.href)) return;
-    sessionStorage.removeItem(PENDING);
-    void send({ type: "applied", applicationId: id });
-    render(`<div class="row ok">✓ Nice one. Marked as applied in JobBuddy.</div>`);
+    if (sessionStorage.getItem(PENDING) && isConfirmation(document, location.href)) markApplied();
   };
   new MutationObserver(() => {
     clearTimeout(timer);
     timer = window.setTimeout(check, 800);
   }).observe(document.documentElement, { childList: true, subtree: true });
   check();
+
+  // The user pressed Submit on a form JobBuddy filled. JobBuddy never presses it itself.
+  // If the form goes away (or a thank-you page shows) with no error messages, it went through.
+  const submitted = () => {
+    if (!sessionStorage.getItem(PENDING)) return;
+    let tries = 0;
+    const wait = window.setInterval(() => {
+      tries++;
+      if (isConfirmation(document, location.href) || (!hasForm() && !formErrorsShown())) {
+        clearInterval(wait);
+        markApplied();
+      } else if (formErrorsShown() || tries > 8) {
+        clearInterval(wait); // errors to fix, or still on the form: not applied yet
+      }
+    }, 1000);
+  };
+  document.addEventListener("submit", submitted, true);
+  document.addEventListener(
+    "click",
+    (e) => {
+      const button = (e.target as Element | null)?.closest?.(
+        "button, input[type='submit'], [role='button']",
+      );
+      if (!button || !e.isTrusted) return; // only the user's own clicks
+      const text = `${button.textContent ?? ""} ${(button as HTMLInputElement).value ?? ""}`;
+      if (/submit|send application|apply now|complete application|finish/i.test(text)) submitted();
+    },
+    true,
+  );
 }
 
 // ---------------------------------------------------------------- start

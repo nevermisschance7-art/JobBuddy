@@ -207,20 +207,17 @@ export async function saveFilters(_prev: ActionState, formData: FormData): Promi
     return failed("Add at least one country you can work in.");
   }
 
-  const minScore = int(formData, "min_score");
-  if (minScore === null || minScore < 0 || minScore > 100)
-    return failed("Pick a score from 0 to 100.");
-
-  const [f, p] = await Promise.all([
-    supabase.from("filters").update(parsed.data).eq("user_id", user.id),
-    supabase.from("profiles").update({ min_score: minScore }).eq("user_id", user.id),
-  ]);
-  if (f.error || p.error) return failed("Saving failed. Try again.");
+  // The Tech fit setting lives on the job board's sidebar (saveMinScore), not here.
+  const { error } = await supabase.from("filters").update(parsed.data).eq("user_id", user.id);
+  if (error) return failed("Saving failed. Try again.");
 
   // Filters changed: rescore now rather than at the next scheduled run.
   await requestMatchRun();
   revalidatePath("/", "layout");
-  return finish(formData, saved());
+  return finish(
+    formData,
+    saved("Saved. I'm re-scoring your jobs now; new results in about 10 to 15 minutes."),
+  );
 }
 
 // ---------------------------------------------------------------- fixed answers

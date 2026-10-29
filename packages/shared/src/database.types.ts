@@ -159,6 +159,24 @@ export type Database = {
           },
         ]
       }
+      blocked_users: {
+        Row: {
+          blocked_at: string
+          reason: string | null
+          user_id: string
+        }
+        Insert: {
+          blocked_at?: string
+          reason?: string | null
+          user_id: string
+        }
+        Update: {
+          blocked_at?: string
+          reason?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       companies: {
         Row: {
           active: boolean
@@ -616,6 +634,7 @@ export type Database = {
       source_runs: {
         Row: {
           created_at: string
+          dropped: Json
           errors: Json
           finished_at: string | null
           id: string
@@ -629,6 +648,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          dropped?: Json
           errors?: Json
           finished_at?: string | null
           id?: string
@@ -642,6 +662,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          dropped?: Json
           errors?: Json
           finished_at?: string | null
           id?: string

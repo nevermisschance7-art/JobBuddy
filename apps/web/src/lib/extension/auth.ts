@@ -2,6 +2,7 @@ import "server-only";
 import type { Database } from "@jobbuddy/shared";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
+import { isBlocked } from "@/lib/data";
 import { publicEnv } from "@/lib/env";
 import type { createClient } from "@/lib/supabase/server";
 
@@ -26,7 +27,8 @@ export async function extensionUser(
   const supabase = clientForToken(token);
   const { data } = await supabase.auth.getClaims(token);
   const userId = data?.claims?.sub;
-  return userId ? { supabase, userId } : null;
+  if (!userId || (await isBlocked(userId))) return null;
+  return { supabase, userId };
 }
 
 export const unauthorized = () =>

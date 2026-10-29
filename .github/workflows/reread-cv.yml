@@ -1,0 +1,34 @@
+name: Re-read CV
+
+# Manual: reads one user's uploaded CV file again with the website's CV reader (real model)
+# and saves it as their confirmed CV, so the matcher rescores their jobs. For CVs read badly
+# before (e.g. a lost skills section).
+on:
+  workflow_dispatch:
+    inputs:
+      username:
+        description: "JobBuddy username"
+        required: true
+
+jobs:
+  reread:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+      REREAD_USERNAME: ${{ inputs.username }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --filter web...
+      - name: Re-read the CV
+        working-directory: apps/web
+        run: pnpm exec vitest run --config vitest.ai.config.ts ai-check/reread-cv.check.ts --reporter=verbose

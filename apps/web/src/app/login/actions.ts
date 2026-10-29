@@ -37,6 +37,9 @@ export async function signInWithUsername(
     ({ error } = await supabase.auth.signInWithPassword({ email, password }));
   }
 
+  if (error?.code === "user_banned") {
+    return failed("This account is disabled. Ask your team admin.");
+  }
   if (error) {
     console.error("signIn failed", error.message);
     return failed("Could not sign you in. Try again in a minute.");

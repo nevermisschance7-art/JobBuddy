@@ -1,5 +1,3 @@
-import "server-only";
-
 export const MAX_CV_BYTES = 5 * 1024 * 1024;
 
 export type CvKind = "pdf" | "docx";

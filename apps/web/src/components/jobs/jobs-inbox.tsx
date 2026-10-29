@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from
 import { MascotSays } from "@/components/mascot";
 import { Button } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/field";
-import { loadMoreMatches, markSeen } from "@/lib/actions/matches";
+import { loadMoreMatches, markSeen, saveMinScore } from "@/lib/actions/matches";
 import { COUNTRY_OPTIONS } from "@/lib/countries";
 import type { MatchCard, MatchCounts, MatchQuery } from "@/lib/matches";
 import { cn } from "@/lib/utils";
@@ -27,6 +27,8 @@ type Props = {
   userTerms: string[];
   /** When this user's matches were last refreshed (ISO), or null. */
   matchedAt: string | null;
+  /** rescoring: CV or filters changed since the last scoring; running: a search is on now. */
+  runState: "idle" | "running" | "rescoring";
   /** The saved-filters form, shown when "Edit my filters" is open. */
   filtersPanel: React.ReactNode;
 };
@@ -63,6 +65,7 @@ export function JobsInbox({
   counts,
   userTerms,
   matchedAt,
+  runState,
   filtersPanel,
 }: Props) {
   const [query, setQuery] = useState<MatchQuery>({
@@ -78,6 +81,8 @@ export function JobsInbox({
   const [newCount, setNewCount] = useState(counts.new);
   const [now, setNow] = useState(() => Date.now());
   const [loading, startLoading] = useTransition();
+  /** The list is being reloaded for new filters: the old cards are dimmed meanwhile. */
+  const [replacing, setReplacing] = useState(false);
   const sentinel = useRef<HTMLDivElement>(null);
   const firstRender = useRef(true);
   const requestId = useRef(0);
@@ -114,7 +119,11 @@ export function JobsInbox({
         setDone(page.length < PAGE_SIZE);
         setError(null);
       } catch {
-        setError("Couldn't load jobs. Check your connection and try again.");
+        if (id === requestId.current) {
+          setError("Couldn't load jobs. Check your connection and try again.");
+        }
+      } finally {
+        if (id === requestId.current) setReplacing(false);
       }
     });
   }, []);
@@ -125,6 +134,7 @@ export function JobsInbox({
       firstRender.current = false;
       return;
     }
+    setReplacing(true); // show "Updating" at once, not after the typing pause
     const t = setTimeout(() => fetchPage(query, 0, true), 300);
     return () => clearTimeout(t);
   }, [query, fetchPage]);
@@ -142,6 +152,11 @@ export function JobsInbox({
 
   const set = <K extends keyof MatchQuery>(key: K, value: MatchQuery[K]) =>
     setQuery((q) => ({ ...q, [key]: value }));
+  // Tech fit is the one saved setting on this page; it applies right away and next visit.
+  const changeMin = (value: number) => {
+    set("minScore", value);
+    void saveMinScore(value);
+  };
 
   if (!hasCv) {
     return (
@@ -218,9 +233,9 @@ export function JobsInbox({
             <Select
               aria-label="Minimum score"
               value={effectiveMin}
-              onChange={(e) => set("minScore", Number(e.target.value))}
+              onChange={(e) => changeMin(Number(e.target.value))}
             >
-              {[30, 40, 50, 55, 60, 70, 80, 90].map((s) => (
+              {[0, 10, 20, 30, 40, 50, 55, 60, 70, 80, 90].map((s) => (
                 <option key={s} value={s}>
                   {s}+
                 </option>
@@ -271,9 +286,20 @@ export function JobsInbox({
       {/* Main column */}
       <section className="flex min-w-0 flex-col gap-4">
         <div className="text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-          <span className="inline-flex items-center gap-1.5">
-            <RefreshCw size={13} /> Updated {ago(matchedAt, now)}
-          </span>
+          {runState === "rescoring" ? (
+            <span className="text-primary inline-flex items-center gap-1.5 font-medium">
+              <RefreshCw size={13} className="animate-spin" /> Re-scoring your jobs with your new CV
+              or filters (usually 10 to 15 minutes)
+            </span>
+          ) : runState === "running" ? (
+            <span className="text-primary inline-flex items-center gap-1.5 font-medium">
+              <RefreshCw size={13} className="animate-spin" /> Searching for new jobs now
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1.5">
+              <RefreshCw size={13} /> Updated {ago(matchedAt, now)}
+            </span>
+          )}
           <span aria-hidden>·</span>
           <span>Next update around {nextUpdate(now)}</span>
           {newCount > 0 ? (
@@ -297,14 +323,14 @@ export function JobsInbox({
           </div>
         ) : null}
 
-        {query.view === "inbox" && counts.below > 0 && effectiveMin > 30 ? (
+        {query.view === "inbox" && counts.below > 0 && effectiveMin > 0 ? (
           <p className="bg-brand-soft rounded-lg px-3 py-2 text-sm">
             {counts.below} more job{counts.below === 1 ? "" : "s"} pass your filters with a tech fit
             under {effectiveMin}.{" "}
             <button
               type="button"
               className="text-primary font-medium underline"
-              onClick={() => set("minScore", 30)}
+              onClick={() => changeMin(0)}
             >
               Show them too
             </button>
@@ -317,7 +343,16 @@ export function JobsInbox({
           </p>
         ) : null}
 
-        {items.length === 0 && !loading ? (
+        {replacing ? (
+          <p
+            role="status"
+            className="bg-brand-soft text-primary inline-flex items-center gap-2 self-start rounded-full px-3 py-1 text-sm font-medium"
+          >
+            <RefreshCw size={14} className="animate-spin" /> Updating your list...
+          </p>
+        ) : null}
+
+        {items.length === 0 && !loading && !replacing ? (
           <MascotSays mood={query.view === "inbox" ? "sleepy" : "thinking"}>
             {query.view === "saved"
               ? "Nothing saved yet. Tap Save on a job to keep it here."
@@ -328,7 +363,13 @@ export function JobsInbox({
                   : "No matches yet. I search right after you change your CV or filters (results in about 15 minutes), and every 2 hours."}
           </MascotSays>
         ) : (
-          <div className="flex flex-col gap-3">
+          <div
+            className={cn(
+              "flex flex-col gap-3 transition-opacity",
+              replacing && "pointer-events-none opacity-40",
+            )}
+            aria-busy={replacing}
+          >
             {items.map((m) => (
               <JobCard
                 key={m.id}

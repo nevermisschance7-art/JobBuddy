@@ -4,7 +4,7 @@ import { loadFilters } from "@/lib/loaders";
 import { nextStep } from "../steps";
 
 export default async function FiltersStep() {
-  const { filters, minScore } = await loadFilters();
+  const { filters } = await loadFilters();
 
   return (
     <>
@@ -13,7 +13,7 @@ export default async function FiltersStep() {
         waste time on them.
       </MascotSays>
       <h1 className="text-2xl font-semibold">Your filters</h1>
-      <FiltersForm filters={filters} minScore={minScore} next={nextStep("/onboarding/filters")} />
+      <FiltersForm filters={filters} next={nextStep("/onboarding/filters")} />
     </>
   );
 }

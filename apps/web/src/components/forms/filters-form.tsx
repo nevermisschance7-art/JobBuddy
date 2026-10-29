@@ -1,7 +1,7 @@
 "use client";
 
 import type { Database } from "@jobbuddy/shared";
-import { useActionState, useState } from "react";
+import { useActionState } from "react";
 import { NextField } from "@/components/next-field";
 import { TagInput } from "@/components/tag-input";
 import { Button } from "@/components/ui/button";
@@ -38,17 +38,8 @@ function Checks({
   );
 }
 
-export function FiltersForm({
-  filters,
-  minScore,
-  next,
-}: {
-  filters: Filters;
-  minScore: number;
-  next?: string;
-}) {
+export function FiltersForm({ filters, next }: { filters: Filters; next?: string }) {
   const [state, action, pending] = useActionState(saveFilters, initialState);
-  const [score, setScore] = useState(minScore);
 
   return (
     <form action={action} className="flex flex-col gap-6">
@@ -175,22 +166,6 @@ export function FiltersForm({
             </Select>
           </Field>
         </div>
-        <Field
-          label={`Show me jobs scoring at least ${score} / 100`}
-          htmlFor="min-score"
-          hint="55 is a good start. Lower shows more jobs, higher shows fewer, closer ones."
-        >
-          <input
-            id="min-score"
-            name="min_score"
-            type="range"
-            min={0}
-            max={100}
-            step={5}
-            value={score}
-            onChange={(e) => setScore(Number(e.target.value))}
-          />
-        </Field>
       </Card>
 
       <FormMessage error={state.error} ok={state.message} />

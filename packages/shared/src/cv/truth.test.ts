@@ -120,3 +120,13 @@ describe("helpers", () => {
     );
   });
 });
+
+describe("years of experience", () => {
+  it("allows 'N+ years' when the CV's job dates cover it, and nothing more", () => {
+    const t = clone(source); // work starts 2021-03
+    t.basics.summary = "Backend developer with 4+ years of Python.";
+    expect(checkTailoredCv(source, t).report.removed).toEqual([]);
+    t.basics.summary = "Backend developer with 12 years of Python.";
+    expect(checkTailoredCv(source, t).report.removed[0]?.section).toBe("Summary");
+  });
+});

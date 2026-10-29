@@ -188,3 +188,10 @@ export async function markSeen(jobIds: string[]): Promise<void> {
     .eq("status", "new")
     .in("job_id", jobIds.slice(0, 100));
 }
+
+/** The job board's Tech fit setting: the lowest score shown. The only place it is set. */
+export async function saveMinScore(minScore: number): Promise<void> {
+  if (!Number.isInteger(minScore) || minScore < 0 || minScore > 100) return;
+  const { supabase, user } = await requireUser();
+  await supabase.from("profiles").update({ min_score: minScore }).eq("user_id", user.id);
+}

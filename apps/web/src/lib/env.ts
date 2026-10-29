@@ -6,7 +6,7 @@ export const publicEnv = {
 };
 
 export function serverEnv(
-  name: "SUPABASE_SERVICE_ROLE_KEY" | "APP_ENCRYPTION_KEY" | "AUTH_SECRET",
+  name: "SUPABASE_SERVICE_ROLE_KEY" | "APP_ENCRYPTION_KEY" | "AUTH_SECRET" | "ADMIN_PASSWORD",
 ): string {
   const value = process.env[name];
   if (!value) throw new Error(`Missing env variable ${name}`);

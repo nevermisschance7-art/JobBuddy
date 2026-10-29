@@ -63,21 +63,56 @@ function resumeText(r: Resume): string {
   return JSON.stringify(r);
 }
 
-type Facts = { text: string; terms: Set<string>; numbers: Set<string>; skills: Set<string> };
+type Facts = {
+  text: string;
+  terms: Set<string>;
+  numbers: Set<string>;
+  skills: Set<string>;
+  /** Whole years from the earliest job start in the CV to now. */
+  careerYears: number;
+};
+
+/** Years covered by the CV's work history (from the earliest start date). */
+export function careerYears(source: Resume, now = new Date()): number {
+  const starts = source.work
+    .map((w) => w.startDate)
+    .filter((d): d is string => Boolean(d))
+    .map((d) => new Date(d.length === 4 ? `${d}-01-01` : `${d.slice(0, 7)}-01`).getTime())
+    .filter((t) => !Number.isNaN(t));
+  if (starts.length === 0) return 0;
+  return Math.floor((now.getTime() - Math.min(...starts)) / (365.25 * 86_400_000));
+}
 
 function factsOf(source: Resume): Facts {
   const text = resumeText(source);
   const skills = new Set<string>();
   for (const g of source.skills) for (const k of g.keywords) skills.add(canonicalTerm(k));
   for (const p of source.projects) for (const k of p.keywords) skills.add(canonicalTerm(k));
-  return { text: text.toLowerCase(), terms: termsIn(text), numbers: numbersIn(text), skills };
+  return {
+    text: text.toLowerCase(),
+    terms: termsIn(text),
+    numbers: numbersIn(text),
+    skills,
+    careerYears: careerYears(source),
+  };
+}
+
+/** "6+ years" and "over 6 years" are fine when the CV's job dates cover that many years. */
+function backedYears(text: string, facts: Facts): Set<string> {
+  const ok = new Set<string>();
+  for (const m of text.matchAll(/(\d{1,2})\s*\+?\s*years?/gi)) {
+    const n = Number(m[1]);
+    if (n > 0 && n <= facts.careerYears) ok.add(String(n));
+  }
+  return ok;
 }
 
 /** Why a piece of text can't be used: an invented technology or number. Null when fine. */
 function problemIn(text: string, facts: Facts): string | null {
   const terms = [...termsIn(text)].filter((t) => !facts.terms.has(t) && !facts.skills.has(t));
   if (terms.length > 0) return `Mentions ${terms.join(", ")}, which is not in your CV`;
-  const numbers = [...numbersIn(text)].filter((n) => !facts.numbers.has(n));
+  const years = backedYears(text, facts);
+  const numbers = [...numbersIn(text)].filter((n) => !facts.numbers.has(n) && !years.has(n));
   if (numbers.length > 0) return `Uses the number ${numbers.join(", ")}, which is not in your CV`;
   return null;
 }
@@ -89,7 +124,8 @@ function problemIn(text: string, facts: Facts): string | null {
 export function unsupportedIn(text: string, source: Resume): string[] {
   const facts = factsOf(source);
   const terms = [...termsIn(text)].filter((t) => !facts.terms.has(t) && !facts.skills.has(t));
-  const numbers = [...numbersIn(text)].filter((n) => !facts.numbers.has(n));
+  const years = backedYears(text, facts);
+  const numbers = [...numbersIn(text)].filter((n) => !facts.numbers.has(n) && !years.has(n));
   return [...terms, ...numbers];
 }
 

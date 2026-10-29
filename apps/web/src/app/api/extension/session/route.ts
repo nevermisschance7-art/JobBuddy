@@ -38,6 +38,12 @@ export async function POST(request: Request) {
     email: usernameToEmail(username),
     password: derivePassword(username, serverEnv("AUTH_SECRET")),
   });
+  if (error?.code === "user_banned") {
+    return NextResponse.json(
+      { error: "This account is disabled. Ask your team admin." },
+      { status: 403 },
+    );
+  }
   if (error || !data.session) {
     const status = error?.code === "invalid_credentials" ? 404 : 502;
     return NextResponse.json(

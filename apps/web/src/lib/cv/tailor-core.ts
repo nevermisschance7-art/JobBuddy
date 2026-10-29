@@ -16,7 +16,7 @@ const SYSTEM = `You tailor a CV for one job. The CV is JSON Resume. Return the s
 You may only:
 - choose which bullets, skills and projects to keep, and put the most relevant first,
 - reword a bullet so it reads clearly, keeping every fact, number and technology exactly as written,
-- write basics.summary: 2 or 3 short plain sentences about this candidate for this job, using only facts in the CV.
+- write basics.summary, always: 2 or 3 short plain sentences on why this candidate fits THIS job. Name the kind of role, their years of experience if the CV dates show it, the CV skills that match what the job asks for, and one concrete result from the CV. Use only facts in the CV; never claim a skill the CV doesn't show.
 You must never:
 - add an employer, job title, date, degree, project, skill, technology, number or achievement that is not in the CV,
 - change a job title, company name or date,
