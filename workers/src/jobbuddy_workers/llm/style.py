@@ -73,8 +73,8 @@ def apply_style(text_in: str, max_words: int) -> StyleResult:
     text = re.sub(r"\s*—\s*", ", ", text)
     text = re.sub(r"\s+–\s+", ", ", text)
     # Typographic hyphens and non-breaking spaces (some models use them) become plain ones.
-    text = re.sub("[‐‑]", "-", text)
-    text = re.sub("[  ]", " ", text)
+    text = re.sub("[\u2010\u2011]", "-", text)
+    text = re.sub("[\u00a0\u202f]", " ", text)
 
     for pattern, replacement in _REPLACEMENTS:
         if replacement == _SENTENCE_START:
