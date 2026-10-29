@@ -26,6 +26,9 @@ export const MODELS_CONFIG = modelsConfig as unknown as ModelsConfig;
 /** Longest one generate call may take across all providers and models (ms). */
 export const CALL_BUDGET_MS = 20_000;
 
+/** Longest one attempt at one model may take (ms); a hang is retried once, then skipped. */
+export const ATTEMPT_TIMEOUT_MS = 10_000;
+
 /** Every provider failed or was cooling down. The user gets a "needs fixing" alert. */
 export class AllProvidersFailedError extends Error {
   constructor(readonly attempts: string[]) {
@@ -228,9 +231,17 @@ export class LlmRouter {
     deadline: number = Date.now() + CALL_BUDGET_MS,
   ): Promise<{ ok: true; text: string } | { ok: false; error: LlmError }> {
     const provider = this.providers[name];
-    let lastError = new LlmError("model_not_found", "no models configured");
+    let lastError: LlmError = new LlmError("model_not_found", "no models configured");
 
-    for (const model of this.config.providers[name].models) {
+    // Each model gets one attempt, plus one quick retry after a hang: free tiers sometimes
+    // stall on a single request that succeeds at once when sent again.
+    const attempts = this.config.providers[name].models.flatMap((model, i) =>
+      i === 0 ? [model, model] : [model],
+    );
+    for (let a = 0; a < attempts.length; a++) {
+      const model = attempts[a]!;
+      const isRetry = a === 1 && attempts[0] === model;
+      if (isRetry && lastError.kind !== "network") continue;
       const left = deadline - Date.now();
       if (left < 1500) {
         lastError = new LlmError("network", "out of time for this request");
@@ -241,7 +252,7 @@ export class LlmRouter {
         const res = await provider.generate(key.apiKey, {
           ...base,
           model,
-          timeoutMs: Math.min(base.timeoutMs ?? left, left),
+          timeoutMs: Math.min(base.timeoutMs ?? ATTEMPT_TIMEOUT_MS, left),
         });
         await this.log({ userId, task, provider: name, model, started, ok: true, res });
         return { ok: true, text: res.text };

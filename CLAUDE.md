@@ -44,7 +44,7 @@ All LLM calls go through the router: [packages/shared/src/llm](packages/shared/s
 - Rate limit or quota: the key cools down (`ai_keys.quota_reset_at`) and the next provider is tried. Bad key: `ai_keys.last_error` is set and the key is skipped until replaced. All failed: a `needs_fixing` event (max one a day).
 - Personal details (name, email, phone, address) and every fixed answer are replaced with placeholders before sending and restored afterwards. Pass them via the `personal` option ([personalInfoFor](apps/web/src/lib/ai/router.ts)).
 - Text output goes through the style rules (no em dashes, buzzword swaps, over-length flagged, never cut).
-- Time limits (TS router): 12 s per model and 20 s per call in total (`CALL_BUDGET_MS`), so a hanging provider never outlasts the web request; then the field is left to the user.
+- Time limits (TS router): 10 s per attempt (`ATTEMPT_TIMEOUT_MS`), one quick retry of the first model after a hang (free tiers stall on random requests that then succeed at once), and 20 s per call in total (`CALL_BUDGET_MS`), so a hanging provider never outlasts the web request; then the field is left to the user.
 - Every call is logged to `llm_calls` (provider, model, tokens, latency; never content).
 - Tests use `FakeProvider`; never call real providers in tests.
 
