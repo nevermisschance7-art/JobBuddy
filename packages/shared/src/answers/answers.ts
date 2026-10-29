@@ -17,37 +17,52 @@ export type FixedKey =
   | "demographics"
   | "linkedin_url"
   | "github_url"
-  | "portfolio_url";
+  | "portfolio_url"
+  | "heard_about";
 
 // Checked in order; the first match wins. Sponsorship before right to work, since
 // "Will you require sponsorship for the right to work?" should map to sponsorship.
+// Forms come in many languages: English, Spanish, German, French, Polish and Portuguese.
 const FIXED_RULES: [FixedKey, RegExp][] = [
-  ["needs_sponsorship", /sponsor/i],
-  ["visa_status", /\b(visa|immigration|citizen(ship)?|nationality|work permit)\b/i],
+  ["needs_sponsorship", /sponsor|patrocinio|patroc[ií]nio|parrainage|sponsoring/i],
+  [
+    "visa_status",
+    /\b(visa|immigration|citizen(ship)?|nationality|work permit|nacionalidad|ciudadan[ií]a|staatsangeh[öo]rigkeit|nationalit[ée]|obywatelstwo|nacionalidade)\b/i,
+  ],
   [
     "right_to_work",
-    /(right|authori[sz]ed|eligible|legally (able|allowed|permitted)) to work|work authori[sz]ation/i,
+    /(right|authori[sz]ed|eligible|legally (able|allowed|permitted)) to work|work authori[sz]ation|permiso de trabajo|autorizaci[óo]n (para|de) trabajo|arbeitserlaubnis|arbeitsgenehmigung|autorisation de travail|pozwolenie na prac[eę]|autoriza[çc][ãa]o de trabalho/i,
   ],
   [
     "salary_expectation",
-    /salary|compensation|pay expectation|expected pay|desired pay|rate expectation|day rate|hourly rate/i,
+    /salary|compensation|pay expectation|expected pay|desired pay|rate expectation|day rate|hourly rate|salario|sueldo|pretensi[óo]n(es)? (econ[óo]mica|salarial)|expectativas? (econ[óo]mica|salarial)|remuneraci[óo]n|gehalt|verg[üu]tung|salaire|r[ée]mun[ée]ration|pr[ée]tentions? salariales?|wynagrodzeni|oczekiwania finansowe|sal[áa]rio|pretens[ãa]o salarial/i,
   ],
   [
     "notice_period",
-    /notice period|when can you start|start date|earliest .*start|availability to start|how soon/i,
+    /notice period|when can you start|start date|earliest .*start|availability to start|how soon|verf[üu]gbar ab|eintrittstermin|fr[üu]hest(er|m[öo]glicher) (eintritt|start)|k[üu]ndigungsfrist|disponibilidad|fecha de (inicio|incorporaci[óo]n)|preaviso|disponibilit[ée]|pr[ée]avis|okres wypowiedzenia|dost[eę]pno[sś][cć]|aviso pr[ée]vio/i,
   ],
-  ["willing_to_relocate", /relocat/i],
-  ["pronouns", /pronoun/i],
+  [
+    "willing_to_relocate",
+    /relocat|reubicaci[óo]n|traslad|umzug|umziehen|d[ée]m[ée]nag|relocaliza|przeprowadz/i,
+  ],
+  ["pronouns", /pronoun|pronombre|pronomen|pronom/i],
   [
     "demographics",
-    /\b(gender|sex|ethnic(ity)?|race|racial|disab(led|ility|ilities)|veteran|sexual orientation|transgender|religio(n|us)|age range|date of birth|hispanic|latino)\b/i,
+    /\b(gender|sex|ethnic(ity)?|race|racial|disab(led|ility|ilities)|veteran|sexual orientation|transgender|religio(n|us)|age range|date of birth|hispanic|latino|g[ée]nero|geschlecht|sexe|p[łl]e[cć]|etnia|ethnie|herkunft|discapacidad|behinderung|handicap|niepe[łl]nosprawno[sś][cć]|geburtsdatum|fecha de nacimiento|date de naissance|data urodzenia)\b/i,
   ],
   ["linkedin_url", /linked\s?in/i],
   ["github_url", /git\s?hub/i],
-  ["portfolio_url", /portfolio|personal (web)?site|website/i],
+  [
+    "portfolio_url",
+    /portfolio|personal (web)?site|website|sitio web|webseite|site web|strona (www|internetowa)/i,
+  ],
+  [
+    "heard_about",
+    /how did you (hear|find out|learn|come across)|where did you (hear|find|see|learn)|referral source|source of (application|referral)|c[óo]mo (te enteraste|conociste|supiste)|wie (bist du|sind sie|haben sie) .*(gekommen|erfahren|aufmerksam)|comment avez-vous (entendu|connu|trouv)|sk[aą]d (si[eę] )?dowiedzia/i,
+  ],
   [
     "location",
-    /where are you (currently |now )?(based|located|living)|current (location|city|country)|country of residence|which (city|country)|time ?zone|located in|reside in|based in|\byour (current )?location\b/i,
+    /where are you (currently |now )?(based|located|living)|current (location|city|country)|country of residence|which (city|country)|time ?zone|located in|reside in|based in|\byour (current )?location\b|d[óo]nde (vives|resides)|pa[ií]s de residencia|wohnort|lieu de r[ée]sidence|miejsce zamieszkania/i,
   ],
 ];
 

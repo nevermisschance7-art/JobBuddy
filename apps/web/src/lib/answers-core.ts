@@ -22,6 +22,7 @@ Rules:
 - Never describe steps, methods, causes or results the CV doesn't state. If the CV gives little detail, stay short and general rather than filling gaps.
 - Plain, short, human and specific. No buzzwords, no clichés, no em dashes.
 - Match the style of the candidate's past answers when given.
+- Answer in the language the question is written in.
 - Never mention salary, visa, sponsorship, notice period, location or personal details.
 - Return only the answer text.
 Placeholders like {{NAME}} stand for real values: keep them as they are.`;

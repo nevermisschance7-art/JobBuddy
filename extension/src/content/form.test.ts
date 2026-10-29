@@ -260,3 +260,31 @@ describe("Ashby-style buttons and dropdowns", () => {
     );
   });
 });
+
+describe("traps, languages and employers", () => {
+  it("never fills a bot trap field", () => {
+    document.body.innerHTML = `
+      <label for="w">Enter website. This input is for robots only, do not enter if you're human.</label>
+      <input id="w" name="website">
+      <label for="e">Email</label><input id="e" type="email">`;
+    const fields = collectFields(document);
+    expect(fields.map((f) => f.kind)).toEqual(["email"]);
+    fillForm(fields, data);
+    expect((document.querySelector("#w") as HTMLInputElement).value).toBe("");
+  });
+
+  it("strips required marks in other languages", () => {
+    document.body.innerHTML = `<label for="q">¿Cuáles son tus pretensiones económicas?*Obligatorio</label><input id="q">`;
+    expect(collectFields(document)[0]!.label).toBe("¿Cuáles son tus pretensiones económicas?");
+  });
+
+  it("answers 'worked for us before?' from the CV's employers", () => {
+    document.body.innerHTML = `
+      <label for="s">Are you currently or have you previously worked for Philips?</label>
+      <select id="s"><option value="">Select</option><option>Yes</option><option>No</option></select>`;
+    const withEmployers = { ...data, profile: { ...data.profile, employers: ["Brightbank"] } };
+    fillForm(collectFields(document), { ...withEmployers, jobCompany: "Philips" });
+    expect((document.querySelector("#s") as HTMLSelectElement).value).toBe("No");
+    fillForm(collectFields(document), { ...withEmployers, jobCompany: "Brightbank" });
+  });
+});

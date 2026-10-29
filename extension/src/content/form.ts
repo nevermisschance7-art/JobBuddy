@@ -19,6 +19,12 @@ export type FieldKind =
   | "current_title"
   | "headline"
   | "summary"
+  | "city"
+  | "address"
+  | "postal_code"
+  | "region"
+  | "phone_type"
+  | "worked_here"
   | "resume"
   | "cover_letter"
   | "file"
@@ -50,9 +56,17 @@ const cssId = (id: string) => id.replace(/["\\]/g, "\\$&");
 const clean = (s: string | null | undefined) =>
   (s ?? "")
     .replace(/\s+/g, " ")
-    // Required marks: "*", "✱", "(required)".
-    .replace(/\s*(\*|✱|\(required\))\s*$/i, "")
+    // Required marks in any language: "*Obligatorio", "* (erforderlich)", "(required)"...
+    .replace(
+      /\s*[*✱]?\s*\(?\b(required|obligatorio|obligatoria|erforderlich|pflichtfeld|obligatoire|wymagane|obrigat[óo]rio|verplicht)\b\)?/gi,
+      "",
+    )
+    .replace(/\s*[*✱]\s*$/, "")
     .trim();
+
+/** Trap fields for bots ("leave this empty"). Filling one gets an application thrown away. */
+const HONEYPOT =
+  /robots? only|do not (enter|fill|complete)|leave (this )?(field )?(blank|empty)|if you('| a)re (a )?human|honeypot/i;
 
 function textOf(el: Element | null): string {
   if (!el) return "";
@@ -121,8 +135,8 @@ export function classify(meta: {
   const auto = (meta.autocomplete ?? "").toLowerCase();
 
   if (meta.type === "file") {
-    if (/cover/.test(hints)) return "cover_letter";
-    if (/resume|résumé|\bcv\b|curriculum/.test(hints)) return "resume";
+    if (/cover|motivation|anschreiben|lettre|list motywacyjny/.test(hints)) return "cover_letter";
+    if (/resume|résumé|\bcv\b|curr[ií]cul|lebenslauf|życiorys/.test(hints)) return "resume";
     return "file";
   }
   if (auto === "given-name") return "first_name";
@@ -142,9 +156,28 @@ export function classify(meta: {
     if (/linked\s?in/.test(hints)) return "linkedin";
     if (/git\s?hub/.test(hints)) return "github";
     if (/portfolio|website|personal (site|url)|^url$|other website/.test(hints)) return "website";
-    if (/^(current )?(location|city)$|^location \(city\)$|^(street |home )?address$/.test(label))
-      return "location";
-    if (/^(country|country of residence|country\/region)$/.test(label)) return "country";
+    if (/^(current )?location$|^location \(city\)$/.test(label)) return "location";
+    if (/^(city|town|ciudad|stadt|ort|ville|miasto|cidade)$/.test(label)) return "city";
+    if (
+      /^(street |home )?address( line 1)?$|^street$|^direcci[óo]n$|^(stra(ss|ß)e|adresse|adres)$/.test(
+        label,
+      )
+    )
+      return "address";
+    if (
+      /^(postal|post|zip)( ?code)?$|^postcode$|^(c[óo]digo postal|plz|postleitzahl|code postal|kod pocztowy)$/.test(
+        label,
+      )
+    )
+      return "postal_code";
+    if (/^(state|province|region|county|state ?\/ ?province)$/.test(label)) return "region";
+    if (/^phone (device |number )?type$/.test(label)) return "phone_type";
+    if (
+      /^(country|country of residence|country ?\/ ?(region|territory)|pa[ií]s|land|pays|kraj)$/.test(
+        label,
+      )
+    )
+      return "country";
     if (/^(current |most recent )?(company|employer|organi[sz]ation)( name)?$/.test(label))
       return "current_company";
     if (/^(current |most recent )?(job )?title$|^current (role|position)$/.test(label))
@@ -153,7 +186,19 @@ export function classify(meta: {
     if (/^(profile |professional )?summary$|^about (you|yourself|me)$/.test(label))
       return "summary";
   }
-  if (/cover letter/.test(label)) return "cover_letter";
+  if (
+    /cover letter|carta de (motivaci[óo]n|presentaci[óo]n)|anschreiben|lettre de motivation|list motywacyjny/.test(
+      label,
+    )
+  )
+    return "cover_letter";
+  // "Have you previously worked for Acme?": answered from the CV's employers.
+  if (
+    /(currently|previously|ever|before) (been )?(work(ed)?|employed) (for|at|by)|(work(ed)?|employed) (for|at|by) .* (before|previously)/.test(
+      label,
+    )
+  )
+    return "worked_here";
   return "question";
 }
 
@@ -259,7 +304,12 @@ export function collectFields(doc: Document): FormField[] {
   }
 
   out.push(...choiceGroups(doc));
-  return out;
+  // Never touch bot traps.
+  return out.filter((f) => {
+    const el = f.el as unknown as Element;
+    const names = `${el.getAttribute?.("name") ?? ""} ${el.id ?? ""}`;
+    return !HONEYPOT.test(f.label) && !/honey ?pot|\bhp[_-]/i.test(names);
+  });
 }
 
 /** Types into a rich text editor the way a person does, so the editor's own code notices. */
@@ -380,6 +430,26 @@ export function valueFor(field: FormField, data: FillData): string | null {
       );
     case "country":
       return p.country ?? null;
+    case "city":
+      return p.city ?? null;
+    case "address":
+      return p.address ?? null;
+    case "postal_code":
+      return p.postalCode ?? null;
+    case "region":
+      return p.region ?? null;
+    case "phone_type":
+      return p.phone ? "Mobile" : null;
+    case "worked_here": {
+      // Yes only when the CV lists this employer.
+      const company = norm(data.jobCompany ?? "");
+      if (!company) return null;
+      const worked = (p.employers ?? []).some((e) => {
+        const n = norm(e);
+        return n === company || n.startsWith(`${company} `) || company.startsWith(`${n} `);
+      });
+      return worked ? "Yes" : "No";
+    }
     case "current_company":
       return p.currentCompany ?? null;
     case "current_title":

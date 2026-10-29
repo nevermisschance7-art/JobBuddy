@@ -60,6 +60,12 @@ export const FIXED_ANSWER_KEYS: FixedAnswerKey[] = [
     hint: "e.g. I prefer not to say",
     kind: "text",
   },
+  {
+    key: "heard_about",
+    label: "How did you hear about the jobs you apply to?",
+    hint: "e.g. Job board, or LinkedIn. Many forms ask this.",
+    kind: "text",
+  },
   { key: "linkedin_url", label: "LinkedIn URL", kind: "url" },
   { key: "github_url", label: "GitHub URL", kind: "url" },
   { key: "portfolio_url", label: "Portfolio or website", kind: "url" },

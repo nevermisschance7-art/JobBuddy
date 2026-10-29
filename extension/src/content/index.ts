@@ -269,7 +269,10 @@ async function runSteps(): Promise<void> {
 
   let result = await lookup();
   if (!result) return;
-  const firstFill = fillForm(collectFields(document), result.application ?? result.base);
+  const firstFill = fillForm(collectFields(document), {
+    ...(result.application ?? result.base),
+    jobCompany: result.job?.company ?? pageInfo().company,
+  });
   const questions = draftable(firstFill.missed);
 
   // 1. The application (created now if this job isn't prepared yet).
@@ -311,7 +314,10 @@ async function fill(
   result: LookupResult,
   extra: { cvError?: string | null; draftError?: string | null; note?: string | null } = {},
 ): Promise<void> {
-  const data: FillData = result.application ?? result.base;
+  const data: FillData = {
+    ...(result.application ?? result.base),
+    jobCompany: result.job?.company ?? pageInfo().company,
+  };
   const report = fillForm(collectFields(document), data);
   await fillComboboxes(report.dropdowns, report);
 

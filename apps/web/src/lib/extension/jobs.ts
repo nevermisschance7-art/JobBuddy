@@ -160,6 +160,11 @@ export async function fillData(supabase: Supabase, userId: string, applicationId
       github: str(fixedAnswers.github_url) ?? profileUrl("github"),
       website: str(fixedAnswers.portfolio_url) ?? str(basics?.url),
       country: countryName(basics?.location?.countryCode),
+      address: str(basics?.location?.address),
+      postalCode: str(basics?.location?.postalCode),
+      region: str(basics?.location?.region),
+      /** Employers in the CV, to answer "Have you worked for us before?". */
+      employers: work.map((w) => w.name),
       currentCompany: str(current?.name),
       currentTitle: str(current?.position),
       headline: str(basics?.label) ?? str(current?.position),

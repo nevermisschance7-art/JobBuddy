@@ -42,6 +42,10 @@ const SAMPLE = {
     currentTitle: "Backend Engineer",
     headline: "Backend Engineer",
     summary: "Backend engineer with 6 years of Python and cloud work.",
+    address: "1 Example Street",
+    postalCode: "M1 1AA",
+    region: "Greater Manchester",
+    employers: ["Brightbank", "Shopline"],
   },
   fixedAnswers: {
     work_authorized: "Yes",
@@ -54,6 +58,7 @@ const SAMPLE = {
     pronouns: "they/them",
     demographics: "I prefer not to say",
     linkedin_url: "https://www.linkedin.com/in/sam-tester",
+    heard_about: "Job board",
   },
   answers: [
     {
@@ -64,6 +69,7 @@ const SAMPLE = {
     { question: "Cover letter", answer: "Hi team, I would like to apply.", isCoverLetter: true },
   ],
   cv: null,
+  jobCompany: "Acme",
 };
 
 async function jobLinks() {
@@ -238,6 +244,10 @@ for (const job of jobs) {
   console.log(
     `\n### ${r.source} · ${r.company} · ${r.final ?? r.start}` +
       (r.error ? `\n  ERROR ${r.error}` : "") +
+      r.frames
+        .filter((x) => x.error)
+        .map((x) => `\n  FRAME ERROR ${String(x.error).slice(0, 250)}`)
+        .join("") +
       `\n  fields ${f.fields?.length ?? 0}, filled ${f.filled ?? 0}, resume ${f.resume ?? false}` +
       `\n  missed: ${(f.missed ?? []).slice(0, 15).join(" | ")}` +
       `\n  kinds: ${(f.fields ?? []).map((x) => `${x.kind}[${x.control}]`).join(", ")}` +

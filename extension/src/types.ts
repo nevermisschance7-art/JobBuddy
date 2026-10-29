@@ -17,6 +17,11 @@ export type FillProfile = {
   currentTitle: string | null;
   headline: string | null;
   summary: string | null;
+  address?: string | null;
+  postalCode?: string | null;
+  region?: string | null;
+  /** Employers in the CV. */
+  employers?: string[];
 };
 
 export type FillData = {
@@ -27,6 +32,8 @@ export type FillData = {
   fixedAnswers: Record<string, string>;
   answers: { question: string; answer: string; isCoverLetter: boolean }[];
   cv: { fileName: string; base64: string } | null;
+  /** The employer of the job being applied to (set by the content script). */
+  jobCompany?: string | null;
 };
 
 export type LookupResult = {
