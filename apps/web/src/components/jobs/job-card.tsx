@@ -61,7 +61,6 @@ const SOURCE_LABEL: Record<string, string> = {
   personio: "Personio",
   recruitee: "Recruitee",
   weworkremotely: "We Work Remotely",
-  remoteok: "RemoteOK",
   hackernews: "Hacker News",
   workingnomads: "Working Nomads",
 };

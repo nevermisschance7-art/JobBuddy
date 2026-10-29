@@ -39,5 +39,7 @@ export async function ensureApprovedCv(
     result.report,
   );
   if (problem) return { error: problem };
-  return tailored.ok ? {} : { note: "No AI available, so I used your CV as it is." };
+  return tailored.ok
+    ? {}
+    : { note: "The AI was busy or isn't set up, so I used your CV as it is." };
 }

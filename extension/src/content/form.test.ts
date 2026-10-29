@@ -4,6 +4,7 @@ import type { FillData } from "../types";
 import {
   classify,
   collectFields,
+  currentAnswer,
   fillComboboxes,
   fillForm,
   formQuestions,
@@ -175,6 +176,12 @@ describe("helpers", () => {
   it("detects the confirmation page", () => {
     document.body.innerHTML = "<h1>Thank you for applying!</h1><p>We'll be in touch.</p>";
     expect(isConfirmation(document, "https://jobs.lever.co/acme/123/thanks")).toBe(true);
+    // Recruitee
+    document.body.innerHTML =
+      "<h2>All done!</h2><p>Your application has been successfully submitted!</p><a>Other jobs</a>";
+    expect(
+      isConfirmation(document, "https://acme.recruitee.com/o/azure-devops-engineer/c/new"),
+    ).toBe(true);
     document.body.innerHTML = lever + "<p>Thanks for your interest in Acme</p>";
     expect(isConfirmation(document, "https://jobs.lever.co/acme/123/apply")).toBe(false);
   });
@@ -286,5 +293,69 @@ describe("traps, languages and employers", () => {
     fillForm(collectFields(document), { ...withEmployers, jobCompany: "Philips" });
     expect((document.querySelector("#s") as HTMLSelectElement).value).toBe("No");
     fillForm(collectFields(document), { ...withEmployers, jobCompany: "Brightbank" });
+  });
+});
+
+describe("Camunda / RevenueCat style questions and learning", () => {
+  it("knows preferred name, legal name, address line and post code", () => {
+    expect(classify({ label: "What is your preferred name?" })).toBe("first_name");
+    expect(classify({ label: "What is your Legal first and last name?" })).toBe("full_name");
+    expect(classify({ label: "What is the first line of your address?" })).toBe("address");
+    expect(classify({ label: "Post Code" })).toBe("postal_code");
+  });
+
+  it("fills a field from what the user typed on an earlier form", () => {
+    document.body.innerHTML = `<label for="a">What is the first line of your address?</label><input id="a">
+      <label for="s">If you are eligible, please select the status that allows you to work</label>
+      <select id="s"><option value="">Select</option><option>I am a citizen / permanent resident</option><option>I have a work visa</option></select>`;
+    const learned = {
+      ...data,
+      learned: [
+        { question: "What is the first line of your address?", answer: "1 Example Street" },
+        {
+          question:
+            "If you are eligible, please select the status that allows you to work and live in that Country",
+          answer: "I am a citizen / permanent resident",
+        },
+      ],
+    };
+    fillForm(collectFields(document), learned);
+    expect((document.querySelector("#a") as HTMLInputElement).value).toBe("1 Example Street");
+    expect((document.querySelector("#s") as HTMLSelectElement).selectedOptions[0]!.text).toBe(
+      "I am a citizen / permanent resident",
+    );
+  });
+
+  it("reads what the user typed, to learn it", () => {
+    document.body.innerHTML = `<label for="p">Post Code</label><input id="p" value="NR1 1AA">`;
+    expect(currentAnswer(collectFields(document)[0]!)).toBe("NR1 1AA");
+  });
+
+  it("picks from a dropdown list without option markers", async () => {
+    document.body.innerHTML = `
+      <label id="l">What location do you plan to work from?</label>
+      <div class="select"><input id="c" role="combobox" aria-labelledby="l"></div>
+      <ul class="dropdown-list"></ul>`;
+    const input = document.querySelector<HTMLInputElement>("#c")!;
+    const list = document.querySelector("ul")!;
+    input.addEventListener("input", () => {
+      list.innerHTML = ["United States", "United Kingdom", "United Arab Emirates"]
+        .filter((o) => o.toLowerCase().includes(input.value.toLowerCase()))
+        .map((o) => `<li>${o}</li>`)
+        .join("");
+      list
+        .querySelectorAll("li")
+        .forEach((li) =>
+          li.addEventListener("click", () =>
+            input.setAttribute("data-picked", li.textContent ?? ""),
+          ),
+        );
+    });
+    const report = fillForm(collectFields(document), {
+      ...data,
+      fixedAnswers: { location: "United Kingdom" },
+    });
+    await fillComboboxes(report.dropdowns, report);
+    expect(input.getAttribute("data-picked")).toBe("United Kingdom");
   });
 });

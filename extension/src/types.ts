@@ -32,6 +32,8 @@ export type FillData = {
   fixedAnswers: Record<string, string>;
   answers: { question: string; answer: string; isCoverLetter: boolean; ai?: boolean }[];
   cv: { fileName: string; base64: string } | null;
+  /** What the user typed into fields JobBuddy couldn't fill before (never sent to an AI). */
+  learned?: { question: string; answer: string }[];
   /** The employer of the job being applied to (set by the content script). */
   jobCompany?: string | null;
 };
@@ -68,6 +70,7 @@ export type Message =
   | { type: "prepare"; input: PrepareInput }
   | { type: "applied"; applicationId: string }
   | { type: "cv"; applicationId: string }
+  | { type: "learn"; items: { question: string; answer: string }[] }
   | { type: "open"; url: string };
 
 export type Reply<T> = { ok: true; data: T } | { ok: false; error: string; signedOut?: boolean };

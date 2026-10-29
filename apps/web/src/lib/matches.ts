@@ -19,7 +19,6 @@ export const JOB_SOURCES = [
   "remotive",
   "himalayas",
   "arbeitnow",
-  "remoteok",
   "weworkremotely",
 ] as const;
 

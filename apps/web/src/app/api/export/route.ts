@@ -13,6 +13,7 @@ const TABLES = [
   "user_job_matches",
   "applications",
   "answer_memory",
+  "learned_answers",
   "employer_messages",
   "events",
 ] as const;

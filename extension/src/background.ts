@@ -96,6 +96,8 @@ async function handle(message: Message): Promise<unknown> {
       return api("applied", { method: "POST", body: { applicationId: message.applicationId } });
     case "cv":
       return api("cv", { method: "POST", body: { applicationId: message.applicationId } });
+    case "learn":
+      return api("learn", { method: "POST", body: { items: message.items } });
     case "open":
       // Only ever opens pages of the JobBuddy app.
       if (message.url.startsWith(`${APP_URL}/`)) await chrome.tabs.create({ url: message.url });

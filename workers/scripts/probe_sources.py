@@ -129,7 +129,6 @@ def main(only: list[str]) -> None:
         "arbeitnow": lambda: probe_json(
             "arbeitnow", "https://www.arbeitnow.com/api/job-board-api", ["data"]
         ),
-        "remoteok": lambda: probe_json("remoteok", "https://remoteok.com/api", None),
         "weworkremotely": lambda: probe_rss(
             "weworkremotely",
             "https://weworkremotely.com/categories/remote-programming-jobs.rss",

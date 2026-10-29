@@ -4,6 +4,7 @@ import {
   attachFile,
   choiceLabels,
   collectFields,
+  currentAnswer,
   fillComboboxes,
   fillForm,
   isConfirmation,
@@ -342,6 +343,7 @@ async function fill(
 
   // Required fields left: orange. Optional ones left: no outline (the form accepts them empty).
   // Answers written or picked by the AI: blue, to check.
+  lastMissed = report.missed;
   const required = report.missed.filter((f) => f.required);
   const optional = report.missed.filter((f) => !f.required);
   const byAi = fields.filter(
@@ -395,6 +397,26 @@ async function fill(
       review: () => void send({ type: "open", url: result.reviewUrl! }),
     },
   );
+}
+
+// ---------------------------------------------------------------- learning from the user
+
+/** Fields JobBuddy couldn't fill on this page; what the user types there is learned. */
+let lastMissed: FormField[] = [];
+
+/**
+ * Saves what the user typed or picked in fields JobBuddy left empty (address line, post
+ * code, "which status allows you to work"...), so next time they are filled by themselves.
+ * Kept per user, never sent to any AI.
+ */
+function learnFromUser(): void {
+  const items = lastMissed
+    .map((f) => ({ question: f.label, answer: currentAnswer(f) ?? "" }))
+    .filter((i) => i.question.length > 2 && i.answer && i.answer.length <= 300);
+  if (items.length === 0) return;
+  const done = new Set(items.map((i) => i.question));
+  lastMissed = lastMissed.filter((f) => !done.has(f.label));
+  void send({ type: "learn", items });
 }
 
 const outlined = new Set<HTMLElement>();
@@ -456,13 +478,14 @@ function markApplied(): void {
   render(`<div class="row ok">✓ Nice one. Marked as applied in JobBuddy.</div>`);
 }
 
-/** Error messages a form shows when Submit didn't go through. */
+/** Error messages a form shows when Submit didn't go through (visible ones only). */
 function formErrorsShown(): boolean {
-  const invalid = document.querySelectorAll("[aria-invalid='true'], :invalid:not(form)").length;
-  const messages = [...document.querySelectorAll("[role='alert'], [class*='error' i]")].some(
-    (el) => (el.textContent ?? "").trim().length > 0 && (el as HTMLElement).offsetParent !== null,
+  const visible = (el: Element) => (el as HTMLElement).offsetParent !== null;
+  const invalid = [...document.querySelectorAll("[aria-invalid='true']")].some(visible);
+  const alerts = [...document.querySelectorAll("[role='alert']")].some(
+    (el) => visible(el) && (el.textContent ?? "").trim().length > 0,
   );
-  return invalid > 0 || messages;
+  return invalid || alerts;
 }
 
 function watchForConfirmation(): void {
@@ -492,6 +515,20 @@ function watchForConfirmation(): void {
     }, 1000);
   };
   document.addEventListener("submit", submitted, true);
+  document.addEventListener("submit", learnFromUser, true);
+  // Moving to the next page of a form (or submitting) is when the user's own answers count.
+  document.addEventListener(
+    "click",
+    (e) => {
+      const button = (e.target as Element | null)?.closest?.(
+        "button, input[type='submit'], [role='button'], a",
+      );
+      if (!button || !e.isTrusted) return;
+      const text = `${button.textContent ?? ""} ${(button as HTMLInputElement).value ?? ""}`;
+      if (/next|continue|submit|send|apply|save|review/i.test(text)) learnFromUser();
+    },
+    true,
+  );
   document.addEventListener(
     "click",
     (e) => {

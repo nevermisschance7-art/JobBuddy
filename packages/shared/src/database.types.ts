@@ -544,6 +544,33 @@ export type Database = {
           },
         ]
       }
+      learned_answers: {
+        Row: {
+          answer: string
+          created_at: string
+          id: string
+          question: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          answer: string
+          created_at?: string
+          id?: string
+          question: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          answer?: string
+          created_at?: string
+          id?: string
+          question?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       llm_calls: {
         Row: {
           created_at: string

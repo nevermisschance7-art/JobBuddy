@@ -15,23 +15,26 @@ import { createAdminClient } from "@/lib/supabase/server";
 
 /** The admin password form. */
 export async function adminSignIn(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const access = await adminAccess();
-  if (access.state === "not_admin") return failed("Not allowed.");
+  if (!process.env.ADMIN_PASSWORD) return failed("The admin password isn't set on the server.");
   // A small delay makes guessing slow.
-  await new Promise((r) => setTimeout(r, 600));
+  await new Promise((r) => setTimeout(r, 800));
   if (!passwordMatches(text(formData, "password") ?? "")) return failed("Wrong password.");
-  (await cookies()).set(ADMIN_COOKIE, adminToken(access.user.id), adminCookieOptions);
+  (await cookies()).set(ADMIN_COOKIE, adminToken(), adminCookieOptions);
   revalidatePath("/admin");
   return { ok: true };
+}
+
+/** Leaves the admin page on this browser. */
+export async function adminSignOut(): Promise<void> {
+  (await cookies()).delete(ADMIN_COOKIE);
+  revalidatePath("/admin");
 }
 
 export type AdminAction = "disable" | "enable" | "kick" | "delete";
 
 /** Disable / enable an account, sign it out everywhere, or delete it with all its data. */
 export async function adminUserAction(userId: string, action: AdminAction): Promise<string> {
-  const access = await adminAccess();
-  if (access.state !== "ok") return "Not allowed.";
-  if (userId === access.user.id) return "You can't do that to your own account.";
+  if ((await adminAccess()) !== "ok") return "Not allowed.";
   const admin = createAdminClient();
 
   switch (action) {

@@ -90,6 +90,8 @@ export function routerFor(supabase: Supabase): LlmRouter {
   };
 
   const sharedKeys: Partial<Record<ProviderName, string>> = {};
+  // Team backups, used after the user's own keys (so a busy Gemini doesn't stop anyone).
+  if (process.env.GROQ_API_KEY) sharedKeys.groq = process.env.GROQ_API_KEY;
   if (process.env.OPENROUTER_API_KEY) sharedKeys.openrouter = process.env.OPENROUTER_API_KEY;
   if (MODELS_CONFIG.providers.anthropic.enabled && process.env.ANTHROPIC_API_KEY) {
     sharedKeys.anthropic = process.env.ANTHROPIC_API_KEY;

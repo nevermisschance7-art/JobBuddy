@@ -68,6 +68,9 @@ describe.skipIf(!configured)("RLS isolation", () => {
       a.client.from("ai_keys").insert({ user_id: a.id, provider: "gemini", encrypted_key: "x" }),
       a.client.from("applications").insert({ user_id: a.id, job_id: jobId }),
       a.client.from("events").insert({ user_id: a.id, type: "test" }),
+      a.client
+        .from("learned_answers")
+        .insert({ user_id: a.id, question: "Post code", answer: "AB1 2CD" }),
       a.client.storage
         .from("cvs")
         .upload(`${a.id}/cv.pdf`, pdf(), { contentType: "application/pdf" }),
@@ -103,6 +106,8 @@ describe.skipIf(!configured)("RLS isolation", () => {
     "ai_keys",
     "applications",
     "events",
+    "learned_answers",
+    "blocked_users",
   ]) {
     it(`B cannot read A's ${table}`, async () => {
       const { data, error } = await b.client.from(table).select("*").eq("user_id", a.id);
@@ -178,5 +183,15 @@ describe.skipIf(!configured)("RLS isolation", () => {
   it("users cannot read worker run logs", async () => {
     const { data } = await a.client.from("source_runs").select("id");
     expect(data ?? []).toEqual([]);
+  });
+
+  it("users can't write the server-only list of disabled accounts", async () => {
+    const insert = await a.client.from("blocked_users").insert({ user_id: b.id });
+    expect(insert.error).not.toBeNull();
+    const { count } = await admin
+      .from("blocked_users")
+      .select("user_id", { count: "exact", head: true })
+      .eq("user_id", b.id);
+    expect(count).toBe(0);
   });
 });

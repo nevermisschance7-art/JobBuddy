@@ -50,3 +50,10 @@ export async function deleteAccount(_prev: ActionState, formData: FormData): Pro
   await supabase.auth.signOut();
   redirect("/login");
 }
+
+/** Settings: forget one answer the extension learned. */
+export async function forgetLearnedAnswer(id: string): Promise<void> {
+  const { supabase, user } = await requireUser();
+  await supabase.from("learned_answers").delete().eq("id", id).eq("user_id", user.id);
+  revalidatePath("/settings");
+}

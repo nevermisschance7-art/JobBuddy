@@ -145,6 +145,15 @@ export function classify(meta: {
   if (auto === "email" || meta.type === "email") return "email";
   if (auto === "tel" || meta.type === "tel") return "phone";
 
+  // Personal-detail questions written out in full ("What is your preferred name?").
+  if (/preferred (first )?name|what should we call you|name you go by|nickname/.test(label))
+    return "first_name";
+  if (/legal (first and last |full )?name|full legal name|first and last name/.test(label))
+    return "full_name";
+  if (/first line of (your )?address|address line 1|street address/.test(label)) return "address";
+  if (/post ?code|postal code|zip ?code/.test(label) && label.split(/\s+/).length <= 8)
+    return "postal_code";
+
   // Longer questions are questions, even if they mention a keyword ("Why LinkedIn?").
   const short = label.split(/\s+/).length <= 6;
   if (short) {
@@ -404,7 +413,40 @@ function labelOwn(el: HTMLInputElement): string {
 // ---------------------------------------------------------------- answers
 
 /** The value for one field, or null when JobBuddy doesn't know it. */
+/**
+ * The value for one field: from the CV, fixed answers or saved answers, and otherwise what
+ * the user typed for the same question on an earlier form (learned answers).
+ */
 export function valueFor(field: FormField, data: FillData): string | null {
+  return knownValue(field, data) ?? learnedValue(field.label, data);
+}
+
+/** The user's own earlier answer to (nearly) the same question. */
+export function learnedValue(label: string, data: FillData): string | null {
+  let best: { answer: string; score: number } | null = null;
+  for (const l of data.learned ?? []) {
+    const score = questionSimilarity(label, l.question);
+    if (!best || score > best.score) best = { answer: l.answer, score };
+  }
+  return best && best.score >= 0.8 ? best.answer : null;
+}
+
+/** What the user has put in a field right now (typed text, picked option), or null. */
+export function currentAnswer(field: FormField): string | null {
+  if (field.options) return field.options.find((o) => o.el.checked)?.label ?? null;
+  if (field.choices) return field.choices.find((c) => isChosen(c.el))?.label ?? null;
+  const el = field.el as unknown as HTMLInputElement | HTMLSelectElement | HTMLElement;
+  if (field.editable) return (el as HTMLElement).textContent?.trim() || null;
+  if (el instanceof (el.ownerDocument.defaultView ?? window).HTMLSelectElement) {
+    const option = el.selectedOptions[0];
+    return option && option.value ? option.text.trim() : null;
+  }
+  const input = el as HTMLInputElement;
+  if (input.type === "file" || input.type === "password") return null;
+  return input.value?.trim() || null;
+}
+
+function knownValue(field: FormField, data: FillData): string | null {
   const p = data.profile;
   switch (field.kind) {
     case "first_name":
@@ -591,9 +633,26 @@ function openOptions(control: HTMLElement): HTMLElement[] {
   const listId = control.getAttribute("aria-controls") ?? control.getAttribute("aria-owns");
   const list = listId ? doc.getElementById(listId) : null;
   const scope: ParentNode = list ?? doc;
-  return [...scope.querySelectorAll<HTMLElement>("[role='option']")].filter(
+  const marked = [...scope.querySelectorAll<HTMLElement>("[role='option']")].filter(
     (o) => visible(o) && o.getAttribute("aria-disabled") !== "true",
   );
+  if (marked.length > 0) return marked;
+  // Lists built without the "option" marker: short visible items of a list or menu that
+  // opened for this control (leaf elements only, so a whole list isn't taken as one option).
+  const lists = doc.querySelectorAll<HTMLElement>(
+    "[role='listbox'], [class*='option' i], [class*='menu' i], [class*='dropdown' i], ul",
+  );
+  const items: HTMLElement[] = [];
+  for (const list of lists) {
+    if (!visible(list) || list.contains(control)) continue;
+    for (const el of list.querySelectorAll<HTMLElement>("li, div, span, button")) {
+      const text = clean(el.textContent);
+      if (!text || text.length > 80 || !visible(el)) continue;
+      if ([...el.children].some((c) => clean(c.textContent) === text)) continue; // not a leaf
+      items.push(el);
+    }
+  }
+  return [...new Set(items)];
 }
 
 /**
@@ -610,13 +669,17 @@ export async function fillComboboxes(
     click((input?.closest("[class*='control' i]") as HTMLElement) ?? control);
     control.focus();
     const first = value.split(",")[0]!.trim();
-    if (input) setNativeValue(input, first);
+    // Type the whole value; if that finds nothing, the first part ("Warsaw" of "Warsaw, Poland").
+    if (input) setNativeValue(input, value.length <= 40 ? value : first);
 
     let picked: HTMLElement | null = null;
     for (let i = 0; i < 15 && !picked; i++) {
       await wait(150);
       const options = openOptions(control).map((el) => ({ el, label: clean(el.textContent) }));
-      if (options.length === 0) continue;
+      if (options.length === 0) {
+        if (input && i === 6 && input.value !== first) setNativeValue(input, first);
+        continue;
+      }
       picked =
         pickOption(options, value)?.el ??
         options.find((o) => norm(o.label).includes(norm(first)))?.el ??
@@ -755,7 +818,7 @@ export function formQuestions(fields: FormField[]): string[] {
 // ---------------------------------------------------------------- confirmation
 
 const CONFIRM_TEXT =
-  /thank(s| you) for (applying|your (application|interest))|application (has been |was )?(submitted|received|sent)|we('ve| have) received your application|you('ve| have) (successfully )?applied|successfully applied/i;
+  /thank(s| you)( so much)? for (applying|your (application|interest|submission))|application (has |have )?(been |was )?(\w+ )?(submitted|received|sent|complete)|we('ve| have) (\w+ )?received your application|you('ve| have) (\w+ )?applied|successfully (applied|submitted|sent)|all done!|application complete/i;
 
 /** True when the page looks like the employer's "application received" page. */
 export function isConfirmation(doc: Document, url: string): boolean {

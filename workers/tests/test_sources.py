@@ -53,8 +53,6 @@ def raws_for(source):
         return [RawJob(source, j["guid"], j) for j in load("himalayas.json")["jobs"]]
     if source == "arbeitnow":
         return [RawJob(source, j["slug"], j) for j in load("arbeitnow.json")["data"]]
-    if source == "remoteok":
-        return [RawJob(source, str(j["id"]), j) for j in load("remoteok.json") if j.get("id")]
     if source == "weworkremotely":
         xml = (FIX / "weworkremotely.xml").read_text(encoding="utf-8")
         return [RawJob(source, i["guid"], i) for i in parse_rss(xml)]
@@ -183,7 +181,7 @@ def test_teamtailor_rss():
 
 
 def test_remote_boards_are_remote_with_regions():
-    for source in ("remotive", "himalayas", "remoteok", "weworkremotely"):
+    for source in ("remotive", "himalayas", "weworkremotely"):
         job = first(source)
         assert job.remote_type == "remote", source
         assert job.countries or job.remote_regions, source

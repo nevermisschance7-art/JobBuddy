@@ -62,7 +62,7 @@ const FIXED_RULES: [FixedKey, RegExp][] = [
   ],
   [
     "location",
-    /where are you (currently |now )?(based|located|living)|current (location|city|country)|country of residence|which (city|country)|time ?zone|located in|reside in|based in|\byour (current )?location\b|d[óo]nde (vives|resides)|pa[ií]s de residencia|wohnort|lieu de r[ée]sidence|miejsce zamieszkania/i,
+    /where are you (currently |now )?(based|located|living)|current (location|city|country)|country of residence|which (city|country)|time ?zone|located in|reside in|based in|location .{0,30}(work|working|live) from|plan to (work|live) from|where will you (be )?(work|working) from|\byour (current )?location\b|d[óo]nde (vives|resides)|pa[ií]s de residencia|wohnort|lieu de r[ée]sidence|miejsce zamieszkania/i,
   ],
 ];
 

@@ -39,7 +39,6 @@ They return only their newest pages, so absence proves nothing: their jobs close
 | Working Nomads | Remote, worldwide | 2 h | `pub_date` | | Fixture from documented shape (blocked from dev network) |
 | Hacker News "Who is hiring" | Remote postings, worldwide | 2 h | comment `created_at` | | Monthly thread via the Algolia API; only comments that say remote |
 | Arbeitnow | Germany and EU | 2 h | `created_at` (epoch s) | | `remote` flag |
-| RemoteOK | Remote, worldwide | 4 h | `date` (ISO), `epoch` | | First array item is a legal notice. Terms: link back, name RemoteOK |
 | We Work Remotely | Remote, worldwide | 4 h | RSS `pubDate` | | Title is "Company: Role". Fixture synthesised (blocked from dev network) |
 | Adzuna | ~20 countries | 4 h | `created` | | Needs key. `salary_is_predicted = 1` salaries are ignored |
 | Reed | UK only | 4 h | `date` (dd/mm/yyyy) | `expirationDate` | Needs key. Only runs if someone wants GB jobs |
@@ -60,3 +59,6 @@ Only the We Work Remotely fixture is synthesised (the feed is blocked from the d
 ## Politeness
 
 Clear User-Agent with a contact link, 3 retries with exponential backoff (honours `Retry-After`), 4 companies in parallel per system, aggregators one request at a time, robots.txt checked for feed and page URLs. No LinkedIn or Indeed.
+
+
+RemoteOK is not used: applying there needs a paid membership. Only free ways to apply are used.

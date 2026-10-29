@@ -1,3 +1,4 @@
+import { LearnedAnswers } from "@/components/forms/learned-answers";
 import { AppHeader } from "@/components/app-header";
 import { DeleteAccountForm, DisplayNameForm } from "@/components/forms/account-forms";
 import { AiKeysForm } from "@/components/forms/ai-keys-form";
@@ -16,6 +17,7 @@ const SECTIONS = [
   ["cv", "CV"],
   ["answers", "Fixed answers"],
   ["ai", "AI keys"],
+  ["learned", "Learned answers"],
   ["tone", "Tone"],
   ["extension", "Chrome extension"],
   ["data", "Your data"],
@@ -43,11 +45,16 @@ function Section({
 }
 
 export default async function SettingsPage() {
-  const { profile } = await loadProfile();
-  const [cv, answers, keys] = await Promise.all([
+  const { supabase, user, profile } = await loadProfile();
+  const [cv, answers, keys, { data: learned }] = await Promise.all([
     loadLatestCv(),
     loadFixedAnswers(),
     loadKeyStatuses(),
+    supabase
+      .from("learned_answers")
+      .select("id, question, answer")
+      .eq("user_id", user.id)
+      .order("updated_at", { ascending: false }),
   ]);
   const username = profile?.username ?? "";
 
@@ -104,6 +111,10 @@ export default async function SettingsPage() {
 
         <Section id="tone" title="Tone">
           <ToneForm tone={profile?.tone ?? "kind"} />
+        </Section>
+
+        <Section id="learned" title="Learned from your forms">
+          <LearnedAnswers items={learned ?? []} />
         </Section>
 
         <Section id="extension" title="Chrome extension">

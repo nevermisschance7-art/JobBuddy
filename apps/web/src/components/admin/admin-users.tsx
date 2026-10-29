@@ -38,7 +38,7 @@ const date = (iso: string | null) =>
     ? new Date(iso).toLocaleDateString([], { day: "numeric", month: "short", year: "numeric" })
     : "never";
 
-function Row({ user, self }: { user: AdminUserRow; self: boolean }) {
+function Row({ user }: { user: AdminUserRow }) {
   const [message, setMessage] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const run = (action: AdminAction) => {
@@ -76,39 +76,30 @@ function Row({ user, self }: { user: AdminUserRow; self: boolean }) {
         )}
       </td>
       <td className="py-2">
-        {self ? (
-          <span className="text-muted-foreground text-xs">you</span>
-        ) : (
-          <div className="flex flex-wrap items-center gap-1">
-            {user.disabled ? (
-              <Button size="sm" variant="outline" disabled={pending} onClick={() => run("enable")}>
-                Enable
-              </Button>
-            ) : (
-              <Button size="sm" variant="outline" disabled={pending} onClick={() => run("disable")}>
-                Disable
-              </Button>
-            )}
-            <Button size="sm" variant="outline" disabled={pending} onClick={() => run("kick")}>
-              Kick
+        <div className="flex flex-wrap items-center gap-1">
+          {user.disabled ? (
+            <Button size="sm" variant="outline" disabled={pending} onClick={() => run("enable")}>
+              Enable
             </Button>
-            <Button
-              size="sm"
-              variant="destructive"
-              disabled={pending}
-              onClick={() => run("delete")}
-            >
-              Delete
+          ) : (
+            <Button size="sm" variant="outline" disabled={pending} onClick={() => run("disable")}>
+              Disable
             </Button>
-            {message ? <span className="text-muted-foreground text-xs">{message}</span> : null}
-          </div>
-        )}
+          )}
+          <Button size="sm" variant="outline" disabled={pending} onClick={() => run("kick")}>
+            Kick
+          </Button>
+          <Button size="sm" variant="destructive" disabled={pending} onClick={() => run("delete")}>
+            Delete
+          </Button>
+          {message ? <span className="text-muted-foreground text-xs">{message}</span> : null}
+        </div>
       </td>
     </tr>
   );
 }
 
-export function AdminUsers({ users, selfId }: { users: AdminUserRow[]; selfId: string }) {
+export function AdminUsers({ users }: { users: AdminUserRow[] }) {
   return (
     <div className="border-border bg-card overflow-x-auto rounded-xl border p-4">
       <table className="w-full text-left text-sm">
@@ -124,7 +115,7 @@ export function AdminUsers({ users, selfId }: { users: AdminUserRow[]; selfId: s
         </thead>
         <tbody>
           {users.map((u) => (
-            <Row key={u.id} user={u} self={u.id === selfId} />
+            <Row key={u.id} user={u} />
           ))}
         </tbody>
       </table>

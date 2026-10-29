@@ -4,8 +4,9 @@ import { createAdminClient } from "@/lib/supabase/server";
 
 // The CV file a user uploaded (their newest), for the admin page. Admins only.
 export async function GET(_request: Request, { params }: { params: Promise<{ userId: string }> }) {
-  const access = await adminAccess();
-  if (access.state !== "ok") return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if ((await adminAccess()) !== "ok") {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
   const { userId } = await params;
   const admin = createAdminClient();
   const { data: cv } = await admin

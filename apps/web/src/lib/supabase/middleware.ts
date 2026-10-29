@@ -3,7 +3,8 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { publicEnv } from "@/lib/env";
 
-const PUBLIC_PATHS = ["/login"];
+// /admin has its own password and needs no JobBuddy account.
+const PUBLIC_PATHS = ["/login", "/admin", "/api/admin"];
 
 /** Refreshes the auth session cookie and sends signed-out visitors to /login. */
 export async function updateSession(request: NextRequest) {

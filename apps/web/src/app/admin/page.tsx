@@ -1,7 +1,6 @@
-import { notFound } from "next/navigation";
-import { AppHeader } from "@/components/app-header";
 import { AdminPassword, AdminUsers, type AdminUserRow } from "@/components/admin/admin-users";
 import { DailyColumns } from "@/components/charts/daily-columns";
+import { adminSignOut } from "@/lib/actions/admin";
 import { adminAccess } from "@/lib/admin";
 import { createAdminClient } from "@/lib/supabase/server";
 
@@ -9,18 +8,12 @@ export const metadata = { title: "Admin · JobBuddy" };
 
 // Users, their application counts and uploaded CV, with Disable / Enable / Kick / Delete.
 export default async function AdminPage() {
-  const access = await adminAccess();
-  if (access.state === "not_admin") notFound();
-
-  if (access.state === "password") {
+  if ((await adminAccess()) === "password") {
     return (
-      <>
-        <AppHeader username={access.username} />
-        <main className="mx-auto flex max-w-5xl flex-col gap-4 px-4 py-8 sm:px-6">
-          <h1 className="text-2xl font-semibold">Admin</h1>
-          <AdminPassword />
-        </main>
-      </>
+      <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-4 px-4">
+        <h1 className="text-2xl font-semibold">JobBuddy admin</h1>
+        <AdminPassword />
+      </main>
     );
   }
 
@@ -61,7 +54,14 @@ export default async function AdminPage() {
 
   return (
     <>
-      <AppHeader username={access.username} />
+      <header className="border-border bg-card border-b">
+        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3 sm:px-6">
+          <span className="font-semibold">JobBuddy admin</span>
+          <form action={adminSignOut}>
+            <button className="text-muted-foreground text-sm hover:underline">Leave admin</button>
+          </form>
+        </div>
+      </header>
       <main className="mx-auto flex max-w-5xl flex-col gap-4 px-4 py-8 sm:px-6">
         <div>
           <h1 className="text-2xl font-semibold">Admin</h1>
@@ -85,7 +85,7 @@ export default async function AdminPage() {
             points={(activity ?? []).map((a) => ({ day: a.day, value: a.applied }))}
           />
         </div>
-        <AdminUsers users={users} selfId={access.user.id} />
+        <AdminUsers users={users} />
       </main>
     </>
   );

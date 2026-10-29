@@ -29,6 +29,11 @@ describe("fixedKeyFor", () => {
     ["Are you willing to relocate to Berlin?", "willing_to_relocate"],
     ["Where are you currently based?", "location"],
     ["What is your location?", "location"],
+    ["What location do you plan to work from?", "location"],
+    [
+      "Are you legally eligible to work in the country where you're planning to work from?",
+      "right_to_work",
+    ],
     ["¿Cuáles son tus pretensiones económicas?", "salary_expectation"],
     ["Gehaltsvorstellung", "salary_expectation"],
     ["Verfügbar ab", "notice_period"],

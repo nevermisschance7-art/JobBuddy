@@ -201,42 +201,6 @@ class Arbeitnow:
         )
 
 
-# ---------------------------------------------------------------- RemoteOK
-# Terms: link back to the job and name RemoteOK as the source.
-
-
-class RemoteOk:
-    name = "remoteok"
-    kind = "aggregator"
-    every_hours = 4
-
-    def available(self, ctx: FetchContext) -> bool:
-        return True
-
-    def fetch(self, http: Http, ctx: FetchContext) -> list[RawJob]:
-        data = http.get_json("https://remoteok.com/api")
-        # The first element is the legal notice, not a job.
-        return [
-            RawJob(self.name, str(j["id"]), j) for j in data if isinstance(j, dict) and j.get("id")
-        ]
-
-    def normalise(self, raw: RawJob) -> Job | None:
-        j = raw.data
-        return _remote_job(
-            self.name,
-            raw,
-            title=j.get("position") or "",
-            company=j.get("company") or "",
-            url=j["url"],
-            apply_url=j.get("apply_url"),
-            description=html_to_text(j.get("description")),
-            location=j.get("location") or None,
-            posted_at=from_iso(j.get("date")) or from_epoch(j.get("epoch")),
-            salary=(j.get("salary_min"), j.get("salary_max"), "USD"),
-            tags=j.get("tags"),
-        )
-
-
 # ---------------------------------------------------------------- We Work Remotely (RSS)
 
 
@@ -597,7 +561,6 @@ AGGREGATOR_SOURCES = {
         Remotive(),
         Himalayas(),
         Arbeitnow(),
-        RemoteOk(),
         WeWorkRemotely(),
         Jobicy(),
         WorkingNomads(),

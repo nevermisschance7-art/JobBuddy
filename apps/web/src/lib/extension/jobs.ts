@@ -89,7 +89,7 @@ const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null
  * site), contact details and fixed answers still fill the basics.
  */
 export async function fillData(supabase: Supabase, userId: string, applicationId: string | null) {
-  const [{ data: app }, { data: cv }, { data: fixed }] = await Promise.all([
+  const [{ data: app }, { data: cv }, { data: fixed }, { data: learned }] = await Promise.all([
     applicationId
       ? supabase
           .from("applications")
@@ -111,6 +111,12 @@ export async function fillData(supabase: Supabase, userId: string, applicationId
       .select("key, value")
       .eq("user_id", userId)
       .is("applies_to_country", null),
+    supabase
+      .from("learned_answers")
+      .select("question, answer")
+      .eq("user_id", userId)
+      .order("updated_at", { ascending: false })
+      .limit(300),
   ]);
   if (applicationId && !app) return null;
 
@@ -174,6 +180,8 @@ export async function fillData(supabase: Supabase, userId: string, applicationId
     },
     fixedAnswers,
     answers,
+    /** What the user typed into fields JobBuddy couldn't fill before. Never sent to an AI. */
+    learned: learned ?? [],
     cv: cvFile,
   };
 }

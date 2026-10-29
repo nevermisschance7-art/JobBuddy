@@ -60,9 +60,13 @@ Return the tailored CV as JSON.`;
     return { ok: true, ...checked };
   } catch (e) {
     if (e instanceof AllProvidersFailedError) {
+      // No key at all, or keys that answered "busy" / didn't answer in time.
       return {
         ok: false,
-        error: "I need a working AI key to tailor. Add one in Settings, or use your CV as it is.",
+        error:
+          e.attempts.length === 0
+            ? "I need an AI key to tailor. Add a free Gemini key in Settings, or use your CV as it is."
+            : "The AI is busy right now (Google's free Gemini is sometimes overloaded). Try again in a minute, or use your CV as it is.",
       };
     }
     if (e instanceof LlmOutputError) {
