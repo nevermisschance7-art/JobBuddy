@@ -1,0 +1,202 @@
+[
+  {
+    "fixture": "greenhouse-1.html",
+    "source": "greenhouse",
+    "url": "https://www.phdata.io/jobs/?gh_jid=8172231",
+    "fields": 0,
+    "filled": 0,
+    "missed": []
+  },
+  {
+    "fixture": "greenhouse-3.html",
+    "source": "greenhouse",
+    "url": "https://job-boards.greenhouse.io/anthropic/jobs/5466517008",
+    "fields": 25,
+    "filled": 11,
+    "missed": [
+      "Country",
+      "(Optional) Personal Preferences",
+      "Are you open to working in-person in one of our offices 25% of the time?",
+      "Do you have any deadlines or timeline considerations we should be aware of?",
+      "AI Policy for Application",
+      "Why Anthropic?",
+      "Additional Information",
+      "Have you ever interviewed at Anthropic before?",
+      "Please read the arbitration agreement below",
+      "Agreement to Arbitrate",
+      "Gender",
+      "Are you Hispanic/Latino?",
+      "Veteran Status"
+    ]
+  },
+  {
+    "fixture": "lever-1.html",
+    "source": "lever",
+    "url": "https://jobs.eu.lever.co/numan/e3fa29b4-fdcb-4a35-a937-f7e6b866417f/apply",
+    "fields": 21,
+    "filled": 8,
+    "missed": [
+      "Current company",
+      "Do you need reasonable adjustments to be made for your interview?✱",
+      "Do you have any conflict of interest that will prevent you from working for us?✱",
+      "Do you have any criminal convictions or pending criminal charges?✱",
+      "What is your location?",
+      "What is your age range?",
+      "What is your ethnicity?",
+      "What gender do you identify as?",
+      "What is your Sexual Orientation?",
+      "What is your Religion or Belief?",
+      "Do you have one or more disabilities as described in the Equality Act 2010?",
+      "Yes, Numan can contact me about future job opportunities for up to 3 yearsPrivacy policy"
+    ]
+  },
+  {
+    "fixture": "lever-2.html",
+    "source": "lever",
+    "url": "https://jobs.eu.lever.co/numan/c8f6f178-abf9-434e-841b-22b86bec1b41/apply",
+    "fields": 21,
+    "filled": 8,
+    "missed": [
+      "Current company",
+      "Do you need reasonable adjustments to be made for your interview?✱",
+      "Do you have any conflict of interest that will prevent you from working for us?✱",
+      "Do you have any criminal convictions or pending criminal charges?✱",
+      "What is your location?",
+      "What is your age range?",
+      "What is your ethnicity?",
+      "What gender do you identify as?",
+      "What is your Sexual Orientation?",
+      "What is your Religion or Belief?",
+      "Do you have one or more disabilities as described in the Equality Act 2010?",
+      "Yes, Numan can contact me about future job opportunities for up to 3 yearsPrivacy policy"
+    ]
+  },
+  {
+    "fixture": "lever-3.html",
+    "source": "lever",
+    "url": "https://jobs.eu.lever.co/visionrt/b9359c20-c6e9-49ea-a882-4815f60286bd/apply",
+    "fields": 17,
+    "filled": 9,
+    "missed": [
+      "Current company",
+      "Twitter URL",
+      "Gender",
+      "Race",
+      "Veteran status",
+      "Disability status",
+      "Date"
+    ]
+  },
+  {
+    "fixture": "workable-1.html",
+    "source": "workable",
+    "url": "https://apply.workable.com/worthai/j/C3CA13EFC5/apply",
+    "fields": 17,
+    "filled": 9,
+    "missed": [
+      "Headline",
+      "Summary",
+      "How many years experience do you have as a Security Engineer?",
+      "Were you referred by a current employee? If so, who?",
+      "Do you have experience in FinTech?"
+    ]
+  },
+  {
+    "fixture": "workable-2.html",
+    "source": "workable",
+    "url": "https://apply.workable.com/zipdev/j/D9AE2DAADD/apply",
+    "fields": 15,
+    "filled": 5,
+    "missed": [
+      "Headline",
+      "What types of manual testing have you performed?",
+      "Which tools have you used for automation testing, and which for DevOps and test management?",
+      "Have you worked with virtual machines or cloud environments? If so, which ones?",
+      "What is your English proficiency level? (C1, C2, Native, etc...)",
+      "Do you have 4+ years of QA Engineering experience?",
+      "Do you currently live in Latin America?"
+    ]
+  },
+  {
+    "fixture": "workable-3.html",
+    "source": "workable",
+    "url": "https://apply.workable.com/workana-premium/j/6F3FDE8015/apply",
+    "fields": 12,
+    "filled": 5,
+    "missed": [
+      "Summary",
+      "Which AI tools do you use in your daily work and what do you use them for? (Please list the tool and describe its specific use case.)",
+      "Have you personally implemented a Dynamics 365 Contact Center or Dynamics 365 Omnichannel solution in production?",
+      "Have you personally built and deployed conversational agents using Microsoft Copilot Studio?",
+      "Can you confidently lead technical discussions with clients in English?"
+    ]
+  },
+  {
+    "fixture": "remoteok-1.html",
+    "source": "remoteok",
+    "url": "https://remoteok.com/sign-up?user_type=worker&redirect_url=https%3A%2F%2Fremoteok.com%2Fremote-jobs%2Fremote-senior-software-engineer-latam-wagmo-1137572",
+    "fields": 2,
+    "filled": 1,
+    "missed": ["Choose a username..."]
+  },
+  {
+    "fixture": "remoteok-2.html",
+    "source": "remoteok",
+    "url": "https://remoteok.com/sign-up?user_type=worker&redirect_url=https%3A%2F%2Fremoteok.com%2Fremote-jobs%2Fremote-senior-software-engineer-klardaten-1137571",
+    "fields": 2,
+    "filled": 1,
+    "missed": ["Choose a username..."]
+  },
+  {
+    "fixture": "remoteok-3.html",
+    "source": "remoteok",
+    "url": "https://remoteok.com/sign-up?user_type=worker&redirect_url=https%3A%2F%2Fremoteok.com%2Fremote-jobs%2Fremote-solutions-engineer-onebrief-1137568",
+    "fields": 2,
+    "filled": 1,
+    "missed": ["Choose a username..."]
+  },
+  {
+    "fixture": "jobicy-1.html",
+    "source": "jobicy",
+    "url": "https://jobicy.com/jobs/157684-senior-engineering-manager-grafana-frontend-united-kingdom-remote#job-application",
+    "fields": 3,
+    "filled": 0,
+    "missed": ["", "Application tools"]
+  },
+  {
+    "fixture": "jobicy-2.html",
+    "source": "jobicy",
+    "url": "https://jobicy.com/jobs/157681-senior-engineering-manager-grafana-frontend-sweden-remote#job-application",
+    "fields": 3,
+    "filled": 0,
+    "missed": ["", "Application tools"]
+  },
+  {
+    "fixture": "jobicy-3.html",
+    "source": "jobicy",
+    "url": "https://jobicy.com/jobs/157680-staff-software-engineer-containers#job-application",
+    "fields": 3,
+    "filled": 0,
+    "missed": ["", "Application tools"]
+  },
+  {
+    "fixture": "arbeitnow-2.html",
+    "source": "arbeitnow",
+    "url": "https://www.arbeitnow.com/jobs/companies/interlead-gmbh/devops-engineer-berlin-362354",
+    "fields": 6,
+    "filled": 4,
+    "missed": [
+      "I agree to the terms and conditions of Arbeitnow and JOIN and confirm that I have reviewed the privacy policy. The terms must be accepted."
+    ]
+  },
+  {
+    "fixture": "arbeitnow-3.html",
+    "source": "arbeitnow",
+    "url": "https://www.arbeitnow.ch/jobs/companies/iq-plus-ag/software-architekt-mit-microservice-architektur-76040-winterthur-126120",
+    "fields": 6,
+    "filled": 4,
+    "missed": [
+      "I agree to the terms and conditions of Arbeitnow and JOIN and confirm that I have reviewed the privacy policy."
+    ]
+  }
+]
