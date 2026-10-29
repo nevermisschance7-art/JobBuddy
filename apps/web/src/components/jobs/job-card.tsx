@@ -62,7 +62,6 @@ const SOURCE_LABEL: Record<string, string> = {
   recruitee: "Recruitee",
   weworkremotely: "We Work Remotely",
   hackernews: "Hacker News",
-  workingnomads: "Working Nomads",
 };
 
 type Applied = { applicationId: string; note?: string; done?: boolean };

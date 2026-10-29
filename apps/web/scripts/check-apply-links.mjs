@@ -6,7 +6,7 @@ import { chromium } from "@playwright/test";
 
 const BOARDS = (
   process.env.BOARDS ??
-  "himalayas,jobicy,weworkremotely,workingnomads,remotive,arbeitnow,adzuna,reed,jooble,hackernews"
+  "himalayas,jobicy,weworkremotely,remotive,arbeitnow,adzuna,reed,jooble,hackernews"
 ).split(",");
 const PER = Number(process.env.PER_SOURCE ?? 3);
 

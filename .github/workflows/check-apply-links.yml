@@ -16,7 +16,7 @@ jobs:
     env:
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-      BOARDS: ${{ inputs.boards || 'himalayas,jobicy,weworkremotely,workingnomads,remotive,arbeitnow,adzuna,reed,jooble,hackernews' }}
+      BOARDS: ${{ inputs.boards || 'himalayas,jobicy,weworkremotely,remotive,arbeitnow,adzuna,reed,jooble,hackernews' }}
     steps:
       - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v4

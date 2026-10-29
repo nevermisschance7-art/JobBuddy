@@ -96,8 +96,6 @@ def raws_for(source):
         ]
     if source == "jobicy":
         return [RawJob(source, str(j["id"]), j) for j in load("jobicy.json")["jobs"]]
-    if source == "workingnomads":
-        return [RawJob(source, j["url"], j) for j in load("workingnomads.json")]
     if source == "hackernews":
         return [RawJob(source, str(c["id"]), c) for c in load("hackernews_item.json")["children"]]
     raise KeyError(source)
@@ -277,8 +275,6 @@ def test_hackernews_only_remote_postings():
         assert job.apply_url.startswith("https://news.ycombinator.com/item?id=")
 
 
-def test_remote_boards_jobicy_and_working_nomads():
+def test_remote_board_jobicy():
     j = norm("jobicy", raws_for("jobicy")[0])
     assert j.remote_type == "remote" and j.remote_regions == ["WORLDWIDE"] and j.salary_min
-    w = norm("workingnomads", raws_for("workingnomads")[1])
-    assert w.remote_regions == ["EUROPE"]

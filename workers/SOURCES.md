@@ -36,7 +36,6 @@ They return only their newest pages, so absence proves nothing: their jobs close
 | Remotive | Remote, worldwide | 6 h | `publication_date` | | Asks for max 4 calls a day. `candidate_required_location` gives the region |
 | Himalayas | Remote, worldwide | 2 h | `pubDate` (epoch s) | `expiryDate` | `locationRestrictions`, salary with `salaryPeriod` |
 | Jobicy | Remote, worldwide | 2 h | `pubDate` | | Free API, `industry=dev`. Fixture from documented shape (blocked from dev network) |
-| Working Nomads | Remote, worldwide | 2 h | `pub_date` | | Fixture from documented shape (blocked from dev network) |
 | Hacker News "Who is hiring" | Remote postings, worldwide | 2 h | comment `created_at` | | Monthly thread via the Algolia API; only comments that say remote |
 | Arbeitnow | Germany and EU | 2 h | `created_at` (epoch s) | | `remote` flag |
 | We Work Remotely | Remote, worldwide | 4 h | RSS `pubDate` | | Title is "Company: Role". Fixture synthesised (blocked from dev network) |
@@ -61,4 +60,4 @@ Only the We Work Remotely fixture is synthesised (the feed is blocked from the d
 Clear User-Agent with a contact link, 3 retries with exponential backoff (honours `Retry-After`), 4 companies in parallel per system, aggregators one request at a time, robots.txt checked for feed and page URLs. No LinkedIn or Indeed.
 
 
-RemoteOK is not used: applying there needs a paid membership. Only free ways to apply are used.
+RemoteOK is not used: applying there needs a paid membership. Working Nomads is not used: its jobs led to Lemon.io, a freelance marketplace you must join and be vetted by, not to the employer. Jobs whose apply link goes to such a marketplace (`MARKETPLACE_HOSTS` in `jobs/run.py`) are dropped from every source. Only free, direct ways to apply are used.

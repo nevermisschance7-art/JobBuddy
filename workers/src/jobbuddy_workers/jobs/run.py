@@ -10,6 +10,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from typing import Any
+from urllib.parse import urlsplit
 
 from ..embed import Embedder, job_text, to_pgvector
 from ..http import Http
@@ -26,6 +27,8 @@ MAX_DETAILS_PER_RUN = (
 )
 # Only fresh remote jobs are stored: posted in the last 48 hours (kept 4 days by prune_stale_jobs).
 MAX_AGE_DAYS = 7  # store jobs posted within this many days (kept 10 days, see prune_stale_jobs)
+# Apply links that lead to a marketplace you must join and be vetted by, not to the employer.
+MARKETPLACE_HOSTS = ("lemon.io",)
 AGGREGATOR_STALE_DAYS = 14  # aggregator jobs close when not seen for this long
 
 
@@ -56,12 +59,19 @@ def is_recent(posted_at: datetime | None, now: datetime | None = None) -> bool:
     return now - posted_at <= timedelta(days=MAX_AGE_DAYS)
 
 
+def _host_in(url: str | None, hosts: tuple[str, ...]) -> bool:
+    host = (urlsplit(url or "").hostname or "").lower()
+    return any(host == h or host.endswith("." + h) for h in hosts)
+
+
 def drop_reason(job: Job, now: datetime | None = None) -> str | None:
     """Why a job is not stored, or None when it is kept."""
     if not is_tech_role(job.title):
         return "not_tech"
     if job.remote_type != "remote":
         return "not_remote"
+    if _host_in(job.apply_url, MARKETPLACE_HOSTS) or _host_in(job.canonical_url, MARKETPLACE_HOSTS):
+        return "marketplace"
     if job.posted_at is None:
         return "no_date"
     if not is_recent(job.posted_at, now):

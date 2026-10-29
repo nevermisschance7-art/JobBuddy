@@ -7,7 +7,7 @@ import pytest
 from jobbuddy_workers.embed import FakeEmbedder
 from jobbuddy_workers.jobs import run as run_module
 from jobbuddy_workers.jobs.model import Job, RawJob
-from jobbuddy_workers.jobs.run import Runner, is_relevant
+from jobbuddy_workers.jobs.run import Runner, drop_reason, is_relevant
 from jobbuddy_workers.jobs.sources import Company
 from jobbuddy_workers.jobs.store import MemoryStore
 
@@ -163,6 +163,10 @@ def test_relevance_is_fresh_remote_tech_jobs_only():
     assert not is_relevant(
         make_job("x", "6", title="Account Executive", posted_at=now), set(), now=now
     )
+    # A marketplace you must join first, not the employer.
+    lemon = make_job("x", "7", posted_at=now)
+    lemon.apply_url = "https://me.lemon.io/signup"
+    assert drop_reason(lemon, now) == "marketplace"
 
 
 class FakeDetailSource(FakeEmployer):

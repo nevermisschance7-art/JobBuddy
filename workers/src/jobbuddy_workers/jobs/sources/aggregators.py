@@ -466,39 +466,6 @@ class Jobicy:
         )
 
 
-# ---------------------------------------------------------------- Working Nomads (remote only)
-
-
-class WorkingNomads:
-    name = "workingnomads"
-    kind = "aggregator"
-    every_hours = 2
-
-    def available(self, ctx: FetchContext) -> bool:
-        return True
-
-    def fetch(self, http: Http, ctx: FetchContext) -> list[RawJob]:
-        data = http.get_json("https://www.workingnomads.com/api/exposed_jobs/")
-        return [
-            RawJob(self.name, j["url"], j) for j in data if isinstance(j, dict) and j.get("url")
-        ]
-
-    def normalise(self, raw: RawJob) -> Job | None:
-        j = raw.data
-        return _remote_job(
-            self.name,
-            raw,
-            title=j.get("title") or "",
-            company=j.get("company_name") or "",
-            url=j["url"],
-            apply_url=j["url"],
-            description=html_to_text(j.get("description")),
-            location=j.get("location") or None,
-            posted_at=from_iso(j.get("pub_date")),
-            tags=[t.strip() for t in (j.get("tags") or "").split(",") if t.strip()],
-        )
-
-
 # ---------------------------------------------------------------- Hacker News "Who is hiring"
 # One thread a month; each top-level comment is one company's posting, and its timestamp is
 # when it was posted. Most start with "Company | Role | Location | REMOTE | ...".
@@ -563,7 +530,6 @@ AGGREGATOR_SOURCES = {
         Arbeitnow(),
         WeWorkRemotely(),
         Jobicy(),
-        WorkingNomads(),
         HackerNews(),
         Adzuna(),
         Reed(),

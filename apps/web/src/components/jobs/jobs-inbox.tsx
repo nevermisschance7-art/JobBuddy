@@ -14,7 +14,7 @@ import { JobCard } from "./job-card";
 const SOURCES = [
   "greenhouse", "lever", "ashby", "workable", "smartrecruiters", "teamtailor", "workday",
   "personio", "recruitee", "adzuna", "reed", "jooble", "remotive", "himalayas", "arbeitnow",
-  "weworkremotely", "jobicy", "workingnomads", "hackernews",
+  "weworkremotely", "jobicy", "hackernews",
 ]; // prettier-ignore
 
 const PAGE_SIZE = 20;
