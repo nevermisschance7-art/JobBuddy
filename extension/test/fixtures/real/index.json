@@ -34,19 +34,12 @@
     "source": "lever",
     "url": "https://jobs.eu.lever.co/numan/e3fa29b4-fdcb-4a35-a937-f7e6b866417f/apply",
     "fields": 21,
-    "filled": 8,
+    "filled": 15,
     "missed": [
       "Current company",
-      "Do you need reasonable adjustments to be made for your interview?✱",
-      "Do you have any conflict of interest that will prevent you from working for us?✱",
-      "Do you have any criminal convictions or pending criminal charges?✱",
-      "What is your location?",
-      "What is your age range?",
-      "What is your ethnicity?",
-      "What gender do you identify as?",
-      "What is your Sexual Orientation?",
-      "What is your Religion or Belief?",
-      "Do you have one or more disabilities as described in the Equality Act 2010?",
+      "Do you need reasonable adjustments to be made for your interview?",
+      "Do you have any conflict of interest that will prevent you from working for us?",
+      "Do you have any criminal convictions or pending criminal charges?",
       "Yes, Numan can contact me about future job opportunities for up to 3 yearsPrivacy policy"
     ]
   },
@@ -55,19 +48,12 @@
     "source": "lever",
     "url": "https://jobs.eu.lever.co/numan/c8f6f178-abf9-434e-841b-22b86bec1b41/apply",
     "fields": 21,
-    "filled": 8,
+    "filled": 15,
     "missed": [
       "Current company",
-      "Do you need reasonable adjustments to be made for your interview?✱",
-      "Do you have any conflict of interest that will prevent you from working for us?✱",
-      "Do you have any criminal convictions or pending criminal charges?✱",
-      "What is your location?",
-      "What is your age range?",
-      "What is your ethnicity?",
-      "What gender do you identify as?",
-      "What is your Sexual Orientation?",
-      "What is your Religion or Belief?",
-      "Do you have one or more disabilities as described in the Equality Act 2010?",
+      "Do you need reasonable adjustments to be made for your interview?",
+      "Do you have any conflict of interest that will prevent you from working for us?",
+      "Do you have any criminal convictions or pending criminal charges?",
       "Yes, Numan can contact me about future job opportunities for up to 3 yearsPrivacy policy"
     ]
   },
@@ -76,16 +62,8 @@
     "source": "lever",
     "url": "https://jobs.eu.lever.co/visionrt/b9359c20-c6e9-49ea-a882-4815f60286bd/apply",
     "fields": 17,
-    "filled": 9,
-    "missed": [
-      "Current company",
-      "Twitter URL",
-      "Gender",
-      "Race",
-      "Veteran status",
-      "Disability status",
-      "Date"
-    ]
+    "filled": 13,
+    "missed": ["Current company", "Twitter URL", "Date"]
   },
   {
     "fixture": "workable-1.html",
