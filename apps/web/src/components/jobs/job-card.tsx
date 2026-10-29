@@ -159,7 +159,7 @@ export function JobCard({
                 New
               </span>
             ) : null}
-            <span>{job.posted_at ? `Posted ${postedLabel(job.posted_at)}` : "Date unknown"}</span>
+            <span>{postedLabel(job.posted_at)}</span>
             <span aria-hidden>·</span>
             <span>{SOURCE_LABEL[job.source] ?? job.source}</span>
           </p>

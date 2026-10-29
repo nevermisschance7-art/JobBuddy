@@ -14,11 +14,15 @@ const H = 150;
 const PAD = { top: 10, right: 6, bottom: 22, left: 30 };
 const MAX_BAR = 24;
 
-/** 1, 2, 5, 10, 20, 50... at or above n (at least 4, so a quiet chart still has a scale). */
+/**
+ * The top of the scale: 4, 6, 8, 10, 20, 40, 60... at or above n. Always even, so the
+ * middle grid line is a whole number too (counts are never "2.5").
+ */
 function niceMax(n: number): number {
   const target = Math.max(4, n);
   const exp = 10 ** Math.floor(Math.log10(target));
-  for (const step of [1, 2, 5, 10]) if (step * exp >= target) return step * exp;
+  for (const step of [1, 2, 4, 6, 8, 10])
+    if (step * exp >= target && (step * exp) % 2 === 0) return step * exp;
   return 10 * exp;
 }
 
