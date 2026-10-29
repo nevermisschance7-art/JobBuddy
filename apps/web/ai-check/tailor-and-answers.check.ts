@@ -1,5 +1,5 @@
 import { mkdirSync, writeFileSync } from "node:fs";
-import { resumeSchema } from "@jobbuddy/shared";
+import { isNonAnswer, resumeSchema } from "@jobbuddy/shared";
 import { LlmRouter, type LlmCallLog, type ProviderKey } from "@jobbuddy/shared/llm";
 import { describe, expect, it } from "vitest";
 import { draftWithRouter, pickChoicesWithRouter } from "@/lib/answers-core";
@@ -204,6 +204,35 @@ describe.skipIf(keys.length === 0)("AI check: tailoring and answers", () => {
     expect(answers[3]).toMatchObject({ kind: "fixed", answer: "85,000 EUR" });
     expect(answers[4]!.kind).toBe("missing_fixed");
     expect(answers[1]!.kind).toBe("drafted");
+  }, 180_000);
+
+  it("answers opinion questions and never writes 'I have no example'", async () => {
+    const started = Date.now();
+    const questions = [
+      "What is an example of a non-computer system you've hacked to your advantage?",
+      "What task or activity do you think AI will make much easier or better for you by next year? Why can't it do that well today?",
+      "Tell us about an agent coding session you are particularly proud of. Explain how you helped the LLM build initial context, how you decided on the implementation plan, and how you validated what was generated/changed.",
+      "What is the most challenging scalability problem you have tackled?",
+      "Tell us about a project where you had to make trade-offs between shipping speed and shipping the perfect solution.",
+    ];
+    const answers = await draftWithRouter(
+      router,
+      "ai-check",
+      job,
+      cv,
+      questions.map((text) => ({ text })),
+      {},
+      [],
+      personal,
+    );
+    report("opinion and story answers", started);
+    for (const a of answers)
+      console.log(`
+[${a.kind}] ${a.question}
+${a.answer}`);
+    // The opinion question always gets an answer; story questions get one or are left empty.
+    expect(answers[1]).toMatchObject({ kind: "drafted" });
+    for (const a of answers) expect(isNonAnswer(a.answer), a.answer).toBe(false);
   }, 180_000);
 
   it("picks choice answers only where the CV supports them", async () => {

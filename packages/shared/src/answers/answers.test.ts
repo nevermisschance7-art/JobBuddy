@@ -5,6 +5,7 @@ import {
   validChoices,
   answerQuestions,
   fixedKeyFor,
+  isNonAnswer,
   questionSimilarity,
   REUSE_THRESHOLD,
   splitQuestions,
@@ -179,6 +180,26 @@ describe("answerQuestions", () => {
     const d = deps({ draft: vi.fn(async () => Promise.reject(new Error("no keys"))) });
     const out = await answerQuestions([{ text: "Why us?" }], d);
     expect(out[0]!.kind).toBe("failed");
+  });
+
+  it("leaves the field to the user when the AI only says it has no answer", async () => {
+    for (const t of [
+      "I do not have an example of this.",
+      "I do not have an answer for this.",
+      "I do not have details on a specific agent coding session beyond my experience with spec-driven development using AI coding agents.",
+      "I don't have a specific example.",
+      "N/A",
+    ])
+      expect(isNonAnswer(t), t).toBe(true);
+    for (const t of [
+      "I don't have a degree, but I have 7 years of PHP and Python work.",
+      "I built queue-based services on AWS and cut processing time on large datasets.",
+      "I do not have to think twice: your API is the reason.",
+    ])
+      expect(isNonAnswer(t), t).toBe(false);
+    const d = deps({ draft: vi.fn(async () => ({ text: "I do not have an example of this." })) });
+    const out = await answerQuestions([{ text: "A non-computer system you've hacked?" }], d);
+    expect(out[0]).toMatchObject({ kind: "failed", answer: "" });
   });
 });
 

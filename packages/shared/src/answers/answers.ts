@@ -199,6 +199,18 @@ export function adaptAnswer(answer: string, from: string | null | undefined, to:
 
 type Pending = { index: number; input: DraftInput };
 
+/**
+ * "I do not have an example of this." and the like: worse than an empty field, which the
+ * user then fills. Only short replies count, so "I don't have a degree, but..." stays.
+ */
+const NON_ANSWER =
+  /^(i (do not|don't|cannot|can't) (have|provide|share|give|recall|think of) (an? |any |)(specific |relevant |)(example|answer|details|information|story)|i have no (specific |)(example|answer|details|experience)|(there is |there's |)no (relevant |specific |)(example|information|details|experience) (is |)(available|given|in (the|my) cv)|(this|that) is not (in|covered by|mentioned in) (the|my) cv|n\/a\b|not applicable\b)/i;
+
+export function isNonAnswer(text: string): boolean {
+  const t = text.trim();
+  return t.split(/\s+/).length <= 30 && NON_ANSWER.test(t);
+}
+
 export async function answerQuestions(
   questions: { text: string; coverLetter?: boolean }[],
   deps: DraftDeps,
@@ -259,7 +271,7 @@ export async function answerQuestions(
       maxWords: p.input.maxWords,
       ...(p.input.isCoverLetter ? { isCoverLetter: true } : {}),
     };
-    if (!text?.trim()) {
+    if (!text?.trim() || isNonAnswer(text)) {
       out[p.index] = { ...base, kind: "failed", answer: "" };
       return;
     }
