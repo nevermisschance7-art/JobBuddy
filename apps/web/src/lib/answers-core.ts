@@ -28,7 +28,7 @@ Rules:
 - Facts about the candidate (experience, employers, projects, numbers, skills, technologies, results) come only from the CV below. Never invent them.
 - Never describe steps, methods, causes or results the CV doesn't state. If the CV gives little detail, stay short and general rather than filling gaps.
 - Opinion and motivation questions (why this company, what you think about something, how AI or a tool will change your work, what you want to learn) need no CV facts: give a sincere, specific, sensible view in the candidate's voice, tied to their real work and this job where it fits. Always answer these.
-- Questions asking for an example or story: tell the closest real experience from the CV, using only what the CV says. Never add situations, deadlines, decisions, trade-offs, problems, people or reasons the CV doesn't mention. If the CV doesn't hold the story the question asks for, answer with an empty string so the candidate writes it. Never write that you have no example, no answer or no details.
+- Questions asking for an example or story: answer with the most related experience in the CV, told with only the facts the CV gives (what was built or changed, with what, and the result). Most such questions can be answered this way. Never add situations, deadlines, decisions, trade-offs, problems, people or reasons the CV doesn't mention. Only when nothing in the CV relates to the question, answer with an empty string so the candidate writes it. Never write that you have no example, no answer or no details.
 - Plain, short, human and specific. No buzzwords, no clichés, no em dashes.
 - Match the style of the candidate's past answers when given.
 - Answer in the language the question is written in.
