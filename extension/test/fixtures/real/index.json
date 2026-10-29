@@ -131,14 +131,12 @@
     "source": "teamtailor",
     "url": "https://knowmadmood.teamtailor.com/jobs/8632711-java-backend-developer-spring-boot-microservicios-remoto",
     "fields": 14,
-    "filled": 4,
+    "filled": 6,
     "missed": [
-      "¿Cuáles son tus pretensiones económicas?*Obligatorio",
-      "¿Cuántos años de experiencias tienes en Java?*Obligatorio",
-      "¿Cuántos años de experiencia tienes con microservicios?*Obligatorio",
-      "Indica si has trabajado con kafka o rabbitMQ y los años de experiencia con ello.*Obligatorio",
-      "Carta de motivación",
-      "Obligatorio.Al presentar esta solicitud, acepto que he leído la Política de privacidad y confirmo que knowmad mood almacenará mis datos personales para poder procesar mi solicitud de empleo.",
+      "¿Cuántos años de experiencias tienes en Java?",
+      "¿Cuántos años de experiencia tienes con microservicios?",
+      "Indica si has trabajado con kafka o rabbitMQ y los años de experiencia con ello.",
+      ".Al presentar esta solicitud, acepto que he leído la Política de privacidad y confirmo que knowmad mood almacenará mis datos personales para poder procesar mi solicitud de empleo.",
       "Sí, knowmad mood puede dirigirse a mí directamente para informarme sobre futuras oportunidades laborales específicas.",
       "Dirección de correo electrónico sin dominio"
     ]
@@ -148,14 +146,12 @@
     "source": "teamtailor",
     "url": "https://knowmadmood.teamtailor.com/jobs/8631731-java-developer-ingles-sector-textil-remoto",
     "fields": 14,
-    "filled": 4,
+    "filled": 6,
     "missed": [
-      "¿Cuántos años de experiencias tienes con Java?*Obligatorio",
-      "¿Cuántos años de experiencia tienes con microservicios?*Obligatorio",
-      "¿Tienes nivel de inglés hablado equivalente a un B2 o superior?*Obligatorio Se realizan reuniones en inglés",
-      "¿Cuáles serían tus expectativas económicas?*Obligatorio",
-      "Carta de motivación",
-      "Obligatorio.Al presentar esta solicitud, acepto que he leído la Política de privacidad y confirmo que knowmad mood almacenará mis datos personales para poder procesar mi solicitud de empleo.",
+      "¿Cuántos años de experiencias tienes con Java?",
+      "¿Cuántos años de experiencia tienes con microservicios?",
+      "¿Tienes nivel de inglés hablado equivalente a un B2 o superior? Se realizan reuniones en inglés",
+      ".Al presentar esta solicitud, acepto que he leído la Política de privacidad y confirmo que knowmad mood almacenará mis datos personales para poder procesar mi solicitud de empleo.",
       "Sí, knowmad mood puede dirigirse a mí directamente para informarme sobre futuras oportunidades laborales específicas.",
       "Dirección de correo electrónico sin dominio"
     ]
@@ -165,14 +161,12 @@
     "source": "teamtailor",
     "url": "https://knowmadmood.teamtailor.com/jobs/8631450-software-engineer-java-jsp-thymeleaf-remoto",
     "fields": 14,
-    "filled": 4,
+    "filled": 6,
     "missed": [
-      "¿Cuáles son tus pretensiones económicas?*Obligatorio",
-      "¿Cuántos años de experiencias tienes en Java?*Obligatorio",
-      "¿Cuántos años de experiencia tienes con microservicios?*Obligatorio",
-      "¿Con qué tecnologías de Front has trabajado JQUERY/ JAVASCRIPT, JSP/JSTL o THYMELEAF? Cuántos años?*Obligatorio",
-      "Carta de motivación",
-      "Obligatorio.Al presentar esta solicitud, acepto que he leído la Política de privacidad y confirmo que knowmad mood almacenará mis datos personales para poder procesar mi solicitud de empleo.",
+      "¿Cuántos años de experiencias tienes en Java?",
+      "¿Cuántos años de experiencia tienes con microservicios?",
+      "¿Con qué tecnologías de Front has trabajado JQUERY/ JAVASCRIPT, JSP/JSTL o THYMELEAF? Cuántos años?",
+      ".Al presentar esta solicitud, acepto que he leído la Política de privacidad y confirmo que knowmad mood almacenará mis datos personales para poder procesar mi solicitud de empleo.",
       "Sí, knowmad mood puede dirigirse a mí directamente para informarme sobre futuras oportunidades laborales específicas.",
       "Dirección de correo electrónico sin dominio"
     ]
@@ -182,49 +176,34 @@
     "source": "workday",
     "url": "https://philips.wd3.myworkdayjobs.com/en-US/jobs-and-careers/job/Hong-Kong/Field-Service-Engineer_587097/apply/applyManually",
     "fields": 15,
-    "filled": 7,
-    "missed": [
-      "How Did You Hear About Us?",
-      "Are you currently or have you previously worked for Philips, including as a contingent worker/external?",
-      "Address Line 1",
-      "Postal Code",
-      "on",
-      "Country / Territory",
-      "State",
-      "Phone Device Type"
-    ]
+    "filled": 12,
+    "missed": ["on", "State", "Phone Device Type"]
   },
   {
     "fixture": "workday-2.html",
     "source": "workday",
     "url": "https://manulife.wd3.myworkdayjobs.com/en-US/MFCJH_Jobs/job/Waterloo%2C-Ontario/Full-Stack-Software-Engineer_JR26082026/apply/applyManually",
-    "fields": 3,
+    "fields": 2,
     "filled": 1,
     "missed": [
-      "Please select the checkbox to indicate your understanding and agreement with the above.",
-      "Enter website. This input is for robots only, do not enter if you're human."
+      "Please select the checkbox to indicate your understanding and agreement with the above."
     ]
   },
   {
     "fixture": "workday-3.html",
     "source": "workday",
     "url": "https://nttlimited.wd3.myworkdayjobs.com/en-US/NTT_Careers/job/Ubi%2C-Singapore/Cross-Technology-Service-Delivery-Field-Support-Engineer--L1-_R-150393/apply/applyManually",
-    "fields": 2,
+    "fields": 1,
     "filled": 1,
-    "missed": ["Enter website. This input is for robots only, do not enter if you're human."]
+    "missed": []
   },
   {
     "fixture": "personio-1.html",
     "source": "personio",
     "url": "https://ares.jobs.personio.de/job/2853224/apply",
     "fields": 10,
-    "filled": 4,
-    "missed": [
-      "Geschlecht",
-      "Verfügbar ab* (erforderlich)",
-      "Gehaltsvorstellung* (erforderlich)",
-      "Wie bist du auf ARES gekommen?* (erforderlich)"
-    ]
+    "filled": 6,
+    "missed": ["Geschlecht", "Wie bist du auf ARES gekommen?"]
   },
   {
     "fixture": "remoteok-1.html",
