@@ -8,7 +8,7 @@
     },
     "groq": {
       "enabled": true,
-      "models": ["openai/gpt-oss-120b", "llama-3.3-70b-versatile"]
+      "models": ["openai/gpt-oss-120b"]
     },
     "openrouter": {
       "enabled": true,
