@@ -33,3 +33,4 @@ jobs:
             gh release create extension-latest --title "JobBuddy Chrome extension" \
               --notes "Unzip, open chrome://extensions, turn on Developer mode, Load unpacked. Built from ${GITHUB_SHA}."
           gh release upload extension-latest jobbuddy-extension.zip --clobber
+          gh release edit extension-latest --notes "Unzip, open chrome://extensions, turn on Developer mode, Load unpacked (or Reload if you had it). Built from ${GITHUB_SHA::7} on $(date -u +%Y-%m-%d)."
