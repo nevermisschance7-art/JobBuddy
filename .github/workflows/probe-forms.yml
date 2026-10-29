@@ -1,0 +1,61 @@
+name: Probe forms
+
+# Manual: opens real application forms from stored jobs in headless Chrome, runs the
+# extension's form code with sample data and reports found / filled / missed fields.
+# Never submits a form. The forms (without scripts) are committed as test fixtures to
+# extension/test/fixtures/real, so tests can check them offline from then on.
+on:
+  workflow_dispatch:
+    inputs:
+      per_source:
+        description: "Forms per source"
+        default: "3"
+
+permissions:
+  contents: write
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      PER_SOURCE: ${{ inputs.per_source }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --filter web --filter extension...
+      - run: pnpm --filter web exec playwright install --with-deps chromium
+      - name: Build the probe (the extension's form code)
+        run: pnpm --filter extension exec vite build -c vite.probe.config.ts
+      - name: Probe real forms
+        working-directory: apps/web
+        run: node scripts/probe-forms.mjs ../../extension/dist-probe/probe.js ../../probe-out
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: probe-forms
+          path: probe-out
+      - name: Save the forms as test fixtures
+        run: |
+          mkdir -p extension/test/fixtures/real
+          rm -f extension/test/fixtures/real/*.html
+          cp probe-out/html/*.html extension/test/fixtures/real/ 2>/dev/null || true
+          node -e "
+            const r = require('./probe-out/report.json');
+            const keep = r.filter((x) => x.fixture).map((x) => {
+              const f = x.frames.find((y) => !y.error) || {};
+              return { fixture: x.fixture, source: x.source, url: x.final || x.start, fields: (f.fields || []).length, filled: f.filled, missed: f.missed };
+            });
+            require('fs').writeFileSync('extension/test/fixtures/real/index.json', JSON.stringify(keep, null, 2) + '\n');
+          "
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add extension/test/fixtures/real
+          git diff --cached --quiet || git commit -m "test: real application forms from the probe [skip ci]"
+          git push
