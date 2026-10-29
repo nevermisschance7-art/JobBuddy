@@ -8,6 +8,8 @@ export type LlmRequest = {
   json: boolean;
   temperature: number;
   maxOutputTokens: number;
+  /** Time left for this request (the router's budget for the whole call). */
+  timeoutMs?: number;
 };
 
 export type LlmResponse = {

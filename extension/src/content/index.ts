@@ -166,13 +166,14 @@ type AiWork = { questions: string[]; choices: { question: string; options: strin
 
 /**
  * Unanswered questions the AI may help with, never sensitive ones: free text to draft, and
- * choice questions (radios, Yes/No buttons, selects) to pick from the CV. Required questions
- * and optional ones are kept apart: required ones are done on Fill, optional ones on request.
+ * choice questions (radios, Yes/No buttons, selects) to pick from the CV. Required ones first,
+ * then optional ones, all in the same request.
  */
-function aiWork(missed: FormField[], required: boolean): AiWork {
-  const open = missed.filter(
+function aiWork(missed: FormField[]): AiWork {
+  // Required questions first, so they always fit within the per-request limits.
+  const ordered = [...missed.filter((f) => f.required), ...missed.filter((f) => !f.required)];
+  const open = ordered.filter(
     (f) =>
-      f.required === required &&
       (f.kind === "question" || f.kind === "cover_letter") &&
       !fixedKeyFor(f.label) &&
       f.label.length > 2,
@@ -278,8 +279,7 @@ async function runSteps(): Promise<void> {
     ...(result.application ?? result.base),
     jobCompany: result.job?.company ?? pageInfo().company,
   });
-  // Required questions are answered now; optional ones only if the user asks (see fill()).
-  const work = aiWork(firstFill.missed, true);
+  const work = aiWork(firstFill.missed);
 
   // 1. The application (created now if this job isn't prepared yet).
   let applicationId = result.application?.applicationId ?? null;
@@ -365,7 +365,6 @@ async function fill(
   );
   outline(byAi, "#4f46e5", "Written or picked by AI from your CV. Please check it.");
   if (data.applicationId) sessionStorage.setItem(PENDING, data.applicationId);
-  const optionalWork = aiWork(report.missed, false);
   let next = 0;
 
   render(
@@ -377,7 +376,6 @@ async function fill(
      ${optional.length ? `<div class="row muted">○ ${optional.length} optional left empty (fine to skip)</div>` : ""}
      ${extra.draftError ? `<div class="row warn">⚠ Couldn't draft answers: ${esc(extra.draftError)}</div>` : ""}
      ${required.length ? `<button class="main" data-act="next">Show me the next required one</button>` : ""}
-     ${workSize(optionalWork) && data.applicationId ? `<button class="second" data-act="optional">Answer ${workSize(optionalWork)} optional question${workSize(optionalWork) === 1 ? "" : "s"} too</button>` : ""}
      <p class="muted">Check everything, then press Submit yourself. I never submit for you.
        ${result.reviewUrl ? `<br><a href="#" data-act="review">CV and answers on JobBuddy</a>` : ""}</p>`,
     {
@@ -387,7 +385,6 @@ async function fill(
         target(f).scrollIntoView({ behavior: "smooth", block: "center" });
         (f.el as unknown as HTMLElement).focus?.();
       },
-      optional: () => void answerOptional(optionalWork, data.applicationId!),
       download: () => {
         if (!data.cv) return;
         const a = document.createElement("a");
@@ -398,21 +395,6 @@ async function fill(
       review: () => void send({ type: "open", url: result.reviewUrl! }),
     },
   );
-}
-
-/** "Answer N optional questions too": one more AI call, then fill again. */
-async function answerOptional(work: AiWork, applicationId: string): Promise<void> {
-  render(
-    `<ul class="steps"><li class="now"><span class="dot"></span>Answering optional questions</li></ul>`,
-  );
-  const reply = await send<PrepareResult>({
-    type: "prepare",
-    input: { url: location.href, ...pageInfo(), ...work, applicationId },
-  });
-  const result = await lookup();
-  if (result?.application) {
-    await fill(result, { draftError: reply.ok ? null : reply.error });
-  }
 }
 
 const outlined = new Set<HTMLElement>();

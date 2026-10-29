@@ -325,7 +325,11 @@ export function validChoices(
   picks: { n: number; answer: string }[],
 ): (string | null)[] {
   return items.map((item, i) => {
-    const raw = picks.find((p) => p.n === i + 1)?.answer?.trim().toLowerCase() ?? "";
+    const raw =
+      picks
+        .find((p) => p.n === i + 1)
+        ?.answer?.trim()
+        .toLowerCase() ?? "";
     if (!raw || raw === "unsure") return null;
     return item.options.find((o) => o.trim().toLowerCase() === raw) ?? null;
   });

@@ -6,8 +6,9 @@ import {
   type ProviderName,
 } from "./types";
 
-// Per model. A user is waiting on most calls, and a slow model is skipped for the next one.
-const TIMEOUT_MS = 30_000;
+// Per model, unless the router passes less (its time budget for the whole call is nearly
+// used). A user is waiting on most calls, and a slow model is skipped for the next one.
+const TIMEOUT_MS = 12_000;
 
 /** Parses "30s", "1.5s", "2m59.56s", "1h2m" or plain seconds. */
 export function parseDuration(value: string | null | undefined): number | null {
@@ -36,13 +37,14 @@ async function post(
   url: string,
   headers: Record<string, string>,
   body: unknown,
+  timeoutMs: number = TIMEOUT_MS,
 ): Promise<Response> {
   try {
     return await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json", ...headers },
       body: JSON.stringify(body),
-      signal: AbortSignal.timeout(TIMEOUT_MS),
+      signal: AbortSignal.timeout(Math.max(1000, timeoutMs)),
     });
   } catch (e) {
     throw new LlmError("network", e instanceof Error ? e.message : "network error");
@@ -75,6 +77,7 @@ export const gemini: LlmProvider = {
           ...(req.json ? { responseMimeType: "application/json" } : {}),
         },
       },
+      req.timeoutMs,
     );
     const body = await res.text();
     if (!res.ok) {
@@ -130,6 +133,7 @@ function openAiCompatible(
           max_tokens: req.maxOutputTokens,
           ...(req.json && opts.jsonMode ? { response_format: { type: "json_object" } } : {}),
         },
+        req.timeoutMs,
       );
       const body = await res.text();
       if (!res.ok) {
@@ -187,6 +191,7 @@ export const anthropic: LlmProvider = {
         ...(req.system ? { system: req.system } : {}),
         messages: [{ role: "user", content: req.prompt }],
       },
+      req.timeoutMs,
     );
     const body = await res.text();
     if (!res.ok) {

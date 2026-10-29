@@ -23,6 +23,9 @@ export type ModelsConfig = {
 
 export const MODELS_CONFIG = modelsConfig as unknown as ModelsConfig;
 
+/** Longest one generate call may take across all providers and models (ms). */
+export const CALL_BUDGET_MS = 20_000;
+
 /** Every provider failed or was cooling down. The user gets a "needs fixing" alert. */
 export class AllProvidersFailedError extends Error {
   constructor(readonly attempts: string[]) {
@@ -162,6 +165,9 @@ export class LlmRouter {
     const userKeys = await this.opts.keys.getKeys(userId);
     const now = this.now();
     const attempts: string[] = [];
+    // One call must finish while the user's web request is still open (the host gives
+    // functions about 10 to 26 seconds), even when providers hang.
+    const deadline = Date.now() + CALL_BUDGET_MS;
 
     for (const name of this.config.order) {
       const providerConfig = this.config.providers[name];
@@ -179,7 +185,18 @@ export class LlmRouter {
           attempts.push(`${name} cooling down until ${key.coolingUntil.toISOString()}`);
           continue;
         }
-        const outcome = await this.tryProvider(name, key, task, userId, { ...taskConfig, ...req });
+        if (Date.now() > deadline - 1500) {
+          attempts.push(`${name}: out of time`);
+          continue;
+        }
+        const outcome = await this.tryProvider(
+          name,
+          key,
+          task,
+          userId,
+          { ...taskConfig, ...req },
+          deadline,
+        );
         if (outcome.ok) return outcome.text;
         attempts.push(`${name}: ${outcome.error.kind}`);
 
@@ -208,14 +225,24 @@ export class LlmRouter {
     task: string,
     userId: string,
     base: Omit<LlmRequest, "model">,
+    deadline: number = Date.now() + CALL_BUDGET_MS,
   ): Promise<{ ok: true; text: string } | { ok: false; error: LlmError }> {
     const provider = this.providers[name];
     let lastError = new LlmError("model_not_found", "no models configured");
 
     for (const model of this.config.providers[name].models) {
+      const left = deadline - Date.now();
+      if (left < 1500) {
+        lastError = new LlmError("network", "out of time for this request");
+        break;
+      }
       const started = Date.now();
       try {
-        const res = await provider.generate(key.apiKey, { ...base, model });
+        const res = await provider.generate(key.apiKey, {
+          ...base,
+          model,
+          timeoutMs: Math.min(base.timeoutMs ?? left, left),
+        });
         await this.log({ userId, task, provider: name, model, started, ok: true, res });
         return { ok: true, text: res.text };
       } catch (e) {
