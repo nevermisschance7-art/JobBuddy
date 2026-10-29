@@ -4,10 +4,10 @@
 
 import { chromium } from "@playwright/test";
 
-const BOARDS = [
-  "himalayas", "jobicy", "weworkremotely", "workingnomads", "remotive", "arbeitnow",
-  "adzuna", "reed", "jooble", "hackernews",
-]; // prettier-ignore
+const BOARDS = (
+  process.env.BOARDS ??
+  "himalayas,jobicy,weworkremotely,workingnomads,remotive,arbeitnow,adzuna,reed,jooble,hackernews"
+).split(",");
 const PER = Number(process.env.PER_SOURCE ?? 3);
 
 const PAYWALL =
@@ -67,7 +67,11 @@ for (const source of BOARDS) {
         break;
       }
       const text = `${before}\n${line.afterText ?? ""}`;
-      line.paywall = PAYWALL.exec(text)?.[0] ?? null;
+      const pay = PAYWALL.exec(text);
+      line.paywall = pay?.[0] ?? null;
+      // The words around it, to tell a real paywall from a menu link like "Pricing".
+      if (pay)
+        line.context = text.slice(Math.max(0, pay.index - 70), pay.index + 70).replace(/\s+/g, " ");
       line.account = ACCOUNT.exec(text)?.[0] ?? null;
       line.blocked = /just a moment|verify you are human|security verification/i.test(before);
       delete line.afterText;

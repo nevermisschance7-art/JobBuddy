@@ -4,6 +4,10 @@ name: Check apply links
 # leads and whether the page asks for payment or an account. Never submits anything.
 on:
   workflow_dispatch:
+    inputs:
+      boards:
+        description: "Comma-separated sources (empty = all)"
+        default: ""
 
 jobs:
   check:
@@ -12,6 +16,7 @@ jobs:
     env:
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      BOARDS: ${{ inputs.boards || 'himalayas,jobicy,weworkremotely,workingnomads,remotive,arbeitnow,adzuna,reed,jooble,hackernews' }}
     steps:
       - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v4
