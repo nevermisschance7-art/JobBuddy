@@ -4,6 +4,10 @@ name: AI check
 # prompt, from a US server (Gemini is blocked from some countries).
 on:
   workflow_dispatch:
+    inputs:
+      only:
+        description: "Web check with only these providers, e.g. groq (empty = all), to test a backup"
+        default: ""
 
 jobs:
   check:
@@ -32,9 +36,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
-      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+      GEMINI_API_KEY: ${{ (inputs.only == '' || contains(inputs.only, 'gemini')) && secrets.GEMINI_API_KEY || '' }}
+      GROQ_API_KEY: ${{ (inputs.only == '' || contains(inputs.only, 'groq')) && secrets.GROQ_API_KEY || '' }}
+      OPENROUTER_API_KEY: ${{ (inputs.only == '' || contains(inputs.only, 'openrouter')) && secrets.OPENROUTER_API_KEY || '' }}
     steps:
       - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v4
