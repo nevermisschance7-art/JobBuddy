@@ -23,11 +23,13 @@
   "tasks": {
     "cv_to_resume": {
       "temperature": 0.1,
-      "maxOutputTokens": 8192
+      "maxOutputTokens": 8192,
+      "timeoutMs": 18000
     },
     "tailor_cv": {
       "temperature": 0.2,
-      "maxOutputTokens": 8192
+      "maxOutputTokens": 8192,
+      "timeoutMs": 18000
     },
     "draft_answer": {
       "temperature": 0.6,

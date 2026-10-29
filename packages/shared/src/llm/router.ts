@@ -18,7 +18,8 @@ import {
 export type ModelsConfig = {
   order: ProviderName[];
   providers: Record<ProviderName, { enabled: boolean; models: string[] }>;
-  tasks: Record<string, { temperature: number; maxOutputTokens: number }>;
+  /** timeoutMs: per attempt, for tasks with long output (a whole CV); default ATTEMPT_TIMEOUT_MS. */
+  tasks: Record<string, { temperature: number; maxOutputTokens: number; timeoutMs?: number }>;
 };
 
 export const MODELS_CONFIG = modelsConfig as unknown as ModelsConfig;
