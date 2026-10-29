@@ -185,6 +185,12 @@ describe("helpers", () => {
     ).toBe(true);
     document.body.innerHTML = lever + "<p>Thanks for your interest in Acme</p>";
     expect(isConfirmation(document, "https://jobs.lever.co/acme/123/apply")).toBe(false);
+    // The form is only hidden after Submit, and the thank-you shows on the same page.
+    document.body.innerHTML = `<div style="display:none">${lever}</div>
+      <p>Application received</p><h1>Thank you for applying.</h1>`;
+    expect(
+      isConfirmation(document, "https://rctalent.com/jobs/sr-cloud-platform-engineer/apply/"),
+    ).toBe(true);
   });
 });
 

@@ -225,10 +225,17 @@ export function classify(meta: {
   return "question";
 }
 
-function visible(el: Element): boolean {
+export function visible(el: Element): boolean {
   if (el.closest("[hidden], [aria-hidden='true']")) return false;
-  const style = el.ownerDocument.defaultView?.getComputedStyle(el as HTMLElement);
-  return !style || (style.display !== "none" && style.visibility !== "hidden");
+  const view = el.ownerDocument.defaultView;
+  if (!view) return true;
+  const own = view.getComputedStyle(el as HTMLElement);
+  if (own.visibility === "hidden") return false;
+  // A form hidden after Submit hides its container, not each field (display isn't inherited).
+  for (let node: Element | null = el; node; node = node.parentElement) {
+    if (view.getComputedStyle(node as HTMLElement).display === "none") return false;
+  }
+  return true;
 }
 
 /** Every fillable field in the document, in page order. Radio and checkbox groups count once. */
@@ -849,7 +856,9 @@ export function isConfirmation(doc: Document, url: string): boolean {
   const text = (doc.body?.textContent ?? "").slice(0, 20_000);
   if (!CONFIRM_TEXT.test(text)) return false;
   // A form still full of inputs is the application itself (some pages say "thanks for your interest").
-  const inputs = doc.querySelectorAll("input:not([type=hidden]), textarea").length;
+  const inputs = [...doc.querySelectorAll("input:not([type=hidden]), textarea")].filter(
+    visible,
+  ).length;
   return inputs < 3 || /confirm|thank|submitted|success/i.test(url);
 }
 
