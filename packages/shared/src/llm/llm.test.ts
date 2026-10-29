@@ -284,3 +284,21 @@ describe("provider helpers", () => {
     );
   });
 });
+
+describe("LlmRouter time sharing", () => {
+  it("moves to the backup after a hang instead of retrying the slow provider", async () => {
+    const { router, fakes } = setup({ gemini: {} }, { groq: "shared-groq" });
+    // Gemini times out (as when Google's free tier is overloaded); Groq answers.
+    fakes.gemini.queue(new LlmError("network", "The operation was aborted due to timeout"));
+    fakes.gemini.queue(new LlmError("network", "timeout again"));
+    fakes.groq.queue('{"title":"Dev","years":3}');
+    await expect(router.generateJson("t", schema, "p", "u1")).resolves.toEqual({
+      title: "Dev",
+      years: 3,
+    });
+    // Gemini's first model was not retried (a backup was available): its next model, then Groq.
+    expect(fakes.gemini.requests.map((r) => r.model)).toEqual(["g-new", "g-old"]);
+    // Each attempt got a share of the time, not the whole budget.
+    expect(fakes.gemini.requests[0]!.timeoutMs).toBeLessThanOrEqual(10_000);
+  });
+});

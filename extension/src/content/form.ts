@@ -75,7 +75,9 @@ function textOf(el: Element | null): string {
   copy
     .querySelectorAll("select, option, input, textarea, script, style")
     .forEach((n) => n.remove());
-  return clean(copy.textContent);
+  // Spaces tidied but required marks ("*", "Obligatorio") kept: isRequired reads them, and
+  // callers clean() the text for display.
+  return (copy.textContent ?? "").replace(/\s+/g, " ").trim();
 }
 
 /** The visible question for a control: <label for>, wrapping label, aria, then the nearest heading-like text. */
@@ -92,13 +94,17 @@ export function labelFor(el: Element, doc: Document = el.ownerDocument): string 
       .map((i) => textOf(doc.getElementById(i)))
       .join(" ")
       .trim();
-    if (text) return clean(text);
+    if (text) return text;
   }
   const aria = el.getAttribute("aria-label");
-  if (aria) return clean(aria);
+  if (aria?.trim()) return aria.replace(/\s+/g, " ").trim();
   const wrap = el.closest("label");
   if (wrap && textOf(wrap)) return textOf(wrap);
-  // Field containers used by Greenhouse, Lever, Ashby, Workable and SmartRecruiters.
+  return nearbyHeading(el) || clean(el.getAttribute("placeholder"));
+}
+
+/** The question heading of the box a control sits in (Greenhouse, Lever, Ashby, BambooHR...). */
+function nearbyHeading(el: Element): string {
   let node: Element | null = el.parentElement;
   for (let depth = 0; node && depth < 5; depth++, node = node.parentElement) {
     const heading = node.querySelector(
@@ -106,14 +112,22 @@ export function labelFor(el: Element, doc: Document = el.ownerDocument): string 
     );
     if (heading && !heading.contains(el) && textOf(heading)) return textOf(heading);
   }
-  return clean(el.getAttribute("placeholder"));
+  return "";
 }
+
+/** Upload buttons' own labels say nothing about what to upload. */
+const GENERIC_UPLOAD =
+  /^(choose|select|browse|upload|attach|add)( a| your)? (file|files|document)s?$|^(upload|attach|browse)$/i;
+
+/** "Resume*", "Name ✱", "Gehalt (erforderlich)", "*Obligatorio"... */
+const REQUIRED_MARK =
+  /[*✱]\s*$|[*✱]\s*\(?(required|obligatorio|obligatoria|erforderlich|obligatoire|wymagane|obrigat[óo]rio|verplicht)|\((required|erforderlich|obligatorio|obligatoire)\)/i;
 
 function isRequired(el: Element, label: string, raw: string): boolean {
   return (
     (el as HTMLInputElement).required ||
     el.getAttribute("aria-required") === "true" ||
-    /\*\s*$/.test(raw) ||
+    REQUIRED_MARK.test(raw) ||
     /\(required\)/i.test(label)
   );
 }
@@ -260,7 +274,9 @@ export function collectFields(doc: Document): FormField[] {
       continue;
     }
 
-    const raw = labelFor(el, doc);
+    let raw = labelFor(el, doc);
+    // A file input labelled just "Choose File": its box's heading ("Resume*") says what it is.
+    if (type === "file" && GENERIC_UPLOAD.test(clean(raw))) raw = nearbyHeading(el) || raw;
     const label = clean(raw);
     out.push({
       el,
@@ -771,6 +787,14 @@ function fillOne(f: FormField, data: FillData, report: FillReport): void {
       return;
     }
     setNativeValue(el, choice.value);
+  } else if ((el as HTMLInputElement).type === "date") {
+    // Date pickers take YYYY-MM-DD; a notice period ("1 month") becomes a start date.
+    const date = noticeToDate(value);
+    if (!date) {
+      report.missed.push(f);
+      return;
+    }
+    setNativeValue(el, date);
   } else {
     setNativeValue(el, value);
   }
@@ -827,4 +851,28 @@ export function isConfirmation(doc: Document, url: string): boolean {
   // A form still full of inputs is the application itself (some pages say "thanks for your interest").
   const inputs = doc.querySelectorAll("input:not([type=hidden]), textarea").length;
   return inputs < 3 || /confirm|thank|submitted|success/i.test(url);
+}
+
+/**
+ * A notice period as a start date for date pickers ("Date available"): "1 month" -> today
+ * plus a month, "2 weeks", "immediately" -> today. A date already written as a date is kept.
+ * Returns YYYY-MM-DD (what date inputs take), or null when it can't tell.
+ */
+export function noticeToDate(text: string, now = new Date()): string | null {
+  const t = text.trim().toLowerCase();
+  const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(t);
+  if (iso) return t;
+  const dmy = /^(\d{1,2})[/.](\d{1,2})[/.](\d{4})$/.exec(t);
+  if (dmy) return `${dmy[3]}-${dmy[2]!.padStart(2, "0")}-${dmy[1]!.padStart(2, "0")}`;
+  const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  if (/immediate|asap|right away|now|none|no notice|^0/.test(t))
+    return d.toISOString().slice(0, 10);
+  const m = /(\d+|one|two|three|four|six)\s*(day|week|month)/.exec(t);
+  if (!m) return null;
+  const words: Record<string, number> = { one: 1, two: 2, three: 3, four: 4, six: 6 };
+  const n = Number(m[1]) || words[m[1]!] || 0;
+  if (m[2] === "day") d.setUTCDate(d.getUTCDate() + n);
+  else if (m[2] === "week") d.setUTCDate(d.getUTCDate() + 7 * n);
+  else d.setUTCMonth(d.getUTCMonth() + n);
+  return d.toISOString().slice(0, 10);
 }

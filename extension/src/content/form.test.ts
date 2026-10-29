@@ -9,6 +9,7 @@ import {
   fillForm,
   formQuestions,
   isConfirmation,
+  noticeToDate,
   pickOption,
 } from "./form";
 
@@ -357,5 +358,35 @@ describe("Camunda / RevenueCat style questions and learning", () => {
     });
     await fillComboboxes(report.dropdowns, report);
     expect(input.getAttribute("data-picked")).toBe("United Kingdom");
+  });
+});
+
+describe("BambooHR-style form", () => {
+  const bamboo = `
+    <div class="field"><div class="fab-FormField"><label class="fab-Label">Resume*</label>
+      <label for="f" class="fab-Button">Choose File*</label><input type="file" id="f" style="display:none"></div></div>
+    <div class="field"><label for="d">Date Available*</label><input type="date" id="d"></div>
+    <div class="field"><label for="a">Anything you would like to add?*</label><textarea id="a"></textarea></div>`;
+
+  it("finds required marks, the CV upload under its heading, and fills the date", () => {
+    document.body.innerHTML = bamboo;
+    const fields = collectFields(document);
+    expect(fields.map((f) => [f.label, f.kind, f.required])).toEqual([
+      ["Resume", "resume", true],
+      ["Date Available", "question", true],
+      ["Anything you would like to add?", "question", true],
+    ]);
+    const report = fillForm(fields, { ...data, fixedAnswers: { notice_period: "2 weeks" } });
+    expect((document.querySelector("#d") as HTMLInputElement).value).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(report.resume?.label).toBe("Resume");
+    expect(report.missed.map((f) => f.label)).toEqual(["Anything you would like to add?"]);
+  });
+
+  it("turns a notice period into a start date", () => {
+    const now = new Date("2026-10-29T12:00:00Z");
+    expect(noticeToDate("1 month", now)).toBe("2026-11-29");
+    expect(noticeToDate("2 weeks", now)).toBe("2026-11-12");
+    expect(noticeToDate("Immediately", now)).toBe("2026-10-29");
+    expect(noticeToDate("whenever", now)).toBeNull();
   });
 });

@@ -173,44 +173,53 @@ export class LlmRouter {
     // functions about 10 to 26 seconds), even when providers hang.
     const deadline = Date.now() + CALL_BUDGET_MS;
 
+    // Every usable key, in order: the user's own first, then shared backups.
+    const queue: (ProviderKey & { shared: boolean })[] = [];
     for (const name of this.config.order) {
-      const providerConfig = this.config.providers[name];
-      if (!providerConfig?.enabled) continue;
-
-      const candidates: (ProviderKey & { shared: boolean })[] = [];
+      if (!this.config.providers[name]?.enabled) continue;
       const own = userKeys.find((k) => k.provider === name);
-      if (own) candidates.push({ ...own, shared: false });
+      if (own) queue.push({ ...own, shared: false });
       const shared = this.opts.sharedKeys?.[name];
-      if (shared)
-        candidates.push({ provider: name, apiKey: shared, coolingUntil: null, shared: true });
+      if (shared) queue.push({ provider: name, apiKey: shared, coolingUntil: null, shared: true });
+    }
+    const usable = queue.filter((key) => {
+      if (key.coolingUntil && key.coolingUntil > now) {
+        attempts.push(`${key.provider} cooling down until ${key.coolingUntil.toISOString()}`);
+        return false;
+      }
+      return true;
+    });
 
-      for (const key of candidates) {
-        if (key.coolingUntil && key.coolingUntil > now) {
-          attempts.push(`${name} cooling down until ${key.coolingUntil.toISOString()}`);
-          continue;
-        }
-        if (Date.now() > deadline - 1500) {
-          attempts.push(`${name}: out of time`);
-          continue;
-        }
-        const outcome = await this.tryProvider(
-          name,
-          key,
-          task,
-          userId,
-          { ...taskConfig, ...req },
-          deadline,
-        );
-        if (outcome.ok) return outcome.text;
-        attempts.push(`${name}: ${outcome.error.kind}`);
+    for (let i = 0; i < usable.length; i++) {
+      const key = usable[i]!;
+      const name = key.provider;
+      const left = deadline - Date.now();
+      if (left < 1500) {
+        attempts.push(`${name}: out of time`);
+        continue;
+      }
+      // Share the time with the backups still to come, so one slow provider (a busy free
+      // Gemini) can't use it all; the last one gets whatever is left.
+      const others = usable.length - 1 - i;
+      const share = others > 0 ? Math.max(ATTEMPT_TIMEOUT_MS * 0.8, left / (others + 1)) : left;
+      const outcome = await this.tryProvider(
+        name,
+        key,
+        task,
+        userId,
+        { ...taskConfig, ...req },
+        Math.min(deadline, Date.now() + share),
+        others === 0,
+      );
+      if (outcome.ok) return outcome.text;
+      attempts.push(`${name}: ${outcome.error.kind}`);
 
-        if (!key.shared) {
-          if (COOLDOWN_KINDS.has(outcome.error.kind)) {
-            const until = outcome.error.retryAt ?? new Date(now.getTime() + 60_000);
-            await this.opts.keys.markCoolingDown(userId, name, until, outcome.error.message);
-          } else if (outcome.error.kind === "auth") {
-            await this.opts.keys.markBroken(userId, name, outcome.error.message);
-          }
+      if (!key.shared) {
+        if (COOLDOWN_KINDS.has(outcome.error.kind)) {
+          const until = outcome.error.retryAt ?? new Date(now.getTime() + 60_000);
+          await this.opts.keys.markCoolingDown(userId, name, until, outcome.error.message);
+        } else if (outcome.error.kind === "auth") {
+          await this.opts.keys.markBroken(userId, name, outcome.error.message);
         }
       }
     }
@@ -230,6 +239,8 @@ export class LlmRouter {
     userId: string,
     base: Omit<LlmRequest, "model">,
     deadline: number = Date.now() + CALL_BUDGET_MS,
+    /** Retry a hung first model once, only when no other provider is left to try. */
+    retryHang = true,
   ): Promise<{ ok: true; text: string } | { ok: false; error: LlmError }> {
     const provider = this.providers[name];
     let lastError: LlmError = new LlmError("model_not_found", "no models configured");
@@ -242,7 +253,7 @@ export class LlmRouter {
     for (let a = 0; a < attempts.length; a++) {
       const model = attempts[a]!;
       const isRetry = a === 1 && attempts[0] === model;
-      if (isRetry && lastError.kind !== "network") continue;
+      if (isRetry && (lastError.kind !== "network" || !retryHang)) continue;
       const left = deadline - Date.now();
       if (left < 1500) {
         lastError = new LlmError("network", "out of time for this request");

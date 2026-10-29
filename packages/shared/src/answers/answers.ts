@@ -39,7 +39,7 @@ const FIXED_RULES: [FixedKey, RegExp][] = [
   ],
   [
     "notice_period",
-    /notice period|when can you start|start date|earliest .*start|availability to start|how soon|verf[üu]gbar ab|eintrittstermin|fr[üu]hest(er|m[öo]glicher) (eintritt|start)|k[üu]ndigungsfrist|disponibilidad|fecha de (inicio|incorporaci[óo]n)|preaviso|disponibilit[ée]|pr[ée]avis|okres wypowiedzenia|dost[eę]pno[sś][cć]|aviso pr[ée]vio/i,
+    /notice period|when can you start|start date|date available|available (from|to start)|availability date|earliest .*start|availability to start|how soon|verf[üu]gbar ab|eintrittstermin|fr[üu]hest(er|m[öo]glicher) (eintritt|start)|k[üu]ndigungsfrist|disponibilidad|fecha de (inicio|incorporaci[óo]n)|preaviso|disponibilit[ée]|pr[ée]avis|okres wypowiedzenia|dost[eę]pno[sś][cć]|aviso pr[ée]vio/i,
   ],
   [
     "willing_to_relocate",
