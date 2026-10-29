@@ -23,6 +23,13 @@
       "flagsContain": ["fast-paced", "dynamic"]
     },
     {
+      "input": "Moved to micro‑services with 6 Python services.",
+      "maxWords": 80,
+      "text": "Moved to micro-services with 6 Python services.",
+      "overLimit": false,
+      "flagsContain": []
+    },
+    {
       "input": "one two three four five six",
       "maxWords": 5,
       "text": "one two three four five six",

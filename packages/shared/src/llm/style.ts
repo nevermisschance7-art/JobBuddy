@@ -65,6 +65,8 @@ export function applyStyle(input: string, maxWords: number): StyleResult {
 
   // Em dashes, and spaced en dashes used as dashes, become commas. Ranges like 2019–2021 stay.
   text = text.replace(/\s*—\s*/g, ", ").replace(/\s+–\s+/g, ", ");
+  // Typographic hyphens and non-breaking spaces (some models use them) become plain ones.
+  text = text.replace(/[‐‑]/g, "-").replace(/[  ]/g, " ");
 
   for (const [pattern, replacement] of REPLACEMENTS) {
     text = text.replace(pattern, (...args: unknown[]) => {
