@@ -1,7 +1,7 @@
 import { jobKeyFromUrl, pageAddress, resumeSchema, type Json } from "@jobbuddy/shared";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { draftAnswers, type StoredAnswer } from "@/lib/answers";
+import { draftAnswers, pickChoices, type StoredAnswer } from "@/lib/answers";
 import { extensionUser, unauthorized } from "@/lib/extension/auth";
 import { findJobForUrl, type FoundJob } from "@/lib/extension/jobs";
 import { createAdminClient } from "@/lib/supabase/server";
@@ -16,6 +16,16 @@ const body = z.object({
   company: z.string().min(1).max(200),
   description: z.string().max(20_000).default(""),
   questions: z.array(z.string().min(2).max(1000)).max(40).default([]),
+  /** Choice questions (Yes/No, dropdowns) for the AI to pick from the CV, where it can. */
+  choices: z
+    .array(
+      z.object({
+        question: z.string().min(2).max(1000),
+        options: z.array(z.string().min(1).max(200)).min(2).max(60),
+      }),
+    )
+    .max(15)
+    .default([]),
   /** Later pages of a multi-page form: add to this application (the address differs). */
   applicationId: z.string().uuid().optional(),
 });
@@ -95,7 +105,8 @@ export async function POST(request: Request) {
   }
 
   let drafted = 0;
-  if (input.questions.length > 0) {
+  let chosen = 0;
+  if (input.questions.length > 0 || input.choices.length > 0) {
     const { data: cv } = await supabase
       .from("cvs")
       .select("resume_json")
@@ -109,18 +120,36 @@ export async function POST(request: Request) {
       const questions = [...new Set(input.questions.map((q: string) => q.trim()))].map((text) => ({
         text,
       }));
-      const fresh = await draftAnswers(supabase, userId, job, resume.data, questions);
+      // Written answers and choice picks: one AI call each, side by side.
+      const [fresh, picks] = await Promise.all([
+        questions.length > 0
+          ? draftAnswers(supabase, userId, job, resume.data, questions)
+          : Promise.resolve([] as StoredAnswer[]),
+        input.choices.length > 0
+          ? pickChoices(supabase, userId, job, resume.data, input.choices).catch(() =>
+              input.choices.map(() => null),
+            )
+          : Promise.resolve([] as (string | null)[]),
+      ]);
+      const picked: StoredAnswer[] = input.choices.flatMap((c, i) => {
+        const answer = picks[i];
+        return answer
+          ? [{ question: c.question, kind: "drafted" as const, answer, maxWords: 10, choice: true }]
+          : [];
+      });
+      const all = [...fresh, ...picked];
       const before = (Array.isArray(existing?.answers)
         ? existing.answers
         : []) as unknown as StoredAnswer[];
-      const seen = new Set(fresh.map((a) => a.question.toLowerCase()));
-      const answers = [...before.filter((a) => !seen.has(a.question.toLowerCase())), ...fresh];
+      const seen = new Set(all.map((a) => a.question.toLowerCase()));
+      const answers = [...before.filter((a) => !seen.has(a.question.toLowerCase())), ...all];
       await supabase
         .from("applications")
         .update({ answers: answers as unknown as Json })
         .eq("id", applicationId)
         .eq("user_id", userId);
       drafted = fresh.length;
+      chosen = picked.length;
     }
   }
 
@@ -136,6 +165,7 @@ export async function POST(request: Request) {
   return NextResponse.json({
     applicationId,
     drafted,
+    chosen,
     reviewUrl: `${new URL(request.url).origin}/applications/${applicationId}`,
   });
 }

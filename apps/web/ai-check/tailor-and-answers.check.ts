@@ -2,7 +2,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { resumeSchema } from "@jobbuddy/shared";
 import { LlmRouter, type LlmCallLog, type ProviderKey } from "@jobbuddy/shared/llm";
 import { describe, expect, it } from "vitest";
-import { draftWithRouter } from "@/lib/answers-core";
+import { draftWithRouter, pickChoicesWithRouter } from "@/lib/answers-core";
 import { tailorWithRouter } from "@/lib/cv/tailor-core";
 import { renderDocx, renderPdf } from "@/lib/cv/render";
 
@@ -204,5 +204,35 @@ describe.skipIf(keys.length === 0)("AI check: tailoring and answers", () => {
     expect(answers[3]).toMatchObject({ kind: "fixed", answer: "85,000 EUR" });
     expect(answers[4]!.kind).toBe("missing_fixed");
     expect(answers[1]!.kind).toBe("drafted");
+  }, 180_000);
+
+  it("picks choice answers only where the CV supports them", async () => {
+    const started = Date.now();
+    const items = [
+      { question: "Do you have experience with Python?", options: ["Yes", "No"] },
+      {
+        question: "How many years of backend experience do you have?",
+        options: ["0-2", "3-5", "6+"],
+      },
+      { question: "Do you have experience in payments or fintech?", options: ["Yes", "No"] },
+      { question: "Do you have production experience with Kubernetes?", options: ["Yes", "No"] },
+      { question: "What is your English level?", options: ["B1", "B2", "C1", "Native"] },
+      {
+        question: "Are you open to working from our office 3 days a week?",
+        options: ["Yes", "No"],
+      },
+    ];
+    const picks = await pickChoicesWithRouter(router, "ai-check", job, cv, items, personal);
+    report("choices", started);
+    items.forEach((it, i) =>
+      console.log(`  ${it.question} -> ${picks[i] ?? "(left for the user)"}`),
+    );
+    expect(picks[0]).toBe("Yes");
+    expect(picks[2]).toBe("Yes");
+    // Not in the CV: never claimed.
+    expect(picks[3]).not.toBe("Yes");
+    expect(picks[4]).toBe("Native");
+    // Personal: filtered out before the AI.
+    expect(picks[5]).toBeNull();
   }, 180_000);
 });

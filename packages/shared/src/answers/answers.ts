@@ -299,3 +299,34 @@ export async function answerQuestions(
   await Promise.all([batch(), ...letters.map(one)]);
   return out;
 }
+
+// ---------------------------------------------------------------- choice questions
+
+/**
+ * Choice questions (Yes/No, dropdowns) the AI must never answer: personal circumstances,
+ * legal statements and consents. Sensitive ones are already caught by fixedKeyFor.
+ */
+const PERSONAL_CHOICE =
+  /agree|consent|accept|acknowledge|confirm|certify|attest|privacy|terms|policy|criminal|convict|offen[cs]e|arrest|background check|conflict of interest|related to|relative|family member|referr|interviewed|applied (here|before|to)|previously applied|open to|willing|comfortable|able to (travel|commute|work (on|in|from))|in.?person|office|on.?site|hybrid|travel|commut|shift|weekend|overtime|night|accommodat|adjustment|contact (me|you)|future (job|opportunit)|newsletter|marketing|text message|sms|whatsapp|signature|18 (years|or older)|over 18|of legal age|drug|non.?compete|security clearance|clearance|government|military|union|how (did|do) you/i;
+
+/** True when an AI may pick an answer for this choice question from the CV. */
+export function aiMayChoose(question: string): boolean {
+  return !fixedKeyFor(question) && !PERSONAL_CHOICE.test(question);
+}
+
+export type ChoiceQuestion = { question: string; options: string[] };
+
+/**
+ * Keeps only valid picks: the exact text of one of the question's options. Anything else
+ * (an invented option, "unsure", empty) means the user answers it.
+ */
+export function validChoices(
+  items: ChoiceQuestion[],
+  picks: { n: number; answer: string }[],
+): (string | null)[] {
+  return items.map((item, i) => {
+    const raw = picks.find((p) => p.n === i + 1)?.answer?.trim().toLowerCase() ?? "";
+    if (!raw || raw === "unsure") return null;
+    return item.options.find((o) => o.trim().toLowerCase() === raw) ?? null;
+  });
+}

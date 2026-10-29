@@ -1,7 +1,8 @@
-import { fixedKeyFor, isFormHost, jobKeyFromUrl } from "@jobbuddy/shared";
+import { fixedKeyFor, isFormHost, jobKeyFromUrl, questionSimilarity } from "@jobbuddy/shared";
 import type { FillData, LookupResult, Message, PrepareResult, Reply } from "../types";
 import {
   attachFile,
+  choiceLabels,
   collectFields,
   fillComboboxes,
   fillForm,
@@ -142,16 +143,6 @@ function pageInfo() {
   return { title, company, description };
 }
 
-function highlight(fields: FormField[]): void {
-  for (const f of fields) {
-    const el = target(f);
-    el.style.outline = "2px solid #f59e0b";
-    el.style.outlineOffset = "3px";
-    el.style.borderRadius = "6px";
-    el.title = "JobBuddy couldn't fill this one. Please fill it yourself.";
-  }
-}
-
 function target(f: FormField): HTMLElement {
   if (f.options || f.choices) {
     const first = (f.options?.[0]?.el ?? f.choices?.[0]?.el) as HTMLElement;
@@ -171,25 +162,39 @@ function fileFrom(cv: { fileName: string; base64: string }): File {
   return new File([bytes], cv.fileName, { type: "application/pdf" });
 }
 
-/** Free-text questions nobody has answered yet, which the AI may draft (never sensitive ones). */
-function draftable(missed: FormField[]): string[] {
-  return [
-    ...new Set(
-      missed
-        .filter(
-          (f) =>
-            (f.kind === "question" || f.kind === "cover_letter") &&
-            !f.options &&
-            !f.choices &&
-            !f.combobox &&
-            f.el.tagName !== "SELECT" &&
-            !fixedKeyFor(f.label) &&
-            f.label.length > 2,
-        )
-        .map((f) => f.label),
-    ),
+type AiWork = { questions: string[]; choices: { question: string; options: string[] }[] };
+
+/**
+ * Unanswered questions the AI may help with, never sensitive ones: free text to draft, and
+ * choice questions (radios, Yes/No buttons, selects) to pick from the CV. Required questions
+ * and optional ones are kept apart: required ones are done on Fill, optional ones on request.
+ */
+function aiWork(missed: FormField[], required: boolean): AiWork {
+  const open = missed.filter(
+    (f) =>
+      f.required === required &&
+      (f.kind === "question" || f.kind === "cover_letter") &&
+      !fixedKeyFor(f.label) &&
+      f.label.length > 2,
+  );
+  const isChoice = (f: FormField) => Boolean(f.options || f.choices || f.el.tagName === "SELECT");
+  const questions = [
+    ...new Set(open.filter((f) => !isChoice(f) && !f.combobox).map((f) => f.label)),
   ].slice(0, 12);
+  const choices = open
+    .filter((f) => isChoice(f) && f.kind === "question")
+    .map((f) => ({
+      question: f.label,
+      options: choiceLabels(f)
+        .map((o) => o.trim())
+        .filter((o) => o && !/^(select|choose|please select|--)/i.test(o)),
+    }))
+    .filter((c) => c.options.length >= 2)
+    .slice(0, 15);
+  return { questions, choices };
 }
+
+const workSize = (w: AiWork) => w.questions.length + w.choices.length;
 
 // ---------------------------------------------------------------- the one-button flow
 
@@ -273,7 +278,8 @@ async function runSteps(): Promise<void> {
     ...(result.application ?? result.base),
     jobCompany: result.job?.company ?? pageInfo().company,
   });
-  const questions = draftable(firstFill.missed);
+  // Required questions are answered now; optional ones only if the user asks (see fill()).
+  const work = aiWork(firstFill.missed, true);
 
   // 1. The application (created now if this job isn't prepared yet).
   let applicationId = result.application?.applicationId ?? null;
@@ -292,10 +298,10 @@ async function runSteps(): Promise<void> {
   const needsCv = !result.application?.cv;
   const [cv, drafts] = await Promise.all([
     needsCv ? send<{ note: string | null }>({ type: "cv", applicationId }) : Promise.resolve(null),
-    questions.length > 0
+    workSize(work) > 0
       ? send<PrepareResult>({
           type: "prepare",
-          input: { url: location.href, ...info, questions, applicationId },
+          input: { url: location.href, ...info, ...work, applicationId },
         })
       : Promise.resolve(null),
   ]);
@@ -318,7 +324,8 @@ async function fill(
     ...(result.application ?? result.base),
     jobCompany: result.job?.company ?? pageInfo().company,
   };
-  const report = fillForm(collectFields(document), data);
+  const fields = collectFields(document);
+  const report = fillForm(fields, data);
   await fillComboboxes(report.dropdowns, report);
 
   let cvLine = "";
@@ -332,32 +339,55 @@ async function fill(
         ? `<div class="row warn">⚠ CV not attached. <a href="#" data-act="download">Download it</a> and drag it in.</div>`
         : `<div class="row warn">⚠ No CV yet${extra.cvError ? `: ${esc(extra.cvError)}` : ""}.</div>`;
   }
-  highlight(report.missed);
+
+  // Required fields left: orange. Optional ones left: no outline (the form accepts them empty).
+  // Answers written or picked by the AI: blue, to check.
+  const required = report.missed.filter((f) => f.required);
+  const optional = report.missed.filter((f) => !f.required);
+  const byAi = fields.filter(
+    (f) =>
+      !report.missed.includes(f) &&
+      (f.kind === "question" || f.kind === "cover_letter") &&
+      !fixedKeyFor(f.label) &&
+      data.answers.some(
+        (a) =>
+          a.ai &&
+          (a.isCoverLetter
+            ? f.kind === "cover_letter"
+            : questionSimilarity(f.label, a.question) >= 0.6),
+      ),
+  );
+  clearOutlines();
+  outline(
+    required,
+    "#f59e0b",
+    "JobBuddy couldn't fill this required field. Please fill it yourself.",
+  );
+  outline(byAi, "#4f46e5", "Written or picked by AI from your CV. Please check it.");
   if (data.applicationId) sessionStorage.setItem(PENDING, data.applicationId);
-  const missedCount = report.missed.length;
+  const optionalWork = aiWork(report.missed, false);
+  let next = 0;
 
   render(
     `<p class="job">${esc(result.job?.title ?? pageInfo().title)}</p>
      <div class="row ok">✓ ${report.filled} field${report.filled === 1 ? "" : "s"} filled</div>
      ${cvLine}
-     ${missedCount ? `<div class="row warn">⚠ ${missedCount} left for you, outlined in orange</div>` : ""}
+     ${byAi.length ? `<div class="row" style="color:#4f46e5">✎ ${byAi.length} answer${byAi.length === 1 ? "" : "s"} by AI, outlined in blue: please check</div>` : ""}
+     ${required.length ? `<div class="row warn">⚠ ${required.length} required left for you, outlined in orange</div>` : `<div class="row ok">✓ Every required field is filled</div>`}
+     ${optional.length ? `<div class="row muted">○ ${optional.length} optional left empty (fine to skip)</div>` : ""}
      ${extra.draftError ? `<div class="row warn">⚠ Couldn't draft answers: ${esc(extra.draftError)}</div>` : ""}
-     ${missedCount ? `<button class="main" data-act="next">Show me the next one</button>` : ""}
+     ${required.length ? `<button class="main" data-act="next">Show me the next required one</button>` : ""}
+     ${workSize(optionalWork) && data.applicationId ? `<button class="second" data-act="optional">Answer ${workSize(optionalWork)} optional question${workSize(optionalWork) === 1 ? "" : "s"} too</button>` : ""}
      <p class="muted">Check everything, then press Submit yourself. I never submit for you.
        ${result.reviewUrl ? `<br><a href="#" data-act="review">CV and answers on JobBuddy</a>` : ""}</p>`,
     {
       next: () => {
-        const left = report.missed.filter((f) => {
-          const el = f.el as unknown as HTMLInputElement;
-          return f.options || f.choices || f.combobox ? true : !el.value?.trim();
-        });
-        const f = left[0];
+        const f = required[next++ % required.length];
         if (!f) return;
-        const el = target(f);
-        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        target(f).scrollIntoView({ behavior: "smooth", block: "center" });
         (f.el as unknown as HTMLElement).focus?.();
-        report.missed.push(report.missed.shift()!);
       },
+      optional: () => void answerOptional(optionalWork, data.applicationId!),
       download: () => {
         if (!data.cv) return;
         const a = document.createElement("a");
@@ -368,6 +398,42 @@ async function fill(
       review: () => void send({ type: "open", url: result.reviewUrl! }),
     },
   );
+}
+
+/** "Answer N optional questions too": one more AI call, then fill again. */
+async function answerOptional(work: AiWork, applicationId: string): Promise<void> {
+  render(
+    `<ul class="steps"><li class="now"><span class="dot"></span>Answering optional questions</li></ul>`,
+  );
+  const reply = await send<PrepareResult>({
+    type: "prepare",
+    input: { url: location.href, ...pageInfo(), ...work, applicationId },
+  });
+  const result = await lookup();
+  if (result?.application) {
+    await fill(result, { draftError: reply.ok ? null : reply.error });
+  }
+}
+
+const outlined = new Set<HTMLElement>();
+
+function clearOutlines(): void {
+  for (const el of outlined) {
+    el.style.outline = "";
+    el.style.outlineOffset = "";
+    el.removeAttribute("title");
+  }
+  outlined.clear();
+}
+
+function outline(fields: FormField[], color: string, title: string): void {
+  for (const f of fields) {
+    const el = target(f);
+    el.style.outline = `2px solid ${color}`;
+    el.style.outlineOffset = "3px";
+    el.title = title;
+    outlined.add(el);
+  }
 }
 
 function showError(reply: { error: string; signedOut?: boolean }): void {

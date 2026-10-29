@@ -482,8 +482,8 @@ export function valueFor(field: FormField, data: FillData): string | null {
   }
 }
 
-/** The answer choices a field offers, whatever kind of control it is. */
-function choiceLabels(field: FormField): string[] {
+/** The answer choices a field offers (radios, buttons, select options). */
+export function choiceLabels(field: FormField): string[] {
   if (field.options) return field.options.map((o) => o.label);
   if (field.choices) return field.choices.map((c) => c.label);
   const el = field.el;

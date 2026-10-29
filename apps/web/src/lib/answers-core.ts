@@ -4,7 +4,10 @@ import {
   type DraftInput,
   type PastAnswer,
   type Resume,
+  aiMayChoose,
+  type ChoiceQuestion,
   unsupportedIn,
+  validChoices,
 } from "@jobbuddy/shared";
 import { applyStyle, type LlmRouter, type PersonalInfo } from "@jobbuddy/shared/llm";
 import { z } from "zod";
@@ -14,7 +17,11 @@ import { z } from "zod";
 export type AnswerJob = { title: string; company_name: string; description_text: string };
 
 /** What the board stores in applications.answers: the draft plus the user's final text. */
-export type StoredAnswer = DraftedAnswer & { final?: string };
+export type StoredAnswer = DraftedAnswer & {
+  final?: string;
+  /** A choice question (Yes/No, dropdown) whose option the AI picked from the CV. */
+  choice?: boolean;
+};
 
 const SYSTEM = `You write a job application answer for the candidate, as the candidate ("I").
 Rules:
@@ -28,10 +35,17 @@ Rules:
 Placeholders like {{NAME}} stand for real values: keep them as they are.`;
 
 function cvFacts(r: Resume): string {
+  // Dates are included so "how many years of X?" can be answered from the CV.
   const work = r.work
-    .slice(0, 4)
-    .map((w) => `- ${w.position} at ${w.name}: ${w.highlights.slice(0, 4).join("; ")}`)
+    .slice(0, 6)
+    .map(
+      (w) =>
+        `- ${w.position} at ${w.name} (${w.startDate ?? "?"} to ${w.endDate ?? "now"}): ${w.highlights.slice(0, 4).join("; ")}`,
+    )
     .join("\n");
+  const languages = r.languages
+    .map((l) => (l.fluency ? `${l.language} (${l.fluency})` : l.language))
+    .join(", ");
   const skills = r.skills
     .flatMap((s) => s.keywords)
     .slice(0, 30)
@@ -44,6 +58,7 @@ function cvFacts(r: Resume): string {
     r.basics.summary ? `Summary: ${r.basics.summary}` : "",
     `Experience:\n${work}`,
     `Skills: ${skills}`,
+    languages ? `Languages: ${languages}` : "",
     projects ? `Projects:\n${projects}` : "",
   ]
     .filter(Boolean)
@@ -143,5 +158,60 @@ export async function draftWithRouter(
         return raw ? applyStyle(raw, input.maxWords).text : "";
       });
     },
+  });
+}
+
+// ---------------------------------------------------------------- choice questions
+
+const SYSTEM_CHOICES = `You answer multiple-choice questions on a job application for the candidate.
+Rules:
+- Use ONLY facts in the candidate's CV below. Today's date is given; compute years of experience from the job dates.
+- For each question, return exactly one of its options, copied character for character.
+- If the CV does not clearly support one option, answer "unsure". Never guess. Never assume skills or experience the CV doesn't show.
+- Return JSON: {"answers": [{"n": 1, "answer": "..."}, ...]}.
+Placeholders like {{NAME}} stand for real values: keep them as they are.`;
+
+const choicesSchema = z.object({
+  answers: z.array(z.object({ n: z.number().int(), answer: z.string() })),
+});
+
+/**
+ * Picks answers for experience and skill choice questions (Yes/No, dropdowns) from the CV,
+ * in one AI call. Personal and sensitive questions are filtered out before (aiMayChoose);
+ * a pick that isn't exactly one of the options is dropped (validChoices). Null = unsure.
+ */
+export async function pickChoicesWithRouter(
+  router: LlmRouter,
+  userId: string,
+  job: AnswerJob,
+  cv: Resume,
+  items: ChoiceQuestion[],
+  personal: PersonalInfo,
+): Promise<(string | null)[]> {
+  const allowed = items.filter((i) => aiMayChoose(i.question) && i.options.length >= 2);
+  if (allowed.length === 0) return items.map(() => null);
+  const list = allowed
+    .map(
+      (i, n) => `${n + 1}. ${i.question}\n   Options: ${i.options.map((o) => `"${o}"`).join(", ")}`,
+    )
+    .join("\n");
+  const result = await router.generateJson(
+    "draft_answer",
+    choicesSchema,
+    `Today: ${new Date().toISOString().slice(0, 10)}
+Job: ${job.title} at ${job.company_name}
+
+The candidate's CV:
+${cvFacts(cv)}
+
+Questions:
+${list}`,
+    userId,
+    { system: SYSTEM_CHOICES, personal },
+  );
+  const picks = validChoices(allowed, result.answers);
+  return items.map((i) => {
+    const k = allowed.indexOf(i);
+    return k >= 0 ? (picks[k] ?? null) : null;
   });
 }

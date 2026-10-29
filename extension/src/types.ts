@@ -30,7 +30,7 @@ export type FillData = {
   status: string | null;
   profile: FillProfile;
   fixedAnswers: Record<string, string>;
-  answers: { question: string; answer: string; isCoverLetter: boolean }[];
+  answers: { question: string; answer: string; isCoverLetter: boolean; ai?: boolean }[];
   cv: { fileName: string; base64: string } | null;
   /** The employer of the job being applied to (set by the content script). */
   jobCompany?: string | null;
@@ -50,10 +50,17 @@ export type PrepareInput = {
   company: string;
   description: string;
   questions: string[];
+  /** Choice questions for the AI to pick from the CV (experience and skills only). */
+  choices?: { question: string; options: string[] }[];
   applicationId?: string;
 };
 
-export type PrepareResult = { applicationId: string; drafted: number; reviewUrl: string };
+export type PrepareResult = {
+  applicationId: string;
+  drafted: number;
+  chosen?: number;
+  reviewUrl: string;
+};
 
 /** Messages from content scripts and the popup to the background worker. */
 export type Message =

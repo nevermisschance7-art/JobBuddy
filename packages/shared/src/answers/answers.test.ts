@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   adaptAnswer,
+  aiMayChoose,
+  validChoices,
   answerQuestions,
   fixedKeyFor,
   questionSimilarity,
@@ -187,5 +189,33 @@ describe("parsing", () => {
       "Why us?",
       "Notice period?",
     ]);
+  });
+});
+
+describe("choice questions", () => {
+  it("lets the AI answer experience questions, never personal ones", () => {
+    expect(aiMayChoose("Do you have experience in FinTech?")).toBe(true);
+    expect(aiMayChoose("Do you have 4+ years of QA Engineering experience?")).toBe(true);
+    expect(aiMayChoose("What is your English proficiency level?")).toBe(true);
+    expect(aiMayChoose("Do you have any criminal convictions?")).toBe(false);
+    expect(aiMayChoose("Have you ever interviewed at Anthropic before?")).toBe(false);
+    expect(aiMayChoose("Are you open to working in-person in one of our offices?")).toBe(false);
+    expect(aiMayChoose("I agree to the privacy policy")).toBe(false);
+    expect(aiMayChoose("Do you require visa sponsorship?")).toBe(false);
+  });
+
+  it("keeps only picks that are one of the options", () => {
+    const items = [
+      { question: "FinTech?", options: ["Yes", "No"] },
+      { question: "Years?", options: ["0-2", "3-5", "6+"] },
+      { question: "Level?", options: ["B1", "B2", "C1"] },
+    ];
+    expect(
+      validChoices(items, [
+        { n: 1, answer: "yes" },
+        { n: 2, answer: "7 years" },
+        { n: 3, answer: "unsure" },
+      ]),
+    ).toEqual(["Yes", null, null]);
   });
 });

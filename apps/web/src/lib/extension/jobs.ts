@@ -142,6 +142,8 @@ export async function fillData(supabase: Supabase, userId: string, applicationId
       question: a.question,
       answer: (a.final ?? a.answer ?? "").trim(),
       isCoverLetter: Boolean(a.isCoverLetter),
+      // Written or picked by the AI and not yet saved by the user: shown in blue to check.
+      ai: a.kind === "drafted" && a.final === undefined,
     }))
     .filter((a) => a.answer);
 

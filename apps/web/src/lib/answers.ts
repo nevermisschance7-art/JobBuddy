@@ -1,8 +1,13 @@
 import "server-only";
-import type { PastAnswer, Resume } from "@jobbuddy/shared";
+import type { ChoiceQuestion, PastAnswer, Resume } from "@jobbuddy/shared";
 import { personalInfoFor, routerFor } from "@/lib/ai/router";
 import type { createClient } from "@/lib/supabase/server";
-import { draftWithRouter, type AnswerJob, type StoredAnswer } from "./answers-core";
+import {
+  draftWithRouter,
+  pickChoicesWithRouter,
+  type AnswerJob,
+  type StoredAnswer,
+} from "./answers-core";
 
 export type { AnswerJob, StoredAnswer } from "./answers-core";
 
@@ -41,6 +46,24 @@ export async function draftAnswers(
       answer: m.final_answer,
       company: m.company,
     })),
+    await personalInfoFor(supabase, userId),
+  );
+}
+
+/** AI picks for experience/skill choice questions, from the CV (null = left to the user). */
+export async function pickChoices(
+  supabase: Supabase,
+  userId: string,
+  job: AnswerJob,
+  cv: Resume,
+  items: ChoiceQuestion[],
+): Promise<(string | null)[]> {
+  return pickChoicesWithRouter(
+    routerFor(supabase),
+    userId,
+    job,
+    cv,
+    items,
     await personalInfoFor(supabase, userId),
   );
 }
