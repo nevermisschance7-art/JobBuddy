@@ -32,3 +32,15 @@ def cv_skills(resume: dict[str, Any]) -> list[str]:
             if isinstance(kw, str) and kw.strip():
                 seen.setdefault(kw.strip().lower(), kw.strip())
     return list(seen.values())
+
+
+def cv_roles(resume: dict[str, Any]) -> set[str]:
+    """Kinds of role the person has held (backend, platform, data...), from their titles."""
+    from .tech import role_families
+
+    titles = [(resume.get("basics") or {}).get("label") or ""]
+    titles += [str(job.get("position") or "") for job in (resume.get("work") or [])[:6]]
+    out: set[str] = set()
+    for title in titles:
+        out |= role_families(title)
+    return out

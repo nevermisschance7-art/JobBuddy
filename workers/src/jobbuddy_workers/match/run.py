@@ -15,13 +15,13 @@ from typing import Any, Protocol
 from zoneinfo import ZoneInfo
 
 from ..embed import Embedder
-from .cv import cv_skills, cv_text
+from .cv import cv_roles, cv_skills, cv_text
 from .rules import JobFacts, Result, UserFilters, evaluate, is_hot, top_reasons
+from .tech import cv_terms
 
 log = logging.getLogger(__name__)
 
 MAX_HOT_PER_DAY = 3
-MIN_STORED_SCORE = 30  # passing jobs below this are noise; never shown at any sensible setting
 
 
 @dataclass
@@ -141,6 +141,8 @@ def _match_user(
         store.save_cv_embedding(user.cv_id, embedding)
 
     user.filters.cv_skills = cv_skills(user.resume)
+    user.filters.cv_terms = cv_terms(user.resume)
+    user.filters.cv_roles = cv_roles(user.resume)
     full = cv_changed or user.filters_updated_at > (
         user.matched_at or datetime.min.replace(tzinfo=UTC)
     )
@@ -158,7 +160,7 @@ def _match_user(
     hot: list[tuple[JobFacts, Result]] = []
     for job in jobs:
         result = evaluate(job, user.filters, now)
-        visible = result.passed and result.score >= MIN_STORED_SCORE
+        visible = result.passed
         near_miss = not result.passed and result.score >= user.min_score
         if visible or near_miss:
             keep.append(match_row(user.user_id, job, result))

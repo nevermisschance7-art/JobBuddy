@@ -186,14 +186,64 @@ def test_compensation():
     assert comp() == 2
 
 
-def test_similarity_drives_technical_score():
+def test_ads_naming_few_technologies_fall_back_to_closeness():
     low = evaluate(job(similarity=0.30), filters(), NOW).score
     mid = evaluate(job(similarity=0.475), filters(), NOW).score
     high = evaluate(job(similarity=0.70), filters(), NOW).score
     assert low < mid < high
-    assert low == 30  # nothing from similarity, all 30 from the one must-have skill
-    assert mid == 65  # half of 70 plus the skill
-    assert high == 100
+    assert low == 0
+    assert high == 85
+
+
+PYTHON_CV = {
+    "basics": {"label": "Senior Backend Engineer", "summary": "Python backend engineer."},
+    "work": [
+        {"position": "Backend Engineer", "name": "Acme",
+         "highlights": ["Built Python APIs with Django and PostgreSQL on AWS", "Python services"]},
+    ],
+    "skills": [
+        {"name": "Backend", "keywords": ["Python", "Django", "PostgreSQL", "AWS", "Docker"]}
+    ],
+}  # fmt: skip
+
+
+def tech_filters(**kw):
+    from jobbuddy_workers.match.cv import cv_roles
+    from jobbuddy_workers.match.tech import cv_terms
+
+    return filters(
+        must_have_skills=[], cv_terms=cv_terms(PYTHON_CV), cv_roles=cv_roles(PYTHON_CV), **kw
+    )
+
+
+def test_tech_fit_counts_the_jobs_technologies_you_have():
+    strong = job(
+        title="Senior Python Backend Engineer",
+        description_text="You will build APIs in Python and Django on PostgreSQL and AWS. "
+        "Docker every day. Nice to have: Kubernetes.",
+        similarity=0.3,
+    )
+    other_stack = job(
+        title="Senior Java Engineer",
+        description_text="Java and Spring Boot services on Oracle, Kotlin a plus.",
+        similarity=0.5,
+    )
+    r = evaluate(strong, tech_filters(), NOW)
+    assert r.score >= 85, r.breakdown["technical"]
+    assert "python" in str(r.breakdown["technical"]["reason"])
+    assert evaluate(other_stack, tech_filters(), NOW).score < 25
+
+
+def test_nice_to_have_counts_less_than_required():
+    required = job(
+        id="r", title="Backend Engineer", description_text="Python, Kubernetes and Kafka required."
+    )
+    nice = job(
+        id="n",
+        title="Backend Engineer",
+        description_text="Python required. Nice to have: Kubernetes and Kafka.",
+    )
+    assert evaluate(nice, tech_filters(), NOW).score > evaluate(required, tech_filters(), NOW).score
 
 
 def test_sponsorship_unknown_caps_eligibility():

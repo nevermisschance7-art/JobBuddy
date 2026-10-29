@@ -8,9 +8,11 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
+from functools import lru_cache
 
 from ..geo import COUNTRIES, region_covers
 from ..jobs.normalize import norm_key
+from .tech import job_terms, main_stack, role_families
 
 # The score is tech fit only (0-100). Location, remote, seniority and sponsorship are pass/fail
 # filters; their parts are kept in the breakdown as information for the job card, with the
@@ -45,6 +47,9 @@ class UserFilters:
     salary_currency: str | None = None
     employment_types: list[str] = field(default_factory=lambda: ["full_time"])
     cv_skills: list[str] = field(default_factory=list)
+    # From the confirmed CV: technologies with weights, and kinds of role held.
+    cv_terms: dict[str, float] = field(default_factory=dict)
+    cv_roles: set[str] = field(default_factory=set)
 
 
 @dataclass
@@ -186,24 +191,62 @@ def _part(points: float, max_points: int, reason: str) -> dict[str, object]:
     return {"points": round(max(0.0, min(points, max_points)), 1), "reason": reason}
 
 
+@lru_cache(maxsize=20_000)
+def _job_terms(job_id: str, title: str, description: str) -> tuple[tuple[str, float], ...]:
+    # Same job, many users: worked out once per run.
+    return tuple(job_terms(title, description).items())
+
+
+def _closeness(similarity: float) -> float:
+    """0 to 1 from CV/job text closeness. Calibrated on real data (MiniLM, CV vs job):
+    median job ~0.33, best matches ~0.60."""
+    return max(0.0, min(1.0, (similarity - SIM_FLOOR) / (SIM_FULL - SIM_FLOOR)))
+
+
 def technical(job: JobFacts, f: UserFilters) -> dict[str, object]:
-    # Calibrated on real data (MiniLM, CV vs job): median job ~0.33, top 10% ~0.45+,
-    # best matches ~0.60. So 0 points at 0.35 and full points at 0.60.
-    # 70 points from closeness to the CV, 30 from the skills the job mentions.
-    sim_points = max(0.0, min(70.0, 70 * (job.similarity - SIM_FLOOR) / (SIM_FULL - SIM_FLOOR)))
-    text = f"{job.title}\n{job.description_text}\n{' '.join(job.tags)}"
-    skills = f.must_have_skills or f.cv_skills[:15]
-    if skills:
-        found = [s for s in skills if mentions(text, s)]
-        skill_points = 30 * len(found) / len(skills)
-        label = "must-have" if f.must_have_skills else "of your top"
-        reason = f"Mentions {len(found)} {label} skills" + (
-            f" ({', '.join(found[:3])})" if found else ""
+    """Tech fit only: the technologies the job asks for against the ones the CV shows.
+
+    60 points: share of the job's technologies the CV has (title 3x, required 1-2x,
+               "nice to have" 0.4x).
+    25 points: the person's main stack (their most used technologies) is in the job.
+    15 points: the kind of role (backend, platform, data...) matches their own titles.
+    A job ad that names fewer than two technologies, or a CV without any, falls back to how
+    close the CV and the ad read (so vague ads neither shine nor vanish).
+    """
+    weights = dict(_job_terms(job.id, job.title, f"{job.description_text}\n{' '.join(job.tags)}"))
+    cv = f.cv_terms
+    if len(weights) < 2 or not cv:
+        points = 85 * _closeness(job.similarity)
+        return _part(
+            points, WEIGHTS["technical"], "Few technologies named; scored by closeness to your CV"
         )
+
+    have = sorted((t for t in weights if t in cv), key=lambda t: -weights[t])
+    coverage = sum(weights[t] for t in have) / sum(weights.values())
+    stack = [t for t in main_stack(cv) if t in weights]
+    job_roles = role_families(job.title)
+    if not job_roles:
+        role_points = 8.0  # a general engineering title
+    elif job_roles & f.cv_roles:
+        role_points = 15.0
     else:
-        skill_points = 15
-        reason = "Closeness to your CV"
-    return _part(sim_points + skill_points, WEIGHTS["technical"], reason)
+        role_points = 0.0
+    tech_points = 60 * coverage + 25 * min(1.0, len(stack) / 2) + role_points
+    # An ad naming only a few technologies says little: trust the technology match less and
+    # blend in the text closeness (full trust from about six required technologies).
+    trust = min(1.0, sum(weights.values()) / 6)
+    points = trust * tech_points + (1 - trust) * 85 * _closeness(job.similarity)
+
+    # Must-have skills the user set: missing ones pull the score down.
+    if f.must_have_skills:
+        text = f"{job.title}\n{job.description_text}"
+        found = sum(1 for s in f.must_have_skills if mentions(text, s))
+        points *= 0.5 + 0.5 * found / len(f.must_have_skills)
+
+    reason = f"You have {len(have)} of the {len(weights)} technologies it asks for" + (
+        f" ({', '.join(have[:4])})" if have else ""
+    )
+    return _part(points, WEIGHTS["technical"], reason)
 
 
 def seniority(job: JobFacts, f: UserFilters) -> dict[str, object]:
