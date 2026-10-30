@@ -5,7 +5,12 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { failed, saved, type ActionState } from "@/lib/action-state";
-import { AI_PROVIDERS, validateAiKey, type AiProvider } from "@/lib/ai-keys/validate";
+import {
+  AI_PROVIDERS,
+  MAX_KEYS_PER_PROVIDER,
+  validateAiKey,
+  type AiProvider,
+} from "@/lib/ai-keys/validate";
 import { encryptSecret } from "@/lib/crypto";
 import { cvKind, extractCvText, MAX_CV_BYTES } from "@/lib/cv/extract";
 import { readCv } from "@/lib/cv/ai-resume";
@@ -267,19 +272,28 @@ export async function saveAiKey(_prev: ActionState, formData: FormData): Promise
   if (!key) return failed("Paste your key first.");
   if (key.length > 300) return failed("That doesn't look like an API key.");
 
+  const hint = key.slice(-4);
+  const { data: existing } = await supabase
+    .from("ai_keys")
+    .select("id, key_hint")
+    .eq("user_id", user.id)
+    .eq("provider", provider);
+  if ((existing ?? []).some((k) => k.key_hint === hint)) {
+    return failed("This key is already saved.");
+  }
+  if ((existing ?? []).length >= MAX_KEYS_PER_PROVIDER) {
+    return failed(`You can keep up to ${MAX_KEYS_PER_PROVIDER} keys here. Remove one first.`);
+  }
+
   const problem = await validateAiKey(provider, key);
   if (problem) return failed(problem);
 
-  const { error } = await supabase.from("ai_keys").upsert(
-    {
-      user_id: user.id,
-      provider,
-      encrypted_key: encryptSecret(key, serverEnv("APP_ENCRYPTION_KEY")),
-      last_error: null,
-      quota_reset_at: null,
-    },
-    { onConflict: "user_id,provider" },
-  );
+  const { error } = await supabase.from("ai_keys").insert({
+    user_id: user.id,
+    provider,
+    encrypted_key: encryptSecret(key, serverEnv("APP_ENCRYPTION_KEY")),
+    key_hint: hint,
+  });
   if (error) return failed("Saving failed. Try again.");
 
   revalidatePath("/", "layout");
@@ -288,10 +302,8 @@ export async function saveAiKey(_prev: ActionState, formData: FormData): Promise
 
 export async function removeAiKey(formData: FormData) {
   const { supabase, user } = await requireUser();
-  const provider = text(formData, "provider");
-  if (provider) {
-    await supabase.from("ai_keys").delete().eq("user_id", user.id).eq("provider", provider);
-  }
+  const id = text(formData, "key_id");
+  if (id) await supabase.from("ai_keys").delete().eq("user_id", user.id).eq("id", id);
   revalidatePath("/", "layout");
 }
 

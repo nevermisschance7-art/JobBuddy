@@ -1,7 +1,9 @@
 import "server-only";
 
-export type AiProvider = "gemini" | "groq" | "openrouter";
-export const AI_PROVIDERS: AiProvider[] = ["gemini", "groq", "openrouter"];
+export type AiProvider = "gemini" | "groq" | "cerebras" | "mistral" | "openrouter";
+export const AI_PROVIDERS: AiProvider[] = ["gemini", "groq", "cerebras", "mistral", "openrouter"];
+/** Keys one person can keep per provider (several free accounts add up). */
+export const MAX_KEYS_PER_PROVIDER = 5;
 
 /** A tiny authenticated call per provider. Returns an error message, or null when the key works. */
 export async function validateAiKey(provider: AiProvider, key: string): Promise<string | null> {
@@ -13,6 +15,16 @@ export async function validateAiKey(provider: AiProvider, key: string): Promise<
       }),
     groq: () =>
       fetch("https://api.groq.com/openai/v1/models", {
+        headers: { Authorization: `Bearer ${key}` },
+        signal: AbortSignal.timeout(15_000),
+      }),
+    cerebras: () =>
+      fetch("https://api.cerebras.ai/v1/models", {
+        headers: { Authorization: `Bearer ${key}` },
+        signal: AbortSignal.timeout(15_000),
+      }),
+    mistral: () =>
+      fetch("https://api.mistral.ai/v1/models", {
         headers: { Authorization: `Bearer ${key}` },
         signal: AbortSignal.timeout(15_000),
       }),

@@ -1,4 +1,5 @@
 import "server-only";
+import { AI_PROVIDERS } from "@/lib/ai-keys/validate";
 import { resumeSchema, type Resume } from "@jobbuddy/shared";
 import type { KeyStatus } from "@/components/forms/ai-keys-form";
 import { requireUser } from "@/lib/data";
@@ -46,10 +47,19 @@ export async function loadKeyStatuses(): Promise<KeyStatus[]> {
   const { supabase, user } = await requireUser();
   const { data } = await supabase
     .from("ai_keys")
-    .select("provider, last_error")
-    .eq("user_id", user.id);
-  return (["gemini", "groq", "openrouter"] as const).map((provider) => {
-    const row = data?.find((k) => k.provider === provider);
-    return { provider, saved: Boolean(row), lastError: row?.last_error ?? null };
-  });
+    .select("id, provider, key_hint, last_error, quota_reset_at")
+    .eq("user_id", user.id)
+    .order("created_at");
+  const now = new Date().toISOString();
+  return AI_PROVIDERS.map((provider) => ({
+    provider,
+    keys: (data ?? [])
+      .filter((k) => k.provider === provider)
+      .map((k) => ({
+        id: k.id,
+        hint: k.key_hint,
+        lastError: k.last_error,
+        resting: Boolean(k.quota_reset_at && k.quota_reset_at > now),
+      })),
+  }));
 }

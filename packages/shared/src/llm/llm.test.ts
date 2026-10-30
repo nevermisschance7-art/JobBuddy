@@ -64,6 +64,8 @@ const CONFIG: ModelsConfig = {
   providers: {
     gemini: { enabled: true, models: ["g-new", "g-old"] },
     groq: { enabled: true, models: ["q-1"] },
+    cerebras: { enabled: false, models: ["c-1"] },
+    mistral: { enabled: false, models: ["m-1"] },
     openrouter: { enabled: true, models: ["o-1"] },
     anthropic: { enabled: false, models: ["c-1"] },
   },
@@ -74,6 +76,8 @@ function setup(keys: Partial<Record<ProviderName, Partial<ProviderKey>>>, shared
   const fakes = {
     gemini: new FakeProvider("gemini"),
     groq: new FakeProvider("groq"),
+    cerebras: new FakeProvider("cerebras"),
+    mistral: new FakeProvider("mistral"),
     openrouter: new FakeProvider("openrouter"),
     anthropic: new FakeProvider("anthropic"),
   };
@@ -176,6 +180,14 @@ describe("LlmRouter", () => {
     fakes.groq.queue('{"title":"x","years":0}');
     await router.generateJson("t", schema, "p", "u1");
     expect(broken).toEqual(["gemini"]);
+  });
+
+  it("moves to the next team key when one hits its per-minute limit", async () => {
+    const { router, fakes } = setup({}, { groq: ["team-1", "team-2"] });
+    fakes.groq.queue(new LlmError("rate_limit", "tokens per minute"), '{"title":"x","years":1}');
+    await router.generateJson("t", schema, "p", "u1");
+    const used = fakes.groq.requests.map((r) => r.apiKey);
+    expect(new Set(used)).toEqual(new Set(["team-1", "team-2"]));
   });
 
   it("uses a shared key after the user's own keys", async () => {

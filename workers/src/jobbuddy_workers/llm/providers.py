@@ -190,6 +190,8 @@ class Anthropic:
 PROVIDERS = {
     "gemini": Gemini(),
     "groq": OpenAiCompatible("groq", "https://api.groq.com/openai/v1", json_mode=True),
+    "cerebras": OpenAiCompatible("cerebras", "https://api.cerebras.ai/v1", json_mode=True),
+    "mistral": OpenAiCompatible("mistral", "https://api.mistral.ai/v1", json_mode=True),
     "openrouter": OpenAiCompatible(
         "openrouter",
         "https://openrouter.ai/api/v1",

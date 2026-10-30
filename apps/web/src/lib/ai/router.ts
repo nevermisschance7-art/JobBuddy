@@ -22,14 +22,16 @@ export function routerFor(supabase: Supabase): LlmRouter {
     async getKeys(userId) {
       const { data } = await supabase
         .from("ai_keys")
-        .select("provider, encrypted_key, quota_reset_at, last_error")
-        .eq("user_id", userId);
+        .select("id, provider, encrypted_key, quota_reset_at, last_error")
+        .eq("user_id", userId)
+        .order("created_at");
       const out: ProviderKey[] = [];
       for (const row of data ?? []) {
         // A key marked broken stays skipped until the user replaces it.
         if (row.last_error) continue;
         try {
           out.push({
+            id: row.id,
             provider: row.provider as ProviderName,
             apiKey: decryptSecret(row.encrypted_key, encryptionKey),
             coolingUntil: row.quota_reset_at ? new Date(row.quota_reset_at) : null,
@@ -40,19 +42,19 @@ export function routerFor(supabase: Supabase): LlmRouter {
       }
       return out;
     },
-    async markCoolingDown(userId, provider, until) {
-      await supabase
+    async markCoolingDown(userId, provider, until, _error, keyId) {
+      const q = supabase
         .from("ai_keys")
         .update({ quota_reset_at: until.toISOString() })
-        .eq("user_id", userId)
-        .eq("provider", provider);
+        .eq("user_id", userId);
+      await (keyId ? q.eq("id", keyId) : q.eq("provider", provider));
     },
-    async markBroken(userId, provider, error) {
-      await supabase
+    async markBroken(userId, provider, error, keyId) {
+      const q = supabase
         .from("ai_keys")
         .update({ last_error: `This key stopped working: ${error.slice(0, 200)}` })
-        .eq("user_id", userId)
-        .eq("provider", provider);
+        .eq("user_id", userId);
+      await (keyId ? q.eq("id", keyId) : q.eq("provider", provider));
     },
   };
 
@@ -89,10 +91,19 @@ export function routerFor(supabase: Supabase): LlmRouter {
     },
   };
 
-  const sharedKeys: Partial<Record<ProviderName, string>> = {};
   // Team backups, used after the user's own keys (so a busy Gemini doesn't stop anyone).
-  if (process.env.GROQ_API_KEY) sharedKeys.groq = process.env.GROQ_API_KEY;
-  if (process.env.OPENROUTER_API_KEY) sharedKeys.openrouter = process.env.OPENROUTER_API_KEY;
+  // Each env value may list several keys, comma-separated: their limits add up.
+  const list = (v: string | undefined) =>
+    (v ?? "")
+      .split(",")
+      .map((k) => k.trim())
+      .filter((k) => k.length > 10);
+  const sharedKeys: Partial<Record<ProviderName, string[]>> = {
+    groq: list(process.env.GROQ_API_KEY),
+    cerebras: list(process.env.CEREBRAS_API_KEY),
+    mistral: list(process.env.MISTRAL_API_KEY),
+    openrouter: list(process.env.OPENROUTER_API_KEY),
+  };
   if (MODELS_CONFIG.providers.anthropic.enabled && process.env.ANTHROPIC_API_KEY) {
     sharedKeys.anthropic = process.env.ANTHROPIC_API_KEY;
   }

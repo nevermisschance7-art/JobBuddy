@@ -31,6 +31,21 @@ def _gemini(key: str) -> list[str]:
     ]
 
 
+def _openai_models(base: str):
+    def fetch(key: str) -> list[str]:
+        res = httpx.get(f"{base}/models", headers={"Authorization": f"Bearer {key}"}, timeout=30)
+        res.raise_for_status()
+        return [m["id"] for m in res.json().get("data", [])]
+
+    return fetch
+
+
+def _first(name: str) -> str | None:
+    """A NAME_API_KEY env value may list several keys, comma-separated: check the first."""
+    raw = os.environ.get(f"{name.upper()}_API_KEY") or ""
+    return raw.split(",")[0].strip() or None
+
+
 def _groq(key: str) -> list[str]:
     res = httpx.get(
         "https://api.groq.com/openai/v1/models",
@@ -51,8 +66,10 @@ def main() -> int:
     load_dotenv()
     config = load_config()
     sources = {
-        "gemini": (os.environ.get("GEMINI_API_KEY"), _gemini),
-        "groq": (os.environ.get("GROQ_API_KEY"), _groq),
+        "gemini": (_first("gemini"), _gemini),
+        "groq": (_first("groq"), _groq),
+        "cerebras": (_first("cerebras"), _openai_models("https://api.cerebras.ai/v1")),
+        "mistral": (_first("mistral"), _openai_models("https://api.mistral.ai/v1")),
         "openrouter": ("public", lambda _k: _openrouter_free()),
     }
     problems = 0

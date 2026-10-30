@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Literal, Protocol
 
-ProviderName = Literal["gemini", "groq", "openrouter", "anthropic"]
+ProviderName = Literal["gemini", "groq", "cerebras", "mistral", "openrouter", "anthropic"]
 ErrorKind = Literal[
     "rate_limit", "quota", "auth", "model_not_found", "bad_request", "server", "network"
 ]

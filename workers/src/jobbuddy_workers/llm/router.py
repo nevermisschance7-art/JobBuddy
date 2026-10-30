@@ -62,7 +62,7 @@ class LlmRouter:
         sinks: LlmSinks,
         config: dict[str, Any] | None = None,
         providers: dict[str, LlmProvider] | None = None,
-        shared_keys: dict[str, str] | None = None,
+        shared_keys: dict[str, str | list[str]] | None = None,
         now: Callable[[], datetime] | None = None,
     ):
         self.keys = keys
@@ -161,8 +161,10 @@ class LlmRouter:
             candidates: list[tuple[ProviderKey, bool]] = [
                 (k, False) for k in user_keys if k.provider == name
             ]
-            if name in self.shared_keys:
-                candidates.append((ProviderKey(name, self.shared_keys[name]), True))
+            shared = self.shared_keys.get(name) or []
+            for api_key in [shared] if isinstance(shared, str) else shared:
+                if api_key:
+                    candidates.append((ProviderKey(name, api_key), True))
 
             for key, shared in candidates:
                 if key.cooling_until and key.cooling_until > now:

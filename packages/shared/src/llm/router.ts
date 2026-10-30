@@ -17,7 +17,10 @@ import {
 
 export type ModelsConfig = {
   order: ProviderName[];
-  providers: Record<ProviderName, { enabled: boolean; models: string[] }>;
+  providers: Record<
+    ProviderName,
+    { enabled: boolean; models: string[]; freeRequestsPerDay?: number }
+  >;
   /** timeoutMs: per attempt, for tasks with long output (a whole CV); default ATTEMPT_TIMEOUT_MS. */
   tasks: Record<string, { temperature: number; maxOutputTokens: number; timeoutMs?: number }>;
 };
@@ -58,14 +61,20 @@ export type RouterOptions = {
   sinks: LlmSinks;
   config?: ModelsConfig;
   providers?: Partial<Record<ProviderName, LlmProvider>>;
-  /** Keys available to everyone, e.g. a shared OpenRouter key from env. Used after the user's own. */
-  sharedKeys?: Partial<Record<ProviderName, string>>;
+  /** Keys available to everyone (team backups from env, several per provider). Used after the
+   * user's own. */
+  sharedKeys?: Partial<Record<ProviderName, string | string[]>>;
   now?: () => Date;
 };
 
 type CallOptions = { system?: string; personal?: PersonalInfo };
 
 const COOLDOWN_KINDS = new Set(["rate_limit", "quota"]);
+
+/** Shared keys that hit a limit rest here (per server instance), so the next call skips them. */
+const sharedCooling = new Map<string, Date>();
+/** Turns through the shared keys of a provider, so their per-minute limits add up. */
+let sharedTurn = 0;
 // Errors tied to one model (missing, overloaded, too slow, rejects an option): try the next model.
 const MODEL_LEVEL_ERRORS = new Set(["model_not_found", "server", "bad_request", "network"]);
 
@@ -176,14 +185,22 @@ export class LlmRouter {
     // functions about 10 to 26 seconds), even when providers hang.
     const deadline = Date.now() + CALL_BUDGET_MS;
 
-    // Every usable key, in order: the user's own first, then shared backups.
+    // Every usable key, in order: the user's own first (all of them), then shared backups,
+    // starting from a different shared key each call.
     const queue: (ProviderKey & { shared: boolean })[] = [];
+    const turn = sharedTurn++;
     for (const name of this.config.order) {
       if (!this.config.providers[name]?.enabled) continue;
-      const own = userKeys.find((k) => k.provider === name);
-      if (own) queue.push({ ...own, shared: false });
-      const shared = this.opts.sharedKeys?.[name];
-      if (shared) queue.push({ provider: name, apiKey: shared, coolingUntil: null, shared: true });
+      for (const own of userKeys.filter((k) => k.provider === name)) {
+        queue.push({ ...own, shared: false });
+      }
+      const raw = this.opts.sharedKeys?.[name];
+      const shared = (Array.isArray(raw) ? raw : raw ? [raw] : []).filter(Boolean);
+      for (let j = 0; j < shared.length; j++) {
+        const apiKey = shared[(turn + j) % shared.length]!;
+        const cooling = sharedCooling.get(apiKey) ?? null;
+        queue.push({ provider: name, apiKey, coolingUntil: cooling, shared: true });
+      }
     }
     const usable = queue.filter((key) => {
       if (key.coolingUntil && key.coolingUntil > now) {
@@ -217,13 +234,15 @@ export class LlmRouter {
       if (outcome.ok) return outcome.text;
       attempts.push(`${name}: ${outcome.error.kind}`);
 
-      if (!key.shared) {
+      if (key.shared) {
         if (COOLDOWN_KINDS.has(outcome.error.kind)) {
-          const until = outcome.error.retryAt ?? new Date(now.getTime() + 60_000);
-          await this.opts.keys.markCoolingDown(userId, name, until, outcome.error.message);
-        } else if (outcome.error.kind === "auth") {
-          await this.opts.keys.markBroken(userId, name, outcome.error.message);
+          sharedCooling.set(key.apiKey, outcome.error.retryAt ?? new Date(now.getTime() + 60_000));
         }
+      } else if (COOLDOWN_KINDS.has(outcome.error.kind)) {
+        const until = outcome.error.retryAt ?? new Date(now.getTime() + 60_000);
+        await this.opts.keys.markCoolingDown(userId, name, until, outcome.error.message, key.id);
+      } else if (outcome.error.kind === "auth") {
+        await this.opts.keys.markBroken(userId, name, outcome.error.message, key.id);
       }
     }
 

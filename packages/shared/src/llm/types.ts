@@ -1,4 +1,4 @@
-export type ProviderName = "gemini" | "groq" | "openrouter" | "anthropic";
+export type ProviderName = "gemini" | "groq" | "cerebras" | "mistral" | "openrouter" | "anthropic";
 
 export type LlmRequest = {
   model: string;
@@ -45,6 +45,8 @@ export interface LlmProvider {
 
 export type ProviderKey = {
   provider: ProviderName;
+  /** The stored key's id when a user has several keys for one provider. */
+  id?: string;
   apiKey: string;
   /** Provider is cooling down (rate limit or quota) until this time. */
   coolingUntil: Date | null;
@@ -58,8 +60,9 @@ export interface KeyStore {
     provider: ProviderName,
     until: Date,
     error: string,
+    keyId?: string,
   ): Promise<void>;
-  markBroken(userId: string, provider: ProviderName, error: string): Promise<void>;
+  markBroken(userId: string, provider: ProviderName, error: string, keyId?: string): Promise<void>;
 }
 
 export type LlmCallLog = {

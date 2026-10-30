@@ -1,18 +1,31 @@
 {
   "$comment": "LLM providers and models. Edit here when free tiers change; no code changes needed. Each provider tries its models in order, moving to the next when one is missing, overloaded, too slow or rejects the request. Ordered by reliability on free tiers: on 2026-10-27 the newest Gemini models returned 503 'high demand' or timed out, while flash-lite answered in under 2 s. Check with the 'AI check' workflow or: cd workers && uv run python -m jobbuddy_workers.llm.smoke",
-  "order": ["gemini", "groq", "openrouter", "anthropic"],
+  "order": ["gemini", "groq", "cerebras", "mistral", "openrouter", "anthropic"],
   "providers": {
     "gemini": {
       "enabled": true,
-      "models": ["gemini-3.5-flash-lite", "gemini-3.7-flash", "gemini-3.8-flash"]
+      "models": ["gemini-3.5-flash-lite", "gemini-3.7-flash", "gemini-3.8-flash"],
+      "freeRequestsPerDay": 1000
     },
     "groq": {
       "enabled": true,
-      "models": ["openai/gpt-oss-120b"]
+      "models": ["openai/gpt-oss-120b"],
+      "freeRequestsPerDay": 1000
+    },
+    "cerebras": {
+      "enabled": true,
+      "models": ["gpt-oss-120b", "llama-3.3-70b"],
+      "freeRequestsPerDay": 14400
+    },
+    "mistral": {
+      "enabled": true,
+      "models": ["mistral-small-latest"],
+      "freeRequestsPerDay": 2000
     },
     "openrouter": {
       "enabled": true,
-      "models": ["google/gemma-4-31b-it:free"]
+      "models": ["google/gemma-4-31b-it:free"],
+      "freeRequestsPerDay": 50
     },
     "anthropic": {
       "$comment": "Paid. Set enabled to true and add ANTHROPIC_API_KEY to turn it on.",
@@ -51,5 +64,6 @@
       "temperature": 0,
       "maxOutputTokens": 16
     }
-  }
+  },
+  "$freeRequestsPerDay": "About how many requests one free key allows per day (shown on the Usage page, never enforced)."
 }

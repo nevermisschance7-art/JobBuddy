@@ -26,7 +26,8 @@ def main() -> int:
     failures = 0
     for name in config["order"]:
         pcfg = config["providers"][name]
-        key = os.environ.get(f"{name.upper()}_API_KEY")
+        # Several keys may be listed, comma-separated: the first is checked.
+        key = (os.environ.get(f"{name.upper()}_API_KEY") or "").split(",")[0].strip()
         print(f"\n== {name} ==")
         if not pcfg.get("enabled"):
             print("  disabled in models.json")

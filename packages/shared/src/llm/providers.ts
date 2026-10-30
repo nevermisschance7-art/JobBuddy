@@ -170,6 +170,12 @@ function openAiCompatible(
 
 export const groq = openAiCompatible("groq", "https://api.groq.com/openai/v1", { jsonMode: true });
 
+// Free tiers with their own limits: more room when Gemini and Groq are busy.
+export const cerebras = openAiCompatible("cerebras", "https://api.cerebras.ai/v1", {
+  jsonMode: true,
+});
+export const mistral = openAiCompatible("mistral", "https://api.mistral.ai/v1", { jsonMode: true });
+
 // Free OpenRouter models differ in JSON-mode support, so JSON is requested in the prompt only.
 export const openrouter = openAiCompatible("openrouter", "https://openrouter.ai/api/v1", {
   jsonMode: false,
@@ -215,4 +221,11 @@ export const anthropic: LlmProvider = {
   },
 };
 
-export const PROVIDERS: Record<ProviderName, LlmProvider> = { gemini, groq, openrouter, anthropic };
+export const PROVIDERS: Record<ProviderName, LlmProvider> = {
+  gemini,
+  groq,
+  cerebras,
+  mistral,
+  openrouter,
+  anthropic,
+};

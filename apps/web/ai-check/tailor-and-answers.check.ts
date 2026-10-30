@@ -13,13 +13,16 @@ import { renderDocx, renderPdf } from "@/lib/cv/render";
 const OUT = "ai-check-output";
 mkdirSync(OUT, { recursive: true });
 
-const keys: ProviderKey[] = [
-  ["gemini", process.env.GEMINI_API_KEY],
-  ["groq", process.env.GROQ_API_KEY],
-  ["openrouter", process.env.OPENROUTER_API_KEY],
-]
-  .filter(([, k]) => k)
-  .map(([provider, apiKey]) => ({ provider, apiKey, coolingUntil: null }) as ProviderKey);
+// Each env value may list several keys, comma-separated (as on the server).
+const keys: ProviderKey[] = (
+  ["gemini", "groq", "cerebras", "mistral", "openrouter"] as const
+).flatMap((provider) =>
+  (process.env[`${provider.toUpperCase()}_API_KEY`] ?? "")
+    .split(",")
+    .map((k) => k.trim())
+    .filter(Boolean)
+    .map((apiKey) => ({ provider, apiKey, coolingUntil: null }) as ProviderKey),
+);
 
 const calls: LlmCallLog[] = [];
 const router = new LlmRouter({

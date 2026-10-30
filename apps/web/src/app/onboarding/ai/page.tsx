@@ -6,7 +6,7 @@ import { nextStep } from "../steps";
 
 export default async function AiStep() {
   const statuses = await loadKeyStatuses();
-  const hasGemini = statuses.some((s) => s.provider === "gemini" && s.saved);
+  const hasGemini = statuses.some((s) => s.provider === "gemini" && s.keys.length > 0);
   const next = nextStep("/onboarding/ai");
 
   return (
