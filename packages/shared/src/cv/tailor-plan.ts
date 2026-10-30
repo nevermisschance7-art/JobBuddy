@@ -70,6 +70,16 @@ export function numberedCv(cv: Resume): string {
 
 const lower = (s: string) => s.trim().toLowerCase();
 
+/** House style for AI-written CV lines: plain hyphens and spaces, no em dashes. */
+function plain(text: string): string {
+  return text
+    .replace(/[‐‑]/g, "-")
+    .replace(/[  ]/g, " ")
+    .replace(/\s*—\s*/g, ", ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 /** How much a line is about this job: the job's technologies it names, title ones double. */
 function relevance(text: string, jobTerms: Set<string>, titleTerms: Set<string>): number {
   let score = 0;
@@ -151,7 +161,7 @@ export function applyPlan(cv: Resume, plan: TailorPlan, jobTitle: string, jobTex
     const seen = new Set<number>();
     const bullets: string[] = [];
     for (const b of entry?.bullets ?? []) {
-      const text = b.text.trim();
+      const text = plain(b.text);
       if (b.from < 0 || b.from >= w.highlights.length || seen.has(b.from) || !text) continue;
       seen.add(b.from);
       bullets.push(text);
@@ -171,8 +181,8 @@ export function applyPlan(cv: Resume, plan: TailorPlan, jobTitle: string, jobTex
     ...cv,
     basics: {
       ...cv.basics,
-      label: plan.headline?.trim() || cv.basics.label,
-      summary: plan.summary?.trim() || cv.basics.summary,
+      label: (plan.headline && plain(plan.headline)) || cv.basics.label,
+      summary: (plan.summary && plain(plan.summary)) || cv.basics.summary,
     },
     skills,
     work,
