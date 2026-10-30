@@ -191,7 +191,12 @@ async function handle(message: Message): Promise<unknown> {
     case "lookup":
       return api("lookup", {
         method: "POST",
-        body: { url: message.url, applicationId: message.applicationId },
+        body: {
+          url: message.url,
+          applicationId: message.applicationId,
+          title: message.title,
+          text: message.text,
+        },
       });
     case "prepare":
       return api("prepare", { method: "POST", body: message.input });

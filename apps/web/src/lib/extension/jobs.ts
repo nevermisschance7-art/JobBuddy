@@ -1,5 +1,11 @@
 import "server-only";
-import { jobKeyFromUrl, pageAddress, resumeSchema, type JobKey } from "@jobbuddy/shared";
+import {
+  jobKeyFromUrl,
+  pageAddress,
+  recentApplicationScore,
+  resumeSchema,
+  type JobKey,
+} from "@jobbuddy/shared";
 import type { StoredAnswer } from "@/lib/answers-core";
 import type { createClient } from "@/lib/supabase/server";
 
@@ -69,6 +75,50 @@ async function findByKey(supabase: Supabase, url: string): Promise<FoundJob | nu
         description_text: job.description_text,
       }
     : null;
+}
+
+/**
+ * The job behind one of the user's recent applications (last 6 hours) that this page
+ * belongs to, when its address isn't the stored job's: Quick apply on a job board's link
+ * lands on the employer's own form. Without this, the extension made a second application
+ * (a second CV, cover letter and AI requests).
+ */
+export async function findRecentApplicationJob(
+  supabase: Supabase,
+  userId: string,
+  page: { url: string; title?: string; text?: string },
+): Promise<FoundJob | null> {
+  const since = new Date(Date.now() - 6 * 3_600_000).toISOString();
+  const { data } = await supabase
+    .from("applications")
+    .select(
+      "created_at, jobs!inner(id, title, company_name, description_text, apply_url, canonical_url)",
+    )
+    .eq("user_id", userId)
+    .gte("created_at", since)
+    .order("created_at", { ascending: false })
+    .limit(40);
+  let best: { job: FoundJob; score: number } | null = null;
+  for (const row of data ?? []) {
+    const j = row.jobs as unknown as FoundJob & { apply_url: string; canonical_url: string };
+    const score = recentApplicationScore(page, {
+      title: j.title,
+      company: j.company_name,
+      urls: [j.apply_url, j.canonical_url],
+    });
+    if (score >= 3 && (!best || score > best.score)) {
+      best = {
+        job: {
+          id: j.id,
+          title: j.title,
+          company_name: j.company_name,
+          description_text: j.description_text,
+        },
+        score,
+      };
+    }
+  }
+  return best?.job ?? null;
 }
 
 /** "GB" -> "United Kingdom". */

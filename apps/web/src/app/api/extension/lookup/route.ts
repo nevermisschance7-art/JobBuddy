@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { extensionUser, unauthorized } from "@/lib/extension/auth";
-import { fillData, findJobForUrl, type FoundJob } from "@/lib/extension/jobs";
+import {
+  fillData,
+  findJobForUrl,
+  findRecentApplicationJob,
+  type FoundJob,
+} from "@/lib/extension/jobs";
 
 // POST { url, applicationId? }: the job and prepared application behind an application page,
 // with what the extension needs to fill the form. With applicationId (the next page of a
@@ -12,6 +17,9 @@ import { fillData, findJobForUrl, type FoundJob } from "@/lib/extension/jobs";
 const body = z.object({
   url: z.string().url().max(2000),
   applicationId: z.string().uuid().optional(),
+  /** The page's job title and some text, to recognise a recent application's form. */
+  title: z.string().max(300).optional(),
+  text: z.string().max(3000).optional(),
 });
 
 type JobInfo = Pick<FoundJob, "id" | "title" | "company_name">;
@@ -38,7 +46,9 @@ export async function POST(request: Request) {
     }
   }
   if (!appId) {
-    job = await findJobForUrl(supabase, parsed.data.url);
+    job =
+      (await findJobForUrl(supabase, parsed.data.url)) ??
+      (await findRecentApplicationJob(supabase, userId, parsed.data));
     if (job) {
       const { data } = await supabase
         .from("applications")

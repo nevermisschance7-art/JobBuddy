@@ -282,6 +282,8 @@ async function lookup(): Promise<LookupResult | null> {
     type: "lookup",
     url: location.href,
     applicationId: session() ?? undefined,
+    title: pageInfo().title,
+    text: pageInfo().description.slice(0, 3000),
   });
   if (!reply.ok) {
     showError(reply);

@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { draftAnswers, pickChoices, rememberAnswers, type StoredAnswer } from "@/lib/answers";
 import { extensionUser, unauthorized } from "@/lib/extension/auth";
-import { findJobForUrl, type FoundJob } from "@/lib/extension/jobs";
+import { findJobForUrl, findRecentApplicationJob, type FoundJob } from "@/lib/extension/jobs";
 import { createAdminClient } from "@/lib/supabase/server";
 
 // "Prepare this one" from the extension: the form's questions are sent here. Finds or adds
@@ -55,6 +55,12 @@ export async function POST(request: Request) {
     found = (data?.jobs as unknown as FoundJob | null) ?? null;
   }
   found ??= await findJobForUrl(supabase, input.url);
+  // A job board's link that led to the employer's form: the application made a moment ago.
+  found ??= await findRecentApplicationJob(supabase, userId, {
+    url: input.url,
+    title: input.title,
+    text: input.description,
+  });
   if (!found) {
     // A job the fetchers haven't seen. Jobs are shared and written by the service role; the
     // posting date is unknown, so it is stored as unknown (never the time we saw it).

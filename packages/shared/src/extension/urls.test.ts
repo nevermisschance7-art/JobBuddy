@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isFormHost, jobKeyFromUrl } from "./urls";
+import { isFormHost, jobKeyFromUrl, recentApplicationScore } from "./urls";
 
 describe("jobKeyFromUrl", () => {
   it.each([
@@ -50,5 +50,45 @@ describe("isFormHost", () => {
     expect(isFormHost("acme.jobs.personio.de")).toBe(true);
     expect(isFormHost("notmyworkdayjobs.com")).toBe(false);
     expect(isFormHost("www.linkedin.com")).toBe(false);
+  });
+});
+
+describe("recent application on another site", () => {
+  const whitetech = {
+    title: "PHP Developer with DDD",
+    company: "WhiteTech",
+    urls: ["https://himalayas.app/companies/whitetech/jobs/php-developer-with-ddd"],
+  };
+  it("matches the employer's form a job board link led to", () => {
+    expect(
+      recentApplicationScore(
+        {
+          url: "https://job-boards.eu.greenhouse.io/whitetech/jobs/4862144",
+          title: "PHP Developer with DDD",
+        },
+        whitetech,
+      ),
+    ).toBeGreaterThanOrEqual(3);
+    expect(
+      recentApplicationScore(
+        {
+          url: "https://nexusmods.careers.hibob.com/jobs/1/apply",
+          title: "Senior Backend Engineer",
+        },
+        {
+          title: "Senior Backend Engineer",
+          company: "Nexus Mods",
+          urls: ["https://jobicy.com/jobs/1"],
+        },
+      ),
+    ).toBeGreaterThanOrEqual(3);
+  });
+  it("doesn't match another company's job", () => {
+    expect(
+      recentApplicationScore(
+        { url: "https://job-boards.greenhouse.io/acme/jobs/1", title: "PHP Developer" },
+        whitetech,
+      ),
+    ).toBeLessThan(3);
   });
 });

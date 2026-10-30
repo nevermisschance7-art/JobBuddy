@@ -73,7 +73,7 @@ export type PrepareResult = {
 
 /** Messages from content scripts and the popup to the background worker. */
 export type Message =
-  | { type: "lookup"; url: string; applicationId?: string }
+  | { type: "lookup"; url: string; applicationId?: string; title?: string; text?: string }
   | { type: "prepare"; input: PrepareInput }
   | { type: "applied"; applicationId: string }
   | { type: "cv"; applicationId: string }

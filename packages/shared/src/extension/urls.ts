@@ -125,3 +125,52 @@ export function isFormHost(host: string): boolean {
   const h = host.toLowerCase();
   return FORM_HOSTS.some((d) => h === d || h.endsWith(`.${d}`));
 }
+
+const words = (s: string) =>
+  new Set(
+    s
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, " ")
+      .split(" ")
+      .filter((w) => w.length > 1),
+  );
+
+/**
+ * How well an application page matches one of the user's recent applications, when the page
+ * address isn't the stored job's (a job board's link leads to the employer's own form).
+ * 0 = no match; 3 or more = the same job. Same site +3, company in the address or page +2,
+ * job title +2 (most of its words on the page).
+ */
+export function recentApplicationScore(
+  page: { url: string; title?: string; text?: string },
+  job: { title: string; company: string; urls: (string | null | undefined)[] },
+): number {
+  let score = 0;
+  let host = "";
+  try {
+    host = new URL(page.url).hostname.replace(/^www\./, "");
+  } catch {
+    return 0;
+  }
+  const hosts = job.urls.flatMap((u) => {
+    try {
+      return u ? [new URL(u).hostname.replace(/^www\./, "")] : [];
+    } catch {
+      return [];
+    }
+  });
+  if (hosts.includes(host)) score += 3;
+
+  const squash = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "");
+  const company = squash(
+    job.company.replace(/\b(inc|ltd|llc|gmbh|limited|corp|corporation|plc|sa|bv|ag)\b\.?/gi, ""),
+  );
+  const where = squash(`${page.url} ${page.title ?? ""} ${(page.text ?? "").slice(0, 3000)}`);
+  if (company.length >= 3 && where.includes(company)) score += 2;
+
+  const wanted = words(job.title);
+  const seen = words(`${page.title ?? ""} ${(page.text ?? "").slice(0, 3000)}`);
+  const hits = [...wanted].filter((w) => seen.has(w)).length;
+  if (wanted.size > 0 && hits / wanted.size >= 0.6) score += 2;
+  return score;
+}
