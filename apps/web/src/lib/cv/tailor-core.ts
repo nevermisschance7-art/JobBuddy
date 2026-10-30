@@ -1,4 +1,10 @@
 import {
+  COVER_LETTER_SYSTEM,
+  COVER_LETTER_WORDS,
+  coverLetterPrompt,
+  letterProblems,
+  ruleCoverLetter,
+  wrapLetter,
   applyPlan,
   BULLETS_OLDER,
   BULLETS_RECENT,
@@ -102,4 +108,30 @@ Return the plan as JSON.`;
     console.error("tailor_cv failed", e);
     return { ok: false, error: "Tailoring failed. Try again later, or use your CV as it is." };
   }
+}
+
+/** A cover letter for the job: the AI writes the body (checked against the CV), else the
+ * code writes one from the CV's facts. Never fails. */
+export async function coverLetterWithRouter(
+  router: LlmRouter,
+  userId: string,
+  source: Resume,
+  job: TailorJob,
+  personal: PersonalInfo,
+): Promise<{ text: string; byAi: boolean }> {
+  try {
+    const body = await router.generateText(
+      "cover_letter",
+      coverLetterPrompt(source, job, numberedCv(source)),
+      COVER_LETTER_WORDS,
+      userId,
+      { system: COVER_LETTER_SYSTEM, personal },
+    );
+    if (body.text.trim() && letterProblems(body.text, source).length === 0) {
+      return { text: wrapLetter(body.text, source, job), byAi: true };
+    }
+  } catch (e) {
+    if (!(e instanceof AllProvidersFailedError)) console.error("cover_letter failed", e);
+  }
+  return { text: ruleCoverLetter(source, job), byAi: false };
 }

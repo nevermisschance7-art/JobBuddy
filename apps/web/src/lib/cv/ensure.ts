@@ -1,8 +1,8 @@
 import "server-only";
 import type { Resume } from "@jobbuddy/shared";
 import type { createClient } from "@/lib/supabase/server";
-import { approveWithFiles } from "./files";
-import { tailorByRules, tailorResume, type TailorJob } from "./tailor";
+import { approveWithFiles, saveCoverLetter } from "./files";
+import { tailorByRules, tailorResume, writeCoverLetter, type TailorJob } from "./tailor";
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
 
@@ -21,14 +21,26 @@ export async function ensureApprovedCv(
 ): Promise<{ error?: string; note?: string }> {
   const { data: app } = await supabase
     .from("applications")
-    .select("cv_approved_at, tailored_cv_pdf")
+    .select("cv_approved_at, tailored_cv_pdf, cover_letter_pdf")
     .eq("id", applicationId)
     .eq("user_id", userId)
     .maybeSingle();
   if (!app) return { error: "I can't find this application." };
-  if (app.cv_approved_at && app.tailored_cv_pdf) return {};
+  const hasCv = Boolean(app.cv_approved_at && app.tailored_cv_pdf);
+  const hasLetter = Boolean(app.cover_letter_pdf);
+  if (hasCv && hasLetter) return {};
 
-  const tailored = await tailorResume(supabase, userId, source, job);
+  // The CV and the cover letter at the same time (two AI requests, one wait).
+  const [tailored, letter] = await Promise.all([
+    hasCv ? null : tailorResume(supabase, userId, source, job),
+    hasLetter ? null : writeCoverLetter(supabase, userId, source, job),
+  ]);
+  if (letter) {
+    // The letter page carries the same name and contact details as the CV.
+    const problem = await saveCoverLetter(supabase, userId, applicationId, source, letter.text);
+    if (problem) console.error(problem);
+  }
+  if (!tailored) return {};
   const result = tailored.ok ? tailored : { ...tailorByRules(source, job), ok: true as const };
   const problem = await approveWithFiles(
     supabase,

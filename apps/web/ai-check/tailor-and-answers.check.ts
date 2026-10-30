@@ -3,7 +3,7 @@ import { isNonAnswer, resumeSchema } from "@jobbuddy/shared";
 import { LlmRouter, type LlmCallLog, type ProviderKey } from "@jobbuddy/shared/llm";
 import { describe, expect, it } from "vitest";
 import { draftWithRouter, pickChoicesWithRouter } from "@/lib/answers-core";
-import { tailorWithRouter } from "@/lib/cv/tailor-core";
+import { coverLetterWithRouter, tailorWithRouter } from "@/lib/cv/tailor-core";
 import { renderDocx, renderPdf } from "@/lib/cv/render";
 
 // Manual check against REAL models (the "AI check" workflow), never part of `pnpm test`.
@@ -165,6 +165,17 @@ describe.skipIf(keys.length === 0)("AI check: tailoring and answers", () => {
     );
     expect(result.resume.basics.email).toBe(cv.basics.email);
     console.log(`\nTailoring took ${secs.toFixed(1)} s in total.`);
+  }, 180_000);
+
+  it("writes a cover letter for the job from the CV only", async () => {
+    const started = Date.now();
+    const letter = await coverLetterWithRouter(router, "ai-check", cv, job, personal);
+    report(`cover letter (${letter.byAi ? "AI" : "from CV facts"})`, started);
+    console.log(`
+${letter.text}
+`);
+    expect(letter.text.startsWith("Dear")).toBe(true);
+    expect(letter.text).toContain(cv.basics.name);
   }, 180_000);
 
   it("drafts answers; sensitive ones come from fixed answers", async () => {

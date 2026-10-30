@@ -233,3 +233,93 @@ export async function renderDocx(resume: Resume): Promise<Uint8Array> {
   });
   return new Uint8Array(await Packer.toBuffer(doc));
 }
+
+// ---------------------------------------------------------------- cover letter
+// The same name and contact line as the CV, then the letter's paragraphs.
+
+export async function renderLetterPdf(resume: Resume, letter: string): Promise<Uint8Array> {
+  const doc = await PDFDocument.create();
+  doc.setTitle(`${resume.basics.name} cover letter`);
+  doc.setAuthor(resume.basics.name);
+  const regular = await doc.embedFont(StandardFonts.Helvetica);
+  const bold = await doc.embedFont(StandardFonts.HelveticaBold);
+  const [W, H] = [595.28, 841.89]; // A4
+  const margin = 60;
+  const width = W - margin * 2;
+  let page = doc.addPage([W, H]);
+  let y = H - margin;
+  const ink = rgb(0.1, 0.1, 0.1);
+  const grey = rgb(0.35, 0.35, 0.35);
+
+  const write = (text: string, font: PDFFont, size: number, color = ink, gap = 0) => {
+    const words = pdfSafe(text, font).split(/\s+/).filter(Boolean);
+    let line = "";
+    const lines: string[] = [];
+    for (const word of words) {
+      const next = line ? `${line} ${word}` : word;
+      if (font.widthOfTextAtSize(next, size) <= width || !line) line = next;
+      else {
+        lines.push(line);
+        line = word;
+      }
+    }
+    if (line) lines.push(line);
+    for (const l of lines) {
+      if (y - size - 4 < margin) {
+        page = doc.addPage([W, H]);
+        y = H - margin;
+      }
+      y -= size + 4;
+      page.drawText(l, { x: margin, y, size, font, color });
+    }
+    y -= gap;
+  };
+
+  const [name, contact] = cvBlocks(resume);
+  if (name?.kind === "name") write(name.text, bold, 18, ink, 2);
+  if (contact?.kind === "contact") write(contact.text, regular, 9.5, grey, 22);
+  for (const paragraph of letter.split(/\n\s*\n/)) {
+    for (const line of paragraph.split("\n")) write(line, regular, 11);
+    y -= 10;
+  }
+  return doc.save();
+}
+
+export async function renderLetterDocx(resume: Resume, letter: string): Promise<Uint8Array> {
+  const font = "Calibri";
+  const [name, contact] = cvBlocks(resume);
+  const children: Paragraph[] = [];
+  if (name?.kind === "name") {
+    children.push(
+      new Paragraph({ children: [new TextRun({ text: name.text, bold: true, size: 36, font })] }),
+    );
+  }
+  if (contact?.kind === "contact") {
+    children.push(
+      new Paragraph({
+        spacing: { after: 360 },
+        children: [new TextRun({ text: contact.text, size: 19, font, color: "555555" })],
+      }),
+    );
+  }
+  for (const paragraph of letter.split(/\n\s*\n/)) {
+    const lines = paragraph.split("\n");
+    children.push(
+      new Paragraph({
+        spacing: { after: 200 },
+        children: lines.map(
+          (text, i) => new TextRun({ text, size: 22, font, ...(i > 0 ? { break: 1 } : {}) }),
+        ),
+      }),
+    );
+  }
+  const file = new Document({
+    sections: [
+      {
+        properties: { page: { margin: { top: 1134, bottom: 1134, left: 1134, right: 1134 } } },
+        children,
+      },
+    ],
+  });
+  return new Uint8Array(await Packer.toBuffer(file));
+}

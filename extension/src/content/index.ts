@@ -187,9 +187,8 @@ function aiWork(missed: FormField[]): AiWork {
   const ordered = [...missed.filter((f) => f.required), ...missed.filter((f) => !f.required)];
   const open = ordered.filter(
     (f) =>
-      (f.kind === "question" || f.kind === "cover_letter") &&
-      !fixedKeyFor(f.label) &&
-      f.label.length > 2,
+      // Cover letters come with the CV (one letter per job), so they aren't drafted here.
+      f.kind === "question" && !fixedKeyFor(f.label) && f.label.length > 2,
   );
   const isChoice = (f: FormField) => Boolean(f.options || f.choices || f.el.tagName === "SELECT");
   const questions = [
@@ -378,6 +377,15 @@ async function fill(
         ? `<div class="row warn">⚠ CV not attached. <a href="#" data-act="download">Download it</a> and drag it in.</div>`
         : `<div class="row warn">⚠ No CV yet${extra.cvError ? `: ${esc(extra.cvError)}` : ""}.</div>`;
   }
+  if (report.coverLetter && data.coverLetter) {
+    const attached = attachFile(
+      report.coverLetter.el as HTMLInputElement,
+      fileFrom(data.coverLetter),
+    );
+    cvLine += attached
+      ? `<div class="row ok">✓ Cover letter for this job attached</div>`
+      : `<div class="row warn">⚠ Cover letter not attached. It's on the JobBuddy page for this job.</div>`;
+  }
 
   // Required fields left: orange. Optional ones left: no outline (the form accepts them empty).
   // Answers written or picked by the AI: blue, to check.
@@ -389,13 +397,17 @@ async function fill(
       !report.missed.includes(f) &&
       (f.kind === "question" || f.kind === "cover_letter") &&
       !fixedKeyFor(f.label) &&
-      data.answers.some(
-        (a) =>
-          a.ai &&
-          (a.isCoverLetter
-            ? f.kind === "cover_letter"
-            : questionSimilarity(f.label, a.question) >= 0.6),
-      ),
+      // The cover letter text box: the letter written for this job, to check.
+      ((f.kind === "cover_letter" &&
+        Boolean(data.coverLetterText) &&
+        (f.el as HTMLInputElement).type !== "file") ||
+        data.answers.some(
+          (a) =>
+            a.ai &&
+            (a.isCoverLetter
+              ? f.kind === "cover_letter"
+              : questionSimilarity(f.label, a.question) >= 0.6),
+        )),
   );
   clearOutlines();
   outline(

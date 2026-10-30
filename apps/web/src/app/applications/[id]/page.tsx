@@ -23,7 +23,7 @@ export default async function ApplicationPage({ params }: { params: Promise<{ id
     supabase
       .from("applications")
       .select(
-        "id, status, answers, tailored_resume_json, tailor_report, tailored_at, cv_approved_at, tailored_cv_pdf, jobs(title, company_name, apply_url)",
+        "id, status, answers, tailored_resume_json, tailor_report, tailored_at, cv_approved_at, tailored_cv_pdf, cover_letter_text, cover_letter_pdf, jobs(title, company_name, apply_url)",
       )
       .eq("id", id)
       .eq("user_id", user.id)
@@ -94,9 +94,31 @@ export default async function ApplicationPage({ params }: { params: Promise<{ id
                     applyUrl={job.apply_url}
                     status={app.status}
                   />
+                  {app.cover_letter_pdf ? (
+                    <details className="border-border rounded-lg border px-4 py-3">
+                      <summary className="flex cursor-pointer flex-wrap items-center gap-3 text-sm font-medium">
+                        <span className="flex-1">Cover letter for this job</span>
+                        <a
+                          href={`/api/applications/${app.id}/cv?format=letter-pdf`}
+                          className="text-primary inline-flex items-center gap-1 hover:underline"
+                        >
+                          <Download size={14} /> PDF
+                        </a>
+                        <a
+                          href={`/api/applications/${app.id}/cv?format=letter-docx`}
+                          className="text-primary inline-flex items-center gap-1 hover:underline"
+                        >
+                          <Download size={14} /> Word
+                        </a>
+                      </summary>
+                      <p className="text-muted-foreground mt-3 whitespace-pre-line text-sm">
+                        {app.cover_letter_text}
+                      </p>
+                    </details>
+                  ) : null}
                   <p className="text-muted-foreground text-xs">
-                    On the form, the JobBuddy extension fills your details, answers and this CV. You
-                    always press Submit yourself.
+                    On the form, the JobBuddy extension fills your details, answers, this CV and the
+                    cover letter. You always press Submit yourself.
                   </p>
                 </>
               ) : (

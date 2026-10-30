@@ -1,7 +1,7 @@
 import "server-only";
 import type { Json, Resume, TruthReport } from "@jobbuddy/shared";
 import type { createClient } from "@/lib/supabase/server";
-import { renderDocx, renderPdf } from "./render";
+import { renderDocx, renderLetterDocx, renderLetterPdf, renderPdf } from "./render";
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
 
@@ -49,4 +49,39 @@ export async function approveWithFiles(
     .eq("id", applicationId)
     .eq("user_id", userId);
   return error ? "Saving failed. Try again." : null;
+}
+
+/** Stores the cover letter's text and its PDF and Word files next to the CV. */
+export async function saveCoverLetter(
+  supabase: Supabase,
+  userId: string,
+  applicationId: string,
+  resume: Resume,
+  text: string,
+): Promise<string | null> {
+  const base = `${userId}/application-${applicationId}-cover-letter`;
+  const [pdf, docx] = await Promise.all([
+    renderLetterPdf(resume, text),
+    renderLetterDocx(resume, text),
+  ]);
+  const uploads = await Promise.all([
+    supabase.storage
+      .from("cvs")
+      .upload(`${base}.pdf`, pdf, { contentType: "application/pdf", upsert: true }),
+    supabase.storage.from("cvs").upload(`${base}.docx`, docx, {
+      contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      upsert: true,
+    }),
+  ]);
+  if (uploads.some((u) => u.error)) return "Saving the cover letter failed.";
+  const { error } = await supabase
+    .from("applications")
+    .update({
+      cover_letter_text: text.slice(0, 4000),
+      cover_letter_pdf: `${base}.pdf`,
+      cover_letter_docx: `${base}.docx`,
+    })
+    .eq("id", applicationId)
+    .eq("user_id", userId);
+  return error ? "Saving the cover letter failed." : null;
 }

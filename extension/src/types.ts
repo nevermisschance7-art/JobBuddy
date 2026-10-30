@@ -36,6 +36,9 @@ export type FillData = {
   fixedAnswers: Record<string, string>;
   answers: { question: string; answer: string; isCoverLetter: boolean; ai?: boolean }[];
   cv: { fileName: string; base64: string } | null;
+  /** The tailored cover letter: PDF for upload fields, text for text boxes. */
+  coverLetter?: { fileName: string; base64: string } | null;
+  coverLetterText?: string | null;
   /** What the user typed into fields JobBuddy couldn't fill before (never sent to an AI). */
   learned?: { question: string; answer: string }[];
   /** The employer of the job being applied to (set by the content script). */

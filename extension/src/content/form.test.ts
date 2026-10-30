@@ -521,3 +521,33 @@ describe("questions answered in code, never by the AI", () => {
     expect(picked("#r")).toBe("I prefer not to say");
   });
 });
+
+describe("cover letter", () => {
+  it("puts the job's cover letter in upload fields and text boxes", () => {
+    document.body.innerHTML = `
+      <label for="cv">Resume/CV</label><input id="cv" type="file">
+      <label for="cl">Cover Letter</label><input id="cl" type="file">
+      <label for="t">Cover letter (optional)</label><textarea id="t"></textarea>`;
+    const data: FillData = {
+      applicationId: "a",
+      status: "prepared",
+      profile: {
+        fullName: "Sam Tester", firstName: "Sam", lastName: "Tester", email: null, phone: null,
+        city: null, countryCode: null, linkedin: null, github: null, website: null,
+        country: null, currentCompany: null, currentTitle: null, headline: null, summary: null,
+      },
+      fixedAnswers: {},
+      answers: [],
+      learned: [],
+      cv: { fileName: "Sam-CV.pdf", base64: "JVBERi0=" },
+      coverLetter: { fileName: "Sam-Cover-Letter.pdf", base64: "JVBERi0=" },
+      coverLetterText: "Dear Acme hiring team,\n\nI build payment APIs.",
+    }; // prettier-ignore
+    const report = fillForm(collectFields(document), data);
+    expect((report.resume?.el as HTMLInputElement).id).toBe("cv");
+    expect((report.coverLetter?.el as HTMLInputElement).id).toBe("cl");
+    expect((document.querySelector("#t") as HTMLTextAreaElement).value).toContain(
+      "I build payment APIs.",
+    );
+  });
+});

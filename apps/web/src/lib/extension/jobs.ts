@@ -94,7 +94,9 @@ export async function fillData(supabase: Supabase, userId: string, applicationId
       applicationId
         ? supabase
             .from("applications")
-            .select("id, status, answers, tailored_cv_pdf, cv_approved_at")
+            .select(
+              "id, status, answers, tailored_cv_pdf, cv_approved_at, cover_letter_pdf, cover_letter_text",
+            )
             .eq("id", applicationId)
             .eq("user_id", userId)
             .maybeSingle()
@@ -134,17 +136,18 @@ export async function fillData(supabase: Supabase, userId: string, applicationId
   const profileUrl = (network: string) =>
     basics?.profiles.find((p) => p.network.toLowerCase().includes(network))?.url ?? null;
 
-  let cvFile: { fileName: string; base64: string } | null = null;
-  if (app?.tailored_cv_pdf && app.cv_approved_at) {
-    const { data: blob } = await supabase.storage.from("cvs").download(app.tailored_cv_pdf);
-    if (blob) {
-      const safe = name.replace(/[^A-Za-z0-9]+/g, "-").replace(/^-|-$/g, "") || "CV";
-      cvFile = {
-        fileName: `${safe}-CV.pdf`,
-        base64: Buffer.from(await blob.arrayBuffer()).toString("base64"),
-      };
-    }
-  }
+  const safe = name.replace(/[^A-Za-z0-9]+/g, "-").replace(/^-|-$/g, "") || "CV";
+  const file = async (path: string | null | undefined, fileName: string) => {
+    if (!path) return null;
+    const { data: blob } = await supabase.storage.from("cvs").download(path);
+    return blob
+      ? { fileName, base64: Buffer.from(await blob.arrayBuffer()).toString("base64") }
+      : null;
+  };
+  const [cvFile, letterFile] = await Promise.all([
+    app?.cv_approved_at ? file(app.tailored_cv_pdf, `${safe}-CV.pdf`) : null,
+    file(app?.cover_letter_pdf, `${safe}-Cover-Letter.pdf`),
+  ]);
 
   const answers = (Array.isArray(app?.answers) ? (app.answers as unknown as StoredAnswer[]) : [])
     .map((a) => ({
@@ -191,5 +194,8 @@ export async function fillData(supabase: Supabase, userId: string, applicationId
     /** What the user typed into fields JobBuddy couldn't fill before. Never sent to an AI. */
     learned: learned ?? [],
     cv: cvFile,
+    /** The tailored cover letter: a PDF for upload fields, the text for text boxes. */
+    coverLetter: letterFile,
+    coverLetterText: app?.cover_letter_text ?? null,
   };
 }

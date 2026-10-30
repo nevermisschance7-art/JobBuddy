@@ -537,7 +537,7 @@ function knownValue(field: FormField, data: FillData): string | null {
     case "summary":
       return p.summary ?? null;
     case "cover_letter":
-      return data.answers.find((a) => a.isCoverLetter)?.answer ?? null;
+      return data.coverLetterText ?? data.answers.find((a) => a.isCoverLetter)?.answer ?? null;
     case "resume":
     case "file":
       return null;
@@ -716,6 +716,8 @@ export type FillReport = {
   fromLearned: number;
   missed: FormField[];
   resume: FormField | null;
+  /** A cover letter upload field, for the tailored cover letter PDF. */
+  coverLetter: FormField | null;
   /** Custom dropdowns with the value to pick, for fillComboboxes (zone: a time zone list). */
   dropdowns: { field: FormField; value: string; zone?: string | null }[];
 };
@@ -877,7 +879,14 @@ export function placeOption(
 
 /** Fills every field JobBuddy knows. Leaves non-empty fields alone. Returns what's left. */
 export function fillForm(fields: FormField[], data: FillData): FillReport {
-  const report: FillReport = { filled: 0, fromLearned: 0, missed: [], resume: null, dropdowns: [] };
+  const report: FillReport = {
+    filled: 0,
+    fromLearned: 0,
+    missed: [],
+    resume: null,
+    coverLetter: null,
+    dropdowns: [],
+  };
   for (const f of fields) {
     // One odd field must never stop the rest of the form.
     try {
@@ -897,7 +906,8 @@ function fillOne(f: FormField, data: FillData, report: FillReport): void {
   // File fields only ever get the CV (above); a browser refuses text in them.
   if (f.kind === "file") return; // other uploads (photo, portfolio): left alone
   if ((f.el as HTMLInputElement).type === "file") {
-    report.missed.push(f); // e.g. a cover letter upload: the user attaches it
+    if (f.kind === "cover_letter" && data.coverLetter) report.coverLetter ??= f;
+    else report.missed.push(f); // another upload the user attaches
     return;
   }
   // A field that already has an answer (picked by the user, or by an earlier fill) is never
