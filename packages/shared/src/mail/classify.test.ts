@@ -75,3 +75,33 @@ describe("employer domains", () => {
     expect(employerDomains("X", ["https://jobs.lever.co/x/1"])).toEqual([]);
   });
 });
+
+describe("seen in a real inbox", () => {
+  it("an advert from LinkedIn is never good news", () => {
+    expect(
+      classifyMail({
+        from: "LinkedIn Premium <premium@em.linkedin.com>",
+        subject: "Iuri, reactivate your Premium trial for your job search",
+        body: "Get noticed by recruiters and land interviews faster. Start your free trial.",
+      }),
+    ).toBe("other");
+  });
+  it("a receipt that mentions a later assessment stays a receipt", () => {
+    expect(
+      classifyMail({
+        from: "Praxent <no-reply@us.greenhouse-mail.io>",
+        subject: "Thank you for applying to Praxent",
+        body: "We received your application. If selected, you will be asked to complete a short assessment.",
+      }),
+    ).toBe("received");
+  });
+  it("an interview confirmation is still good news", () => {
+    expect(
+      classifyMail({
+        from: "WhiteTech <no-reply@eu.greenhouse-mail.io>",
+        subject: "WhiteTech | Interview Confirmation",
+        body: "Thank you for applying. Your interview is confirmed for Monday at 10:00.",
+      }),
+    ).toBe("interview");
+  });
+});

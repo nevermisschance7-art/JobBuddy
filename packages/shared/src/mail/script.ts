@@ -34,7 +34,17 @@ function stop() {
   });
 }
 
+/** Every 15 minutes. A dropped connection or a busy Gmail only means "try again next time":
+ * labels go on after JobBuddy confirms, so nothing is missed. */
 function run() {
+  try {
+    check_();
+  } catch (e) {
+    console.log("JobBuddy: this check didn't finish (" + e + "). Trying again in 15 minutes.");
+  }
+}
+
+function check_() {
   var props = PropertiesService.getScriptProperties();
   var lastRun = Number(props.getProperty("lastRunAt")) || 0;
   var started = Date.now();
@@ -127,7 +137,15 @@ function classifyMail(from, subject, body) {
   var text = subject + "\n" + body;
   if (any_(r.job_alert, head)) return "other";
   if (!any_(r.hiring, from + "\n" + text)) return "other";
-  for (var i = 0; i < ORDER.length; i++) if (any_(r[ORDER[i]], text)) return ORDER[i];
+  for (var i = 0; i < ORDER.length; i++) {
+    var c = ORDER[i];
+    if (!any_(r[c], text)) continue;
+    // A receipt that only mentions a later test or call stays a receipt.
+    if (GOOD_NEWS.indexOf(c) >= 0 && any_(r.received, subject) && !any_(r.strong_subject, subject)) {
+      return "received";
+    }
+    return c;
+  }
   return "other";
 }
 

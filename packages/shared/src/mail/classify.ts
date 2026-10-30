@@ -36,7 +36,10 @@ export const MAIL_ORDER = [
 ] as const;
 
 /** Regex sources, all used case-insensitively. Plain strings so the Apps Script can embed them. */
-export const MAIL_RULES: Record<"job_alert" | "hiring" | (typeof MAIL_ORDER)[number], string[]> = {
+export const MAIL_RULES: Record<
+  "job_alert" | "hiring" | "strong_subject" | (typeof MAIL_ORDER)[number],
+  string[]
+> = {
   // Checked against the sender and subject only.
   job_alert: [
     String.raw`jobalerts?-noreply@`,
@@ -56,6 +59,14 @@ export const MAIL_RULES: Record<"job_alert" | "hiring" | (typeof MAIL_ORDER)[num
     String.raw`\btop jobs\b`,
     String.raw`Stellenangebote|Jobangebote f`,
     String.raw`offres d'emploi`,
+    // Adverts from job sites (LinkedIn Premium trials and the like) are never news.
+    String.raw`@(em|e|mail|news|info|marketing)\.linkedin\.com`,
+    String.raw`\b(premium|free trial|your trial|upgrade (now|to)|subscription|webinar|% off|discount)\b`,
+  ],
+  // A receipt ("Thank you for applying") that only mentions a later test or call stays a
+  // receipt, unless the subject itself says interview, schedule, test, offer or next step.
+  strong_subject: [
+    String.raw`\b(interview|schedule|scheduling|book(ing)? a|availability|assessment|test|challenge|assignment|offer|next steps?|call with|chat with|meet)\b`,
   ],
   // At least one must appear in sender, subject or body, or the mail is "other".
   hiring: [
@@ -166,6 +177,16 @@ export function classifyMail({ from, subject, body }: MailInput): MailClass {
   const text = `${subject}\n${body}`;
   if (any(compiled.job_alert, head)) return "other";
   if (!any(compiled.hiring, `${from}\n${text}`)) return "other";
-  for (const c of MAIL_ORDER) if (any(compiled[c], text)) return c;
+  for (const c of MAIL_ORDER) {
+    if (!any(compiled[c], text)) continue;
+    if (
+      isGoodNews(c) &&
+      any(compiled.received, subject) &&
+      !any(compiled.strong_subject, subject)
+    ) {
+      return "received";
+    }
+    return c;
+  }
   return "other";
 }
