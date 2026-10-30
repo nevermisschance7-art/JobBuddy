@@ -19,6 +19,7 @@ export type Database = {
           created_at: string
           encrypted_key: string
           id: string
+          key_hint: string | null
           last_error: string | null
           provider: string
           quota_reset_at: string | null
@@ -29,6 +30,7 @@ export type Database = {
           created_at?: string
           encrypted_key: string
           id?: string
+          key_hint?: string | null
           last_error?: string | null
           provider: string
           quota_reset_at?: string | null
@@ -39,6 +41,7 @@ export type Database = {
           created_at?: string
           encrypted_key?: string
           id?: string
+          key_hint?: string | null
           last_error?: string | null
           provider?: string
           quota_reset_at?: string | null
