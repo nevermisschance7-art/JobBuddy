@@ -556,8 +556,39 @@ async function intro(): Promise<void> {
      ${result.job ? `<p class="sub">${esc(result.job.company)}</p>` : ""}
      ${status}
      <button class="main" data-act="go">⚡ Fill this application <span style="opacity:.7;font-weight:400">(Alt+A)</span></button>
+     <button class="second" data-act="skip">👎 Not for me</button>
      <p class="muted">${app ? "I'll fill your details, answers and CV." : "I'll set up the application, make your CV for this job, draft the answers and fill the form."} You press Submit.</p>`,
-    { go: () => void run() },
+    { go: () => void run(), skip: () => void notForMe(app?.applicationId ?? undefined) },
+  );
+}
+
+/** "Not for me": hides this job from the JobBuddy list (Undo shows it again). */
+async function notForMe(applicationId?: string): Promise<void> {
+  const reply = await send<{ hidden: boolean; reason?: string }>({
+    type: "dismiss",
+    url: location.href,
+    applicationId,
+  });
+  if (!reply.ok) return showError(reply);
+  sessionStorage.removeItem(PENDING);
+  render(
+    reply.data.hidden
+      ? `<div class="row ok">✓ Hidden from your JobBuddy list. I won't show it again.</div>
+         <button class="second" data-act="undo">Undo</button>
+         <button class="second" data-act="closetab">Close this tab</button>`
+      : `<p class="muted">${esc(reply.data.reason ?? "This job isn't in your JobBuddy list, so there's nothing to hide.")}</p>
+         <button class="second" data-act="closetab">Close this tab</button>`,
+    {
+      undo: () =>
+        void send({ type: "dismiss", url: location.href, applicationId, undo: true }).then(() =>
+          intro(),
+        ),
+      // Works for tabs JobBuddy opened (Quick apply); otherwise the box just closes.
+      closetab: () => {
+        window.close();
+        host?.remove();
+      },
+    },
   );
 }
 

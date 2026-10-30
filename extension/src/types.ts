@@ -78,6 +78,7 @@ export type Message =
   | { type: "applied"; applicationId: string }
   | { type: "cv"; applicationId: string }
   | { type: "learn"; items: { question: string; answer: string }[] }
-  | { type: "open"; url: string };
+  | { type: "open"; url: string }
+  | { type: "dismiss"; url: string; applicationId?: string; undo?: boolean };
 
 export type Reply<T> = { ok: true; data: T } | { ok: false; error: string; signedOut?: boolean };
