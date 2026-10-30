@@ -8,3 +8,7 @@ export * from "./cv/tailor-plan";
 export * from "./answers/answers";
 export * from "./extension/urls";
 export * from "./extension/alerts";
+export * from "./mail/classify";
+export * from "./mail/companies";
+export * from "./mail/script";
+export * from "./mail/status";

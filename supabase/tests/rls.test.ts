@@ -76,6 +76,11 @@ describe.skipIf(!configured)("RLS isolation", () => {
         .upload(`${a.id}/cv.pdf`, pdf(), { contentType: "application/pdf" }),
     ]);
     for (const w of writes) if (w.error) throw w.error;
+    // Mail keys are only created by the server.
+    const mail = await admin
+      .from("mail_tokens")
+      .insert({ user_id: a.id, token_hash: `rls-${run}` });
+    if (mail.error) throw mail.error;
   });
 
   afterAll(async () => {
@@ -108,6 +113,7 @@ describe.skipIf(!configured)("RLS isolation", () => {
     "events",
     "learned_answers",
     "blocked_users",
+    "mail_tokens",
   ]) {
     it(`B cannot read A's ${table}`, async () => {
       const { data, error } = await b.client.from(table).select("*").eq("user_id", a.id);
@@ -183,6 +189,22 @@ describe.skipIf(!configured)("RLS isolation", () => {
   it("users cannot read worker run logs", async () => {
     const { data } = await a.client.from("source_runs").select("id");
     expect(data ?? []).toEqual([]);
+  });
+
+  it("mail keys: owners can see and delete theirs, nobody can write them", async () => {
+    const own = await a.client.from("mail_tokens").select("user_id");
+    expect(own.data).toEqual([{ user_id: a.id }]);
+
+    const insert = await b.client.from("mail_tokens").insert({ user_id: b.id, token_hash: "x" });
+    expect(insert.error).not.toBeNull();
+    await a.client.from("mail_tokens").update({ token_hash: "changed" }).eq("user_id", a.id);
+    await b.client.from("mail_tokens").delete().eq("user_id", a.id);
+    const after = await admin.from("mail_tokens").select("token_hash").eq("user_id", a.id).single();
+    expect(after.data?.token_hash).toBe(`rls-${run}`);
+
+    await a.client.from("mail_tokens").delete().eq("user_id", a.id);
+    const gone = await admin.from("mail_tokens").select("user_id").eq("user_id", a.id);
+    expect(gone.data).toEqual([]);
   });
 
   it("users can't write the server-only list of disabled accounts", async () => {

@@ -1,3 +1,4 @@
+import { GOOD_NEWS } from "@jobbuddy/shared";
 import Link from "next/link";
 import { AppHeader } from "@/components/app-header";
 import { AppList, type AppRow } from "@/components/applications/app-list";
@@ -65,6 +66,24 @@ export default async function ApplicationsPage({
     .order(tab === "ready" ? "created_at" : "updated_at", { ascending: false })
     .range((page - 1) * PAGE, page * PAGE - 1);
   const items = (data ?? []) as unknown as AppRow[];
+
+  // The latest good news per application, found in Gmail by the user's mail script.
+  if (items.length > 0) {
+    const { data: news } = await supabase
+      .from("employer_messages")
+      .select("application_id, subject, gmail_url")
+      .eq("user_id", user.id)
+      .in(
+        "application_id",
+        items.map((i) => i.id),
+      )
+      .in("classification", [...GOOD_NEWS])
+      .order("received_at", { ascending: false });
+    for (const n of news ?? []) {
+      const item = items.find((i) => i.id === n.application_id);
+      if (item && !item.good_news) item.good_news = { subject: n.subject, gmail_url: n.gmail_url };
+    }
+  }
   const pages = Math.max(1, Math.ceil((count ?? 0) / PAGE));
   const href = (next: Partial<{ tab: string; page: number }>) => {
     const p = new URLSearchParams();

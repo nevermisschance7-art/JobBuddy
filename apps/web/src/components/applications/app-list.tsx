@@ -15,6 +15,8 @@ export type AppRow = {
   notes: string | null;
   cv_approved_at: string | null;
   jobs: { title: string; company_name: string; apply_url: string };
+  /** Latest good news from the employer, found in Gmail. */
+  good_news?: { subject: string | null; gmail_url: string | null };
 };
 
 export const STATUS_LABEL: Record<string, string> = {
@@ -67,6 +69,24 @@ function Row({ item }: { item: AppRow }) {
               : `Prepared ${date(item.created_at)}`}
             {item.cv_approved_at ? " · CV ready" : " · CV not approved yet"}
           </p>
+          {item.good_news ? (
+            <p className="text-success text-sm">
+              Good news: {item.good_news.subject || "a reply"}
+              {item.good_news.gmail_url ? (
+                <>
+                  {" · "}
+                  <a
+                    href={item.good_news.gmail_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="underline"
+                  >
+                    Open in Gmail
+                  </a>
+                </>
+              ) : null}
+            </p>
+          ) : null}
         </div>
         <span
           className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_STYLE[status] ?? ""}`}

@@ -63,6 +63,24 @@ describe("alertMessage", () => {
     }
   });
 
+  it("says what the good news is", () => {
+    const e = (classification: string) => ({
+      id: "1",
+      type: "good_news",
+      payload: { company: "Acme", subject: "Next steps", classification },
+      created_at: "",
+    });
+    expect(alertMessage(e("interview"), "plain")).toEqual({
+      title: "Good news",
+      message: "Acme wants to talk with you: Next steps",
+    });
+    expect(alertMessage(e("offer"), "kind").title).toBe("You got an offer");
+    for (const tone of ["kind", "funny", "plain"] as const) {
+      expect(alertMessage(e("assessment"), tone).message).toContain("Acme sent you a test");
+      expect(alertMessage(e("assessment"), tone).message).not.toContain(String.fromCharCode(8212));
+    }
+  });
+
   it("pluralises the daily summary", () => {
     const e = (n: number) => ({
       id: "1",
