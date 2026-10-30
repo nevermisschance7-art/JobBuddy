@@ -44,3 +44,6 @@ apps/web/e2e-screenshots/
 apps/web/playwright-report/
 apps/web/test-results/
 dist-probe/
+
+# Helper agents work in their own copies here
+.claude/worktrees/

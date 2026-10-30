@@ -5,10 +5,10 @@ import { serverEnv } from "@/lib/env";
 
 // The admin page is protected by the admin password only (ADMIN_PASSWORD on the server);
 // no JobBuddy account is needed. After the right password, an httpOnly cookie made from it
-// opens the page for 12 hours. Changing the password signs every admin out.
+// opens the page for 30 days on that browser. Changing the password signs every admin out.
 
 export const ADMIN_COOKIE = "jb_admin";
-const COOKIE_HOURS = 12;
+const COOKIE_DAYS = 30;
 
 /** A cookie value only the server can make, tied to the current password. */
 export function adminToken(): string {
@@ -26,9 +26,11 @@ export function passwordMatches(given: string): boolean {
 export const adminCookieOptions = {
   httpOnly: true,
   secure: true,
-  sameSite: "strict" as const,
+  // "lax", not "strict": a strict cookie is not sent when /admin is opened from a link or
+  // bookmark in another app, which asked for the password every time.
+  sameSite: "lax" as const,
   path: "/",
-  maxAge: COOKIE_HOURS * 3600,
+  maxAge: COOKIE_DAYS * 86_400,
 };
 
 /** "password": show the password form. "ok": the admin page. */
