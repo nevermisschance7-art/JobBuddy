@@ -4,7 +4,7 @@ import { personalInfoFor, routerFor } from "@/lib/ai/router";
 import type { createClient } from "@/lib/supabase/server";
 import { tailorWithRouter, type TailorJob, type TailorResult } from "./tailor-core";
 
-export { jobText, type TailorJob, type TailorResult } from "./tailor-core";
+export { jobText, tailorByRules, type TailorJob, type TailorResult } from "./tailor-core";
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
 

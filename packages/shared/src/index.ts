@@ -4,6 +4,7 @@ export * from "./match";
 export * from "./application";
 export type { Database, Json } from "./database.types";
 export * from "./cv/truth";
+export * from "./cv/tailor-plan";
 export * from "./answers/answers";
 export * from "./extension/urls";
 export * from "./extension/alerts";

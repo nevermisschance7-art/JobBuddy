@@ -152,7 +152,14 @@ export function checkTailoredCv(
     report.removed.push({ section: "Summary", item: clip(summary), reason: summaryProblem });
     summary = source.basics.summary;
   }
-  const basics = { ...source.basics, summary };
+  // Headline: may be worded for the job ("Senior PHP Engineer"), with the same check.
+  let label = tailored.basics.label?.trim() || source.basics.label;
+  const labelProblem = label && label !== source.basics.label ? problemIn(label, facts) : null;
+  if (labelProblem) {
+    report.removed.push({ section: "Headline", item: clip(label ?? ""), reason: labelProblem });
+    label = source.basics.label;
+  }
+  const basics = { ...source.basics, summary, label };
 
   const checkBullets = (section: string, bullets: string[]) =>
     bullets.filter((b) => {

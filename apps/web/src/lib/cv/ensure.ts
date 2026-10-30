@@ -1,14 +1,15 @@
 import "server-only";
-import { checkTailoredCv, type Resume } from "@jobbuddy/shared";
+import type { Resume } from "@jobbuddy/shared";
 import type { createClient } from "@/lib/supabase/server";
 import { approveWithFiles } from "./files";
-import { jobText, tailorResume, type TailorJob } from "./tailor";
+import { tailorByRules, tailorResume, type TailorJob } from "./tailor";
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
 
 /**
  * Makes sure the application has an approved CV with files: tailors it (the truth checker
- * removes anything not in the confirmed CV), or uses the CV as it is when no AI is available.
+ * removes anything not in the confirmed CV), or, when no AI is available, orders and trims it
+ * for the job by rules.
  * Does nothing when it is already approved.
  */
 export async function ensureApprovedCv(
@@ -28,9 +29,7 @@ export async function ensureApprovedCv(
   if (app.cv_approved_at && app.tailored_cv_pdf) return {};
 
   const tailored = await tailorResume(supabase, userId, source, job);
-  const result = tailored.ok
-    ? tailored
-    : { ...checkTailoredCv(source, source, jobText(job)), ok: true as const };
+  const result = tailored.ok ? tailored : { ...tailorByRules(source, job), ok: true as const };
   const problem = await approveWithFiles(
     supabase,
     userId,
@@ -41,5 +40,7 @@ export async function ensureApprovedCv(
   if (problem) return { error: problem };
   return tailored.ok
     ? {}
-    : { note: "The AI was busy or isn't set up, so I used your CV as it is." };
+    : {
+        note: `${/need an AI key/.test(tailored.error) ? "No AI key yet" : "The AI was busy"}, so I tailored it by rules: your most relevant skills and experience for this job first.`,
+      };
 }
