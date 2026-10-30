@@ -494,6 +494,10 @@ def test_remote_ad_that_says_us_only_counts_as_a_us_job():
     assert says_us_only("This role is open only to applicants located in the U.S.")
     assert says_us_only("We hire from anywhere in the United States.")
     assert not says_us_only("We work with clients in the United States and Europe.")
+    assert says_us_only("We're only hiring those authorized to work in the United States.")
+    assert says_us_only("All applicants must be authorized to work in the US without sponsorship")
+    assert says_us_only("Requirements: - U.S. citizenship")
+    assert says_us_only("Work from home anywhere within our approved states in the US")
     ad = job(
         countries=[],
         remote_regions=[],
@@ -502,3 +506,21 @@ def test_remote_ad_that_says_us_only_counts_as_a_us_job():
     )
     assert location_fit(ad, ["GB"])[0] == "none"
     assert location_fit(ad, ["GB"], ["US"])[0] == "remote_abroad"
+
+
+def test_parser_reads_country_remote_wordings():
+    from jobbuddy_workers.geo import parse_location
+    from jobbuddy_workers.match.rules import stated_country
+
+    for text, code in [
+        ("U.S. Remote", "US"),
+        ("United States Remote", "US"),
+        ("Remote: United States", "US"),
+        ("Remote: India", "IN"),
+        ("USA Remote", "US"),
+        ("Remote within Brazil", "BR"),
+    ]:
+        assert parse_location(text)[0] == {code}, text
+    assert parse_location("Remote in AMER")[1] == {"AMERICAS"}
+    assert stated_country("Work Model: Remote within Brazil, overlapping with U.S. hours") == "BR"
+    assert stated_country("A fully remote team across many time zones.") is None

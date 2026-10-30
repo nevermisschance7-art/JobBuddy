@@ -132,7 +132,8 @@ REGIONS: dict[str, str] = {
     "work from anywhere": "WORLDWIDE",
     "emea": "EMEA", "europe": "EUROPE", "eu": "EUROPE", "european union": "EUROPE",
     "eea": "EUROPE", "cet": "EUROPE", "cest": "EUROPE",
-    "americas": "AMERICAS", "north america": "NORTH_AMERICA", "na": "NORTH_AMERICA",
+    "americas": "AMERICAS", "amer": "AMERICAS", "north america": "NORTH_AMERICA",
+    "na": "NORTH_AMERICA",
     "latam": "LATAM", "latin america": "LATAM", "south america": "LATAM",
     "apac": "APAC", "asia": "APAC", "asia pacific": "APAC", "asia-pacific": "APAC",
     "oceania": "APAC", "anz": "APAC", "africa": "AFRICA", "middle east": "MIDDLE_EAST",
@@ -211,11 +212,20 @@ def parse_location(text: str | None) -> tuple[set[str], set[str], bool]:
     countries: set[str] = set()
     regions: set[str] = set()
 
-    parts = [p.strip() for p in re.split(r"[,;/|()\-–]+|\bor\b|\band\b", folded) if p.strip()]
-    raw_parts = [p.strip() for p in re.split(r"[,;/|()\-–]+", text) if p.strip()]
+    parts = [p.strip() for p in re.split(r"[,;:/|()\-–]+|\bor\b|\band\b", folded) if p.strip()]
+    raw_parts = [p.strip() for p in re.split(r"[,;:/|()\-–]+", text) if p.strip()]
 
     for part in parts:
-        part = re.sub(r"^(remote|hybrid|onsite|on-site|in|based in)\s+", "", part).strip()
+        # "Remote in X", "within X", "U.S. Remote", "United States remote only": the place.
+        prev = None
+        while prev != part:
+            prev = part
+            part = re.sub(
+                r"^(fully |100% )?(remote|hybrid|onsite|on-site|in|based in|within|from|only)\s+",
+                "",
+                part,
+            ).strip()
+            part = re.sub(r"\s+(remote|hybrid|only|based|wide)$", "", part).strip()
         if part in REGIONS:
             regions.add(REGIONS[part])
             continue

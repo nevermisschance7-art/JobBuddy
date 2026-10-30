@@ -10,7 +10,7 @@ from dataclasses import dataclass, field, replace
 from datetime import datetime, timedelta
 from functools import lru_cache
 
-from ..geo import COUNTRIES, region_covers
+from ..geo import COUNTRIES, country_code, region_covers
 from ..jobs.normalize import norm_key
 from .tech import job_terms, main_stack, role_families
 
@@ -141,9 +141,34 @@ _US_ONLY = re.compile(
     r"|\b(u\.?s\.?a?|united states)\s+(residents|citizens|persons)\s+only"
     r"|\bremote\s*[-(,:]\s*(u\.?s\.?a?|united states)\s*(only)?\s*\)?\s*$"
     r"|\b(within|from anywhere in)\s+the\s+(continental\s+)?(united states|u\.?s\.?a?\b)"
-    r"|\bwhat state do you (legally\s+)?(reside|live)",
+    r"|\bwhat state do you (legally\s+)?(reside|live)"
+    # "We're only hiring those authorized to work in the United States", "All applicants must
+    # be authorized to work in the US", "U.S. citizenship required", "our approved states".
+    r"|\bonly\s+(hiring|considering|accepting)\s+(those|candidates|applicants|people)\s+"
+    r"(who are\s+)?(legally\s+)?authori[sz]ed to work in the (united states|u\.?s\.?a?\b)"
+    r"|\b(applicants|candidates|you)\s+must\s+(be\s+)?(legally\s+)?authori[sz]ed to work"
+    r"\s+in the (united states|u\.?s\.?a?\b)"
+    r"|\bu\.?s\.?\s+citizenship\b|\bmust be a u\.?s\.? citizen"
+    r"|\bapproved states\b",
     re.I | re.M,
 )
+
+# "Remote within Brazil", "work remotely from Germany": one country, stated in the text.
+_REMOTE_IN = re.compile(
+    r"\b(?i:remote(?:ly)?|work(?:ing)?(?: remotely)?)\s+(?i:only\s+)?(?i:with)?in\s+(?i:the\s+)?"
+    r"([A-Z][A-Za-z.]+(?:\s[A-Z][a-z]+)?)"
+)
+
+
+def stated_country(text: str) -> str | None:
+    """The one country a 'remote, no limits' ad names in its text, or None."""
+    if says_us_only(text):
+        return "US"
+    for m in _REMOTE_IN.finditer(text):
+        code = country_code(m.group(1).rstrip("."))
+        if code:
+            return code
+    return None
 
 
 def says_us_only(text: str) -> bool:
@@ -155,14 +180,12 @@ def location_fit(
 ) -> tuple[str, str]:
     """('country'|'region'|'open_remote'|'remote_abroad'|'none', reason)."""
     allowed_set = set(allowed)
-    if (
-        job.remote_type == "remote"
-        and not job.countries
-        and not job.remote_regions
-        and says_us_only(f"{job.title}\n{job.description_text}")
-    ):
-        # "Remote, limits not stated", but the text says US only: judge it as a US job.
-        job = replace(job, countries=["US"])
+    if job.remote_type == "remote" and not job.countries and not job.remote_regions:
+        # "Remote, limits not stated", but the text names one country ("must reside in the
+        # US", "remote within Brazil"): judge it as a job in that country.
+        stated = stated_country(f"{job.title}\n{job.description_text}")
+        if stated:
+            job = replace(job, countries=[stated])
     hit = allowed_set & set(job.countries)
     if hit:
         return "country", f"Based in {', '.join(COUNTRIES.get(c, c) for c in sorted(hit))}"
