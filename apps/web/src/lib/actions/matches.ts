@@ -26,7 +26,6 @@ export async function setSaved(jobId: string, saved: boolean): Promise<void> {
     .update({ status: saved ? "saved" : "seen" })
     .eq("user_id", user.id)
     .eq("job_id", jobId);
-  revalidatePath("/app");
 }
 
 /** "Not for me". Optionally skips the whole company from now on. */
@@ -59,9 +58,27 @@ export async function dismissMatch(
         .eq("user_id", user.id);
     }
   }
-  revalidatePath("/app");
 }
 
+/** Undo of "hide every job from this company": takes it off the skip list again. */
+export async function unskipCompany(company: string): Promise<void> {
+  const { supabase, user } = await requireUser();
+  const { data: filters } = await supabase
+    .from("filters")
+    .select("excluded_companies")
+    .eq("user_id", user.id)
+    .single();
+  const current = filters?.excluded_companies ?? [];
+  await supabase
+    .from("filters")
+    .update({
+      excluded_companies: current.filter((c) => c.toLowerCase() !== company.toLowerCase()),
+    })
+    .eq("user_id", user.id);
+}
+
+// Save, hide and restore don't rebuild the board: the page already shows the change, and a
+// rebuild made each click wait for every list and count to load again.
 export async function restoreMatch(jobId: string): Promise<void> {
   const { supabase, user } = await requireUser();
   await supabase
@@ -69,7 +86,6 @@ export async function restoreMatch(jobId: string): Promise<void> {
     .update({ status: "seen", dismissed_reason: null })
     .eq("user_id", user.id)
     .eq("job_id", jobId);
-  revalidatePath("/app");
 }
 
 /** On-demand AI explanation, cached on the match. */

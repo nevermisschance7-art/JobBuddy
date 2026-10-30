@@ -170,16 +170,21 @@ export async function loadRecentApplied(
   const since = new Date(Date.now() - 30 * 86_400_000).toISOString();
   const { data } = await supabase
     .from("applications")
-    .select("applied_at, jobs!inner(title, company_name)")
+    .select("applied_at, jobs!inner(id, title, company_name)")
     .eq("user_id", userId)
     .gte("applied_at", since)
     .order("applied_at", { ascending: false })
     .limit(500);
   const out: Record<string, AppliedBefore> = {};
   for (const a of data ?? []) {
-    const job = a.jobs as unknown as { title: string; company_name: string };
+    const job = a.jobs as unknown as { id: string; title: string; company_name: string };
     const key = companyKey(job.company_name);
-    if (key && a.applied_at && !out[key]) out[key] = { title: job.title, appliedAt: a.applied_at };
+    if (key && a.applied_at && !out[key])
+      out[key] = {
+        jobId: job.id,
+        title: job.title.replace(/\s+/g, " ").trim(),
+        appliedAt: a.applied_at,
+      };
   }
   return out;
 }

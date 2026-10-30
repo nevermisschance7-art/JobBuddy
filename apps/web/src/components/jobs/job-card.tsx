@@ -7,13 +7,14 @@ import {
   Check,
   ChevronDown,
   ExternalLink,
+  EyeOff,
   FileText,
   MoreHorizontal,
   Sparkles,
   Zap,
 } from "lucide-react";
 import Link from "next/link";
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { moveApplication } from "@/lib/actions/applications";
 import { explainMatch, restoreMatch, setSaved } from "@/lib/actions/matches";
@@ -28,7 +29,6 @@ import {
 import type { AppliedBefore } from "@/lib/company";
 import type { MatchCard } from "@/lib/matches";
 import { cn } from "@/lib/utils";
-import { NotForMeDialog } from "./not-for-me-dialog";
 import { ScoreRing } from "./score-ring";
 
 const ELIG_STYLE: Record<EligibilityChip, string> = {
@@ -75,6 +75,7 @@ export function JobCard({
   userTerms,
   appliedBefore,
   onGone,
+  onHide,
   onSeen,
 }: {
   match: MatchCard;
@@ -84,6 +85,8 @@ export function JobCard({
   userTerms: Set<string>;
   /** Called when the card should leave the current list (dismissed, restored, unsaved, applied). */
   onGone: (jobId: string) => void;
+  /** "Not for me" (or every job from this company): hidden at once, with Undo. */
+  onHide: (jobId: string, skipCompany?: string) => void;
   /** The user opened this job: no longer "New". */
   onSeen: (jobId: string) => void;
 }) {
@@ -93,7 +96,6 @@ export function JobCard({
   const [saved, setSavedState] = useState(match.status === "saved");
   const [explanation, setExplanation] = useState(match.explanation);
   const [error, setError] = useState<string | null>(null);
-  const [dismissOpen, setDismissOpen] = useState(false);
   const [applied, setApplied] = useState<Applied | null>(null);
   const [pending, startTransition] = useTransition();
   const [applying, startApplying] = useTransition();
@@ -119,6 +121,32 @@ export function JobCard({
     onSeen(job.id);
   };
 
+  // "New" means not shown to you yet: once most of the card has been on screen for about a
+  // second, it counts as seen (its New mark stays until you come back to the board).
+  const cardRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const el = cardRef.current;
+    if (!el || match.status !== "new") return;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        clearTimeout(timer);
+        if (entry?.isIntersecting) {
+          timer = setTimeout(() => {
+            onSeen(job.id);
+            io.disconnect();
+          }, 1000);
+        }
+      },
+      { threshold: 0.6 },
+    );
+    io.observe(el);
+    return () => {
+      clearTimeout(timer);
+      io.disconnect();
+    };
+  }, [job.id, match.status, onSeen]);
+
   const runQuickApply = () => {
     seen();
     setError(null);
@@ -140,16 +168,18 @@ export function JobCard({
     });
   };
 
-  const markApplied = () =>
-    startTransition(async () => {
-      if (!applied) return;
-      await moveApplication(applied.applicationId, "applied");
-      setApplied({ ...applied, done: true });
-      setTimeout(() => onGone(job.id), 1200);
-    });
+  // At once on screen; saved in the background. (The extension also marks it applied by
+  // itself when it sees the employer's thank-you page, so this button is only a backup.)
+  const markApplied = () => {
+    if (!applied) return;
+    setApplied({ ...applied, done: true });
+    void moveApplication(applied.applicationId, "applied");
+    setTimeout(() => onGone(job.id), 900);
+  };
 
   return (
     <article
+      ref={cardRef}
       className={cn(
         "border-border bg-card group rounded-xl border p-4 transition-colors sm:p-5",
         "hover:border-primary/40",
@@ -194,7 +224,9 @@ export function JobCard({
           </p>
           {appliedBefore ? (
             <p className="bg-warning/20 mt-2 inline-block rounded-md px-2 py-0.5 text-xs">
-              {`You applied to ${job.company_name} on ${appliedOn(appliedBefore.appliedAt)} (${appliedBefore.title}).`}
+              {appliedBefore.jobId === job.id
+                ? `You applied to this job on ${appliedOn(appliedBefore.appliedAt)}.`
+                : `A different job: you already applied to ${job.company_name} on ${appliedOn(appliedBefore.appliedAt)} for "${appliedBefore.title}".`}
             </p>
           ) : null}
         </div>
@@ -266,7 +298,7 @@ export function JobCard({
               <Link href={`/applications/${applied.applicationId}`} className="underline">
                 Check CV
               </Link>
-              <Button size="sm" variant="outline" disabled={pending} onClick={markApplied}>
+              <Button size="sm" variant="outline" onClick={markApplied}>
                 I applied
               </Button>
             </>
@@ -279,13 +311,10 @@ export function JobCard({
           <Button
             variant="outline"
             size="sm"
-            disabled={pending}
-            onClick={() =>
-              startTransition(async () => {
-                await restoreMatch(job.id);
-                onGone(job.id);
-              })
-            }
+            onClick={() => {
+              onGone(job.id);
+              void restoreMatch(job.id);
+            }}
           >
             Show again
           </Button>
@@ -299,17 +328,17 @@ export function JobCard({
               size="sm"
               aria-pressed={saved}
               aria-label={saved ? "Saved" : "Save"}
-              disabled={pending}
-              onClick={() =>
-                startTransition(async () => {
-                  await setSaved(job.id, !saved);
-                  setSavedState(!saved);
-                  if (saved && match.status === "saved") onGone(job.id);
-                })
-              }
+              onClick={() => {
+                setSavedState(!saved);
+                void setSaved(job.id, !saved);
+                if (saved && match.status === "saved") onGone(job.id);
+              }}
             >
               {saved ? <BookmarkCheck size={14} /> : <Bookmark size={14} />}
               <span className="hidden sm:inline">{saved ? "Saved" : "Save"}</span>
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => onHide(job.id)}>
+              <EyeOff size={14} /> <span className="hidden sm:inline">Not for me</span>
             </Button>
             <details className="relative">
               <summary
@@ -358,23 +387,14 @@ export function JobCard({
                     <FileText size={14} /> CV and answers
                   </Link>
                 ) : null}
-                <MenuButton onClick={() => setDismissOpen(true)}>Not for me</MenuButton>
+                <MenuButton onClick={() => onHide(job.id, job.company_name)}>
+                  <EyeOff size={14} /> Hide every job from {job.company_name}
+                </MenuButton>
               </div>
             </details>
           </>
         )}
       </div>
-
-      {dismissOpen ? (
-        <NotForMeDialog
-          jobId={job.id}
-          company={job.company_name}
-          onClose={(dismissed) => {
-            setDismissOpen(false);
-            if (dismissed) onGone(job.id);
-          }}
-        />
-      ) : null}
     </article>
   );
 }

@@ -5,7 +5,14 @@ import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from
 import { MascotSays } from "@/components/mascot";
 import { Button } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/field";
-import { loadMoreMatches, markSeen, saveMinScore } from "@/lib/actions/matches";
+import {
+  dismissMatch,
+  loadMoreMatches,
+  markSeen,
+  restoreMatch,
+  saveMinScore,
+  unskipCompany,
+} from "@/lib/actions/matches";
 import { COUNTRY_OPTIONS } from "@/lib/countries";
 import type { MatchCard, MatchCounts, MatchQuery } from "@/lib/matches";
 import { cn } from "@/lib/utils";
@@ -108,7 +115,67 @@ export function JobsInbox({
     }, 1500);
     return () => clearInterval(t);
   }, []);
+  // "Not for me": gone at once, saved in the background, with Undo (button or Ctrl+Z).
+  type Hidden = { cards: { card: MatchCard; index: number }[]; company?: string };
+  const [undoStack, setUndoStack] = useState<Hidden[]>([]);
+  // The Undo bar shows for 8 seconds after each hide; Ctrl+Z keeps working after that.
+  const [barVisible, setBarVisible] = useState(false);
+  useEffect(() => {
+    if (!barVisible) return;
+    const t = setTimeout(() => setBarVisible(false), 8000);
+    return () => clearTimeout(t);
+  }, [barVisible, undoStack]);
+  const itemsRef = useRef(items);
+  itemsRef.current = items;
+  const undoRef = useRef(undoStack);
+  undoRef.current = undoStack;
+  const onHide = useCallback((jobId: string, company?: string) => {
+    const key = company ? companyKey(company) : null;
+    const gone = itemsRef.current
+      .map((card, index) => ({ card, index }))
+      .filter(({ card }) =>
+        key ? companyKey(card.jobs.company_name) === key : card.jobs.id === jobId,
+      );
+    if (gone.length === 0) return;
+    setItems((prev) => prev.filter((card) => !gone.some((g) => g.card.id === card.id)));
+    setUndoStack((stack) => [...stack.slice(-19), { cards: gone, company }]);
+    setBarVisible(true);
+    for (const { card } of gone) {
+      // The company is added to the skip list once, with the job that was clicked.
+      void dismissMatch(card.jobs.id, null, "", card.jobs.id === jobId ? (company ?? null) : null);
+    }
+  }, []);
+  const undo = useCallback(() => {
+    const last = undoRef.current.at(-1);
+    if (!last) return;
+    setUndoStack((stack) => stack.slice(0, -1));
+    setItems((prev) => {
+      const next = [...prev];
+      for (const { card, index } of last.cards) next.splice(Math.min(index, next.length), 0, card);
+      return next;
+    });
+    for (const { card } of last.cards) void restoreMatch(card.jobs.id);
+    if (last.company) void unskipCompany(last.company);
+  }, []);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const typing =
+        !!target && (/^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName) || target.isContentEditable);
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === "z" && !typing) {
+        e.preventDefault();
+        undo();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [undo]);
+  const lastHidden = undoStack.at(-1);
+
+  const seenIds = useRef<Set<string>>(new Set());
   const onSeen = useCallback((jobId: string) => {
+    if (seenIds.current.has(jobId)) return; // shown and then opened: counted once
+    seenIds.current.add(jobId);
     seenQueue.current.add(jobId);
     setNewCount((n) => Math.max(0, n - 1));
   }, []);
@@ -377,11 +444,37 @@ export function JobsInbox({
                 userTerms={terms}
                 appliedBefore={recentApplied[companyKey(m.jobs.company_name)]}
                 onSeen={onSeen}
+                onHide={onHide}
                 onGone={(jobId) => setItems((prev) => prev.filter((x) => x.jobs.id !== jobId))}
               />
             ))}
           </div>
         )}
+
+        {lastHidden && barVisible ? (
+          <div
+            role="status"
+            className="bg-foreground text-background fixed bottom-6 left-1/2 z-40 flex -translate-x-1/2 items-center gap-4 rounded-full px-5 py-2.5 text-sm shadow-lg"
+          >
+            <span>
+              {lastHidden.company
+                ? `Hidden every job from ${lastHidden.company}`
+                : `Hidden: ${lastHidden.cards[0]?.card.jobs.title ?? "job"}`}
+            </span>
+            <button type="button" onClick={undo} className="font-semibold underline">
+              Undo
+            </button>
+            <span className="opacity-60">Ctrl+Z</span>
+            <button
+              type="button"
+              aria-label="Close"
+              onClick={() => setBarVisible(false)}
+              className="opacity-60 hover:opacity-100"
+            >
+              ×
+            </button>
+          </div>
+        ) : null}
 
         <div ref={sentinel} aria-hidden className="h-8" />
         {loading ? (

@@ -12,4 +12,4 @@ export function companyKey(name: string): string {
 }
 
 /** A company the user applied to recently: the job and when. */
-export type AppliedBefore = { title: string; appliedAt: string };
+export type AppliedBefore = { jobId: string; title: string; appliedAt: string };
