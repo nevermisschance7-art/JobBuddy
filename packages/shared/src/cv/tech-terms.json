@@ -1,5 +1,5 @@
 {
-  "$comment": "Technologies the truth checker and the matcher look for. Lower case, matched as whole words. Words that are also plain English (Go, C, R, REST, Spring, Express) are left out or written in a safer form. Used by packages/shared (TypeScript) and workers (Python).",
+  "$comment": "Technologies the truth checker and the matcher look for. Lower case, matched as whole words. Words that are also plain English (Go, C, R, REST, Spring, Express) are left out or written in a safer form. Used by packages/shared (TypeScript) and workers (Python). Languages and frameworks come first, up to \"graphql\": the matcher takes a person's main stack from them.",
   "terms": [
     "python",
     "java",
@@ -61,6 +61,9 @@
     "asp.net",
     "blazor",
     "flutter",
+    "swiftui",
+    "ios",
+    "android",
     "ionic",
     "electron",
     "graphql",

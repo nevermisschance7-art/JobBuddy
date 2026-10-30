@@ -203,49 +203,76 @@ def _closeness(similarity: float) -> float:
     return max(0.0, min(1.0, (similarity - SIM_FLOOR) / (SIM_FULL - SIM_FLOOR)))
 
 
+# Kinds of role far from each other: a mismatch here says the job is a different job.
+_FAR_ROLES = {"mobile", "frontend", "qa", "security", "ml", "data"}
+
+# A title that says the person builds software. Others ("Talent Scientist", "Producer",
+# "Analyst") can name Python and SQL and still not be a developer's job.
+_DEV_TITLE = re.compile(
+    r"engineer|developer|programmer|architect|devops|\bsre\b|software|back.?end|front.?end|"
+    r"full.?stack|\bcto\b|tech(nical)? lead|coder|\bswe\b",
+    re.IGNORECASE,
+)
+
+
 def technical(job: JobFacts, f: UserFilters) -> dict[str, object]:
     """Tech fit only: the technologies the job asks for against the ones the CV shows.
 
     60 points: share of the job's technologies the CV has (title 3x, required 1-2x,
                "nice to have" 0.4x).
-    25 points: the person's main stack (their most used technologies) is in the job.
+    25 points: the person's main stack (their first languages and frameworks) is asked for.
     15 points: the kind of role (backend, platform, data...) matches their own titles.
-    A job ad that names fewer than two technologies, or a CV without any, falls back to how
-    close the CV and the ad read (so vague ads neither shine nor vanish).
+    An ad naming few technologies blends in how close the CV and the ad read, but a
+    technology it asks for that the CV lacks still counts against it. Then: a clearly
+    different kind of role (iOS for a backend developer) and an ad naming none of the
+    user's must-have skills (any one is enough) pull the score down.
     """
     weights = dict(_job_terms(job.id, job.title, f"{job.description_text}\n{' '.join(job.tags)}"))
     cv = f.cv_terms
-    if len(weights) < 2 or not cv:
-        points = 85 * _closeness(job.similarity)
-        return _part(
-            points, WEIGHTS["technical"], "Few technologies named; scored by closeness to your CV"
+    closeness = 85 * _closeness(job.similarity)
+    job_roles = role_families(job.title)
+
+    if not cv or not weights:
+        points = closeness
+        reason = "Few technologies named; scored by closeness to your CV"
+    else:
+        have = sorted((t for t in weights if t in cv), key=lambda t: -weights[t])
+        coverage = sum(weights[t] for t in have) / sum(weights.values())
+        stack = main_stack(cv)
+        if any(weights.get(t, 0) >= 1 for t in stack):
+            stack_points = 25.0
+        elif any(t in weights for t in stack):
+            stack_points = 12.0  # only as a "nice to have"
+        else:
+            stack_points = 0.0
+        if not job_roles:
+            role_points = 8.0  # a general engineering title
+        elif job_roles & f.cv_roles:
+            role_points = 15.0
+        else:
+            role_points = 0.0
+        tech_points = 60 * coverage + stack_points + role_points
+        # An ad naming only a few technologies says little: trust the technology match less
+        # and blend in the text closeness (full trust from about six required technologies).
+        trust = min(1.0, sum(weights.values()) / 6)
+        points = trust * tech_points + (1 - trust) * closeness * (0.5 + 0.5 * coverage)
+        reason = f"You have {len(have)} of the {len(weights)} technologies it asks for" + (
+            f" ({', '.join(have[:4])})" if have else ""
         )
 
-    have = sorted((t for t in weights if t in cv), key=lambda t: -weights[t])
-    coverage = sum(weights[t] for t in have) / sum(weights.values())
-    stack = [t for t in main_stack(cv) if t in weights]
-    job_roles = role_families(job.title)
-    if not job_roles:
-        role_points = 8.0  # a general engineering title
-    elif job_roles & f.cv_roles:
-        role_points = 15.0
-    else:
-        role_points = 0.0
-    tech_points = 60 * coverage + 25 * min(1.0, len(stack) / 2) + role_points
-    # An ad naming only a few technologies says little: trust the technology match less and
-    # blend in the text closeness (full trust from about six required technologies).
-    trust = min(1.0, sum(weights.values()) / 6)
-    points = trust * tech_points + (1 - trust) * 85 * _closeness(job.similarity)
+    if not _DEV_TITLE.search(job.title):
+        points *= 0.6
+        reason += "; not a developer title"
+    if job_roles and f.cv_roles and not job_roles & f.cv_roles:
+        points *= 0.6 if job_roles & _FAR_ROLES else 0.85
+        reason += f"; a {'/'.join(sorted(job_roles))} role, unlike yours"
 
-    # Must-have skills the user set: missing ones pull the score down.
+    # Must-have skills: any one of them is enough; an ad with none of them drops.
     if f.must_have_skills:
         text = f"{job.title}\n{job.description_text}"
-        found = sum(1 for s in f.must_have_skills if mentions(text, s))
-        points *= 0.5 + 0.5 * found / len(f.must_have_skills)
-
-    reason = f"You have {len(have)} of the {len(weights)} technologies it asks for" + (
-        f" ({', '.join(have[:4])})" if have else ""
-    )
+        if not any(mentions(text, s) for s in f.must_have_skills):
+            points *= 0.5
+            reason += "; none of your must-have skills"
     return _part(points, WEIGHTS["technical"], reason)
 
 

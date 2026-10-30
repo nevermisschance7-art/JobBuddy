@@ -211,9 +211,8 @@ def tech_filters(**kw):
     from jobbuddy_workers.match.cv import cv_roles
     from jobbuddy_workers.match.tech import cv_terms
 
-    return filters(
-        must_have_skills=[], cv_terms=cv_terms(PYTHON_CV), cv_roles=cv_roles(PYTHON_CV), **kw
-    )
+    kw.setdefault("must_have_skills", [])
+    return filters(cv_terms=cv_terms(PYTHON_CV), cv_roles=cv_roles(PYTHON_CV), **kw)
 
 
 def test_tech_fit_counts_the_jobs_technologies_you_have():
@@ -442,3 +441,47 @@ def test_remote_jobs_limited_to_another_country_are_opt_in():
 
     us_office = job(countries=["US"], remote_type="onsite")
     assert "location" in hard_filters(us_office, opted_in)  # only remote jobs, never office jobs
+
+
+def test_must_have_skills_mean_any_one_of_them():
+    ad = job(
+        title="Python Developer",
+        description_text="Python, Django, PostgreSQL, AWS and Docker.",
+        similarity=0.5,
+    )
+    stack = ["Python", "PHP", "Laravel", "Azure"]  # a list of options, not all at once
+    with_list = evaluate(ad, tech_filters(must_have_skills=stack), NOW).score
+    assert with_list == evaluate(ad, tech_filters(), NOW).score
+    other = job(title="Java Developer", description_text="Java and Spring Boot.", similarity=0.5)
+    assert evaluate(other, tech_filters(must_have_skills=stack), NOW).score < 20
+
+
+def test_a_different_kind_of_role_scores_low_even_with_few_technologies():
+    ios = job(
+        title="iOS Engineer - Creative App",
+        description_text="Ship native features in Swift for our creative app.",
+        similarity=0.55,
+    )
+    assert evaluate(ios, tech_filters(), NOW).score < 25
+
+
+def test_a_non_developer_title_scores_lower():
+    dev = job(id="d", title="Python Engineer", description_text="Python and SQL.", similarity=0.5)
+    other = job(
+        id="t", title="Talent Scientist", description_text="Python and SQL.", similarity=0.5
+    )
+    assert evaluate(other, tech_filters(), NOW).score < evaluate(dev, tech_filters(), NOW).score
+
+
+def test_main_stack_follows_the_skills_order_not_mention_counts():
+    from jobbuddy_workers.match.tech import cv_terms, main_stack
+
+    cv = {
+        "work": [{"highlights": ["Azure, Azure, Azure and Kafka, Kafka on Azure"]}],
+        "skills": [
+            {"name": "Languages", "keywords": ["PHP 8.4", "Python", "SQL"]},
+            {"name": "Backend", "keywords": ["Laravel", "Symfony"]},
+        ],
+    }
+    stack = main_stack(cv_terms(cv))
+    assert "php" in stack and "laravel" in stack and "sql" not in stack
