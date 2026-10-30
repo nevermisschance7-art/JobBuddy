@@ -59,7 +59,12 @@ export async function pickChoices(
   const out: (string | null)[] = items.map((item) => {
     let best: { answer: string; score: number } | null = null;
     for (const m of memory) {
-      const score = questionSimilarity(item.question, m.question, job.company_name, m.company);
+      const score = questionSimilarity(
+        item.question,
+        m.question,
+        job.company_name,
+        m.company ?? undefined,
+      );
       if (!best || score > best.score) best = { answer: m.answer, score };
     }
     if (!best || best.score < CHOICE_REUSE) return null;
