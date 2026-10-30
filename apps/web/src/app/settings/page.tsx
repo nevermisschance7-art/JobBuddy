@@ -4,6 +4,7 @@ import { DeleteAccountForm, DisplayNameForm, TimeZoneForm } from "@/components/f
 import { AiKeysForm } from "@/components/forms/ai-keys-form";
 import { CvUpload, RereadCv } from "@/components/forms/cv-upload";
 import { FixedAnswersForm } from "@/components/forms/fixed-answers-form";
+import { MailSetup } from "@/components/forms/mail-setup";
 import { ResumeEditor } from "@/components/forms/resume-editor";
 import { ToneForm } from "@/components/forms/tone-form";
 import { Card } from "@/components/ui/field";
@@ -20,6 +21,7 @@ const SECTIONS = [
   ["learned", "Learned answers"],
   ["tone", "Tone"],
   ["extension", "Chrome extension"],
+  ["mail", "Employer replies"],
   ["data", "Your data"],
 ] as const;
 
@@ -46,7 +48,7 @@ function Section({
 
 export default async function SettingsPage() {
   const { supabase, user, profile } = await loadProfile();
-  const [cv, answers, keys, { data: learned }] = await Promise.all([
+  const [cv, answers, keys, { data: learned }, { data: mailKey }] = await Promise.all([
     loadLatestCv(),
     loadFixedAnswers(),
     loadKeyStatuses(),
@@ -55,6 +57,7 @@ export default async function SettingsPage() {
       .select("id, question, answer")
       .eq("user_id", user.id)
       .order("updated_at", { ascending: false }),
+    supabase.from("mail_tokens").select("last_used_at").eq("user_id", user.id).maybeSingle(),
   ]);
   const username = profile?.username ?? "";
 
@@ -143,6 +146,10 @@ export default async function SettingsPage() {
               </li>
             </ol>
           </Card>
+        </Section>
+
+        <Section id="mail" title="Employer replies (Gmail)">
+          <MailSetup connected={Boolean(mailKey)} lastUsedAt={mailKey?.last_used_at ?? null} />
         </Section>
 
         <Section id="data" title="Your data">

@@ -5,9 +5,10 @@ export async function middleware(request: NextRequest) {
   return updateSession(request);
 }
 
-// /api/extension/* authenticates with a bearer token from the Chrome extension, not cookies.
+// /api/extension/* and /api/mail/* authenticate with a bearer token (Chrome extension, Gmail
+// script), not cookies.
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|api/health|api/extension|.*\\.(?:svg|png|jpg|ico)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|api/health|api/extension|api/mail|.*\\.(?:svg|png|jpg|ico)$).*)",
   ],
 };

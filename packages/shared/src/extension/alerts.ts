@@ -6,6 +6,7 @@ export const ALERT_TYPES = [
   "application_ready",
   "weekly_nudge",
   "needs_fixing",
+  "good_news",
 ] as const;
 export type AlertType = (typeof ALERT_TYPES)[number];
 
@@ -126,6 +127,25 @@ export function alertMessage(e: AlertEvent, tone: Tone): { title: string; messag
         title: "Needs fixing",
         message: str(p.message) || "Something needs your attention in Settings.",
       };
+    case "good_news": {
+      // An employer reply found in Gmail by the user's mail script.
+      const company = str(p.company) || "An employer";
+      const what =
+        {
+          interview: "wants to talk with you",
+          assessment: "sent you a test",
+          offer: "sent you an offer",
+          next_step: "wants to move you forward",
+        }[str(p.classification)] ?? "replied with good news";
+      return {
+        title: str(p.classification) === "offer" ? "You got an offer" : "Good news",
+        message: {
+          kind: `${company} ${what}. Well done. Open it in Gmail when you're ready.`,
+          funny: `${company} ${what}. Told you they'd notice.`,
+          plain: `${company} ${what}: ${str(p.subject)}`,
+        }[tone],
+      };
+    }
     default:
       return { title: "JobBuddy", message: "Something new is waiting for you." };
   }

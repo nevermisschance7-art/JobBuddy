@@ -265,9 +265,11 @@ export type Database = {
         Row: {
           application_id: string | null
           classification: string | null
+          company: string | null
           confidence: number | null
           created_at: string
           from_domain: string
+          gmail_url: string | null
           id: string
           received_at: string
           snippet: string | null
@@ -278,9 +280,11 @@ export type Database = {
         Insert: {
           application_id?: string | null
           classification?: string | null
+          company?: string | null
           confidence?: number | null
           created_at?: string
           from_domain: string
+          gmail_url?: string | null
           id?: string
           received_at: string
           snippet?: string | null
@@ -291,9 +295,11 @@ export type Database = {
         Update: {
           application_id?: string | null
           classification?: string | null
+          company?: string | null
           confidence?: number | null
           created_at?: string
           from_domain?: string
+          gmail_url?: string | null
           id?: string
           received_at?: string
           snippet?: string | null
@@ -613,6 +619,27 @@ export type Database = {
           provider?: string
           task?: string
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      mail_tokens: {
+        Row: {
+          created_at: string
+          last_used_at: string | null
+          token_hash: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          last_used_at?: string | null
+          token_hash: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          last_used_at?: string | null
+          token_hash?: string
+          user_id?: string
         }
         Relationships: []
       }
