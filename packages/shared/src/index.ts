@@ -7,6 +7,7 @@ export * from "./cv/truth";
 export * from "./cv/tailor-plan";
 export * from "./cv/cover-letter";
 export * from "./answers/answers";
+export * from "./answers/standard";
 export * from "./extension/urls";
 export * from "./extension/alerts";
 export * from "./mail/classify";

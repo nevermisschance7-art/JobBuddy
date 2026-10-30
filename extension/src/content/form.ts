@@ -1,4 +1,10 @@
-import { fixedAnswerFor, fixedKeyFor, questionSimilarity } from "@jobbuddy/shared";
+import {
+  fixedAnswerFor,
+  fixedKeyFor,
+  isConsentBox,
+  questionSimilarity,
+  standardAnswer,
+} from "@jobbuddy/shared";
 import type { FillData } from "../types";
 
 // Reads an application form and fills it. Pure DOM code (no chrome.*), tested with jsdom.
@@ -562,6 +568,12 @@ function knownValue(field: FormField, data: FillData): string | null {
         return data.fixedAnswers.work_authorized ?? yesNoFrom(data.fixedAnswers.right_to_work);
       }
       if (key) return fixedAnswerFor(key, data.fixedAnswers) ?? null;
+      // The owner's standing answers to personal questions (always No / fully remote only).
+      const standard = standardAnswer(field.label);
+      if (standard) {
+        const choice = Boolean(field.options || field.choices || isSelectLike(field));
+        return choice ? standard.choice : standard.text;
+      }
       let best: { answer: string; score: number } | null = null;
       for (const a of data.answers) {
         if (a.isCoverLetter) continue;
@@ -718,6 +730,8 @@ export type FillReport = {
   resume: FormField | null;
   /** A cover letter upload field, for the tailored cover letter PDF. */
   coverLetter: FormField | null;
+  /** Consent tick boxes ticked for the user (privacy policy, terms): shown to check. */
+  consented: FormField[];
   /** Custom dropdowns with the value to pick, for fillComboboxes (zone: a time zone list). */
   dropdowns: { field: FormField; value: string; zone?: string | null }[];
 };
@@ -885,6 +899,7 @@ export function fillForm(fields: FormField[], data: FillData): FillReport {
     missed: [],
     resume: null,
     coverLetter: null,
+    consented: [],
     dropdowns: [],
   };
   for (const f of fields) {
@@ -914,6 +929,15 @@ function fillOne(f: FormField, data: FillData, report: FillReport): void {
   // changed: JobBuddy only fills gaps.
   if (f.choices?.some((c) => isChosen(c.el))) return;
   if (f.options?.some((o) => o.el.checked)) return;
+  // A single consent tick box (privacy policy, terms, "I certify"): ticked, for the user to
+  // check before Submit. Never a marketing opt-in.
+  const box = f.options?.length === 1 ? f.options[0]! : null;
+  if (box && box.el.type === "checkbox" && isConsentBox(`${f.label} ${box.label}`)) {
+    box.el.click();
+    report.consented.push(f);
+    report.filled++;
+    return;
+  }
   if (f.combobox && comboboxHasValue(f.el as unknown as HTMLElement)) return;
   const known = knownValue(f, data);
   const value = known ?? learnedValue(f.label, data);

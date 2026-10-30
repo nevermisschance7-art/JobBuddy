@@ -551,3 +551,39 @@ describe("cover letter", () => {
     );
   });
 });
+
+describe("standing answers and consent", () => {
+  const data = (): FillData => ({
+    applicationId: "a",
+    status: "prepared",
+    profile: {
+      fullName: "Sam Tester", firstName: "Sam", lastName: "Tester", email: null, phone: null,
+      city: null, countryCode: null, linkedin: null, github: null, website: null,
+      country: null, currentCompany: null, currentTitle: null, headline: null, summary: null,
+    },
+    fixedAnswers: {},
+    answers: [],
+    learned: [],
+    cv: null,
+  }); // prettier-ignore
+
+  it("answers personal questions the owner's way and ticks consent, not marketing", () => {
+    document.body.innerHTML = `
+      <label for="a">Have you previously applied to Acme?</label>
+      <select id="a"><option value="">Select</option><option>Yes</option><option>No</option></select>
+      <label for="o">This role is 3 days a week in the office. Are you comfortable with that?</label>
+      <textarea id="o"></textarea>
+      <fieldset><legend>Do you hold an active security clearance?</legend>
+        <label><input type="radio" name="c" value="y"> Yes</label>
+        <label><input type="radio" name="c" value="n"> No</label></fieldset>
+      <label><input type="checkbox" id="p"> I have read and agree to the Privacy Policy</label>
+      <label><input type="checkbox" id="m"> Send me job alerts and marketing emails</label>`;
+    const report = fillForm(collectFields(document), data());
+    expect((document.querySelector("#a") as HTMLSelectElement).selectedOptions[0]!.text).toBe("No");
+    expect((document.querySelector("#o") as HTMLTextAreaElement).value).toMatch(/fully remote/);
+    expect((document.querySelector("input[value=n]") as HTMLInputElement).checked).toBe(true);
+    expect((document.querySelector("#p") as HTMLInputElement).checked).toBe(true);
+    expect((document.querySelector("#m") as HTMLInputElement).checked).toBe(false);
+    expect(report.consented).toHaveLength(1);
+  });
+});

@@ -5,6 +5,8 @@
 // 3. Otherwise the AI drafts it, using past answers as style examples.
 // This module is pure (the AI call is passed in) so the rules above are easy to test.
 
+import { standardAnswer } from "./standard";
+
 export type FixedKey =
   | "right_to_work"
   | "visa_status"
@@ -275,6 +277,12 @@ export async function answerQuestions(
       out[index] = value
         ? { ...base, kind: "fixed", fixedKey: key, answer: value }
         : { ...base, kind: "missing_fixed", fixedKey: key, answer: "" };
+      return;
+    }
+    // The owner's standing answers (applied before, office/travel, clearance...): code, no AI.
+    const standard = isCoverLetter ? null : standardAnswer(q.text);
+    if (standard) {
+      out[index] = { ...base, kind: "fixed", answer: standard.text };
       return;
     }
 

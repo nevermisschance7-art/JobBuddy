@@ -419,7 +419,15 @@ async function fill(
     "#f59e0b",
     "JobBuddy couldn't fill this required field. Please fill it yourself.",
   );
-  outline(byAi, "#4f46e5", "Written or picked by AI from your CV. Please check it.");
+  // AI drafts with [notes in brackets] need the user's own details: orange, not blue.
+  const gaps = byAi.filter((f) => /\[[^\]]{3,}\]/.test(currentAnswer(f) ?? ""));
+  outline(
+    byAi.filter((f) => !gaps.includes(f)),
+    "#4f46e5",
+    "Written or picked by AI from your CV. Please check it.",
+  );
+  outline(gaps, "#f59e0b", "AI draft: replace the [notes in brackets] with your own details.");
+  outline(report.consented, "#f59e0b", "Ticked for you. Please check it before you press Submit.");
   if (data.applicationId) sessionStorage.setItem(PENDING, data.applicationId);
   let next = 0;
 
@@ -440,6 +448,8 @@ async function fill(
      <div class="row ok">✓ ${report.filled} field${report.filled === 1 ? "" : "s"} filled${report.fromLearned ? ` (${report.fromLearned} from answers you taught me)` : ""}</div>
      ${cvLine}
      ${byAi.length ? `<div class="row" style="color:#4f46e5">✎ ${byAi.length} answer${byAi.length === 1 ? "" : "s"} by AI, outlined in blue: please check</div>` : ""}
+     ${gaps.length ? `<div class="row warn">✎ ${gaps.length} AI draft${gaps.length === 1 ? "" : "s"} with [notes] for your own details, outlined in orange</div>` : ""}
+     ${report.consented.length ? `<div class="row warn">☑ ${report.consented.length} consent box${report.consented.length === 1 ? "" : "es"} ticked for you, outlined in orange: please check</div>` : ""}
      ${required.length ? `<div class="row warn">⚠ ${required.length} required left for you, outlined in orange</div>` : `<div class="row ok">✓ Every required field is filled</div>`}
      ${optional.length ? `<div class="row muted">○ ${optional.length} optional left empty (fine to skip)</div>` : ""}
      ${extra.draftError ? `<div class="row warn">⚠ Couldn't draft answers: ${esc(extra.draftError)}</div>` : ""}
