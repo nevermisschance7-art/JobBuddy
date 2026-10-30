@@ -105,7 +105,7 @@ export function routerFor(supabase: Supabase): LlmRouter {
     openrouter: list(process.env.OPENROUTER_API_KEY),
   };
   if (MODELS_CONFIG.providers.anthropic.enabled && process.env.ANTHROPIC_API_KEY) {
-    sharedKeys.anthropic = process.env.ANTHROPIC_API_KEY;
+    sharedKeys.anthropic = [process.env.ANTHROPIC_API_KEY];
   }
 
   return new LlmRouter({ keys, sinks, sharedKeys });
