@@ -53,16 +53,12 @@ jobs:
       # the saved test forms stay as they are.
       - name: Publish the given forms
         if: inputs.urls != ''
+        working-directory: probe-out
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          mkdir -p /tmp/given && cp -r probe-out/. /tmp/given/
-          git fetch origin probe-given || true
-          git switch --orphan probe-given-new
-          git rm -rq . 2>/dev/null || true
-          cp -r /tmp/given/. .
-          git add -A && git commit -qm "Probe of given forms"
-          git push -f origin HEAD:probe-given
+          git init -q -b probe-given
+          git add -A
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -qm "Probe of given forms"
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" probe-given
       - name: Save the forms as test fixtures
         if: inputs.urls == ''
         run: |
