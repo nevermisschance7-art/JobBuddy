@@ -151,7 +151,8 @@ async function uploadThroughButton(
         const file = new File([bytes], fileName, { type: "application/pdf" });
         const proto = HTMLInputElement.prototype;
         const click = proto.click;
-        const picker = proto.showPicker;
+        // Older browsers have no showPicker.
+        const picker = proto.showPicker as (() => void) | undefined;
         let given = false;
         const give = function (this: HTMLInputElement) {
           if (this.type !== "file" || given) return click.call(this);
