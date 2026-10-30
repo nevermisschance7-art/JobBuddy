@@ -73,9 +73,9 @@ const lower = (s: string) => s.trim().toLowerCase();
 /** House style for AI-written CV lines: plain hyphens and spaces, no em dashes. */
 function plain(text: string): string {
   return text
-    .replace(/[‐‑]/g, "-")
-    .replace(/[  ]/g, " ")
-    .replace(/\s*—\s*/g, ", ")
+    .replace(/[\u2010\u2011]/g, "-")
+    .replace(/[\u00a0\u202f]/g, " ")
+    .replace(/\s*\u2014\s*/g, ", ")
     .replace(/\s+/g, " ")
     .trim();
 }

@@ -14,7 +14,7 @@ import {
   Zap,
 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { moveApplication } from "@/lib/actions/applications";
 import { explainMatch, restoreMatch, setSaved } from "@/lib/actions/matches";
@@ -115,37 +115,13 @@ export function JobCard({
     return { mine, other: other.slice(0, Math.max(0, 8 - mine.length)) };
   }, [job.title, description, userTerms]);
 
+  // "New" until you apply: only Quick apply (or applying with the extension) clears it.
+  // Opening, reading or explaining a job doesn't.
   const seen = () => {
     if (!isNew) return;
     setIsNew(false);
     onSeen(job.id);
   };
-
-  // "New" means not shown to you yet: once most of the card has been on screen for about a
-  // second, it counts as seen (its New mark stays until you come back to the board).
-  const cardRef = useRef<HTMLElement>(null);
-  useEffect(() => {
-    const el = cardRef.current;
-    if (!el || match.status !== "new") return;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const io = new IntersectionObserver(
-      ([entry]) => {
-        clearTimeout(timer);
-        if (entry?.isIntersecting) {
-          timer = setTimeout(() => {
-            onSeen(job.id);
-            io.disconnect();
-          }, 1000);
-        }
-      },
-      { threshold: 0.6 },
-    );
-    io.observe(el);
-    return () => {
-      clearTimeout(timer);
-      io.disconnect();
-    };
-  }, [job.id, match.status, onSeen]);
 
   const runQuickApply = () => {
     seen();
@@ -179,7 +155,6 @@ export function JobCard({
 
   return (
     <article
-      ref={cardRef}
       className={cn(
         "border-border bg-card group rounded-xl border p-4 transition-colors sm:p-5",
         "hover:border-primary/40",
@@ -201,10 +176,7 @@ export function JobCard({
           <h3 className="mt-1 text-base font-semibold leading-snug sm:text-lg">
             <button
               type="button"
-              onClick={() => {
-                setOpen((o) => !o);
-                seen();
-              }}
+              onClick={() => setOpen((o) => !o)}
               className={cn(
                 "text-left hover:underline",
                 isNew ? "text-primary" : "text-foreground",
@@ -352,7 +324,6 @@ export function JobCard({
                   <MenuButton
                     onClick={() =>
                       startTransition(async () => {
-                        seen();
                         const res = await explainMatch(job.id);
                         if (res.text) setExplanation(res.text);
                         else setError(res.error ?? "Something went wrong.");
@@ -362,19 +333,13 @@ export function JobCard({
                     <Sparkles size={14} /> {pending ? "Thinking..." : "Explain match"}
                   </MenuButton>
                 ) : null}
-                <MenuButton
-                  onClick={() => {
-                    setOpen((o) => !o);
-                    seen();
-                  }}
-                >
+                <MenuButton onClick={() => setOpen((o) => !o)}>
                   <ChevronDown size={14} /> {open ? "Show less" : "Show full description"}
                 </MenuButton>
                 <a
                   href={job.apply_url}
                   target="_blank"
                   rel="noreferrer"
-                  onClick={seen}
                   className="hover:bg-muted flex items-center gap-2 rounded-md px-2 py-1.5 text-sm"
                 >
                   <ExternalLink size={14} /> Open job posting

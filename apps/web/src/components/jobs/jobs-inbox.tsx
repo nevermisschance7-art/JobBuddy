@@ -426,7 +426,7 @@ export function JobsInbox({
               : query.view === "hidden"
                 ? "No hidden jobs."
                 : query.view === "new"
-                  ? "You've seen every new job. New ones arrive every 2 hours."
+                  ? "No new jobs: you've applied to all of them. New ones arrive every 2 hours."
                   : "No matches yet. I search right after you change your CV or filters (results in about 15 minutes), and every 2 hours."}
           </MascotSays>
         ) : (
