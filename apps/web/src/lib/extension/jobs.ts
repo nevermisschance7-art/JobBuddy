@@ -78,10 +78,11 @@ async function findByKey(supabase: Supabase, url: string): Promise<FoundJob | nu
 }
 
 /**
- * The job behind one of the user's recent applications (last 6 hours) that this page
- * belongs to, when its address isn't the stored job's: Quick apply on a job board's link
- * lands on the employer's own form. Without this, the extension made a second application
- * (a second CV, cover letter and AI requests).
+ * The job this page is for, when its address isn't the stored job's (a job board's link
+ * leads to the employer's own form): one of the user's applications from the last 6 hours
+ * (Quick apply, then the extension), else a job on their board with this title and company
+ * (the job link opened, then the extension). Without this, the extension made a second
+ * application: a second CV, cover letter and AI requests.
  */
 export async function findRecentApplicationJob(
   supabase: Supabase,
@@ -107,6 +108,40 @@ export async function findRecentApplicationJob(
       urls: [j.apply_url, j.canonical_url],
     });
     if (score >= 3 && (!best || score > best.score)) {
+      best = {
+        job: {
+          id: j.id,
+          title: j.title,
+          company_name: j.company_name,
+          description_text: j.description_text,
+        },
+        score,
+      };
+    }
+  }
+  if (best) return best.job;
+
+  // Not applied yet: a job on the user's board with this title, at the company the page
+  // shows (company and title both needed, since there is no recent application to go by).
+  const title = (page.title ?? "").replace(/\s+/g, " ").trim();
+  if (title.length < 4) return null;
+  const { data: matches } = await supabase
+    .from("user_job_matches")
+    .select("jobs!inner(id, title, company_name, description_text, apply_url, canonical_url)")
+    .eq("user_id", userId)
+    .ilike(
+      "jobs.title",
+      title.replace(/[%_]/g, (c) => `\\${c}`),
+    )
+    .limit(20);
+  for (const row of matches ?? []) {
+    const j = row.jobs as unknown as FoundJob & { apply_url: string; canonical_url: string };
+    const score = recentApplicationScore(page, {
+      title: j.title,
+      company: j.company_name,
+      urls: [j.apply_url, j.canonical_url],
+    });
+    if (score >= 4 && (!best || score > best.score)) {
       best = {
         job: {
           id: j.id,
