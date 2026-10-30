@@ -142,11 +142,11 @@ test("sign up, onboard, edit settings, delete account", async ({ page }, info) =
     await expect(card).toBeVisible();
     await expect(card.getByText("New", { exact: true })).toBeVisible();
     await shot(page, "10b-dashboard-match");
-    // Opening the job shows the details (and it's no longer "New").
+    // Opening the job shows the details; it stays "New" until you apply.
     await card.getByRole("button", { name: "E2E Backend Engineer" }).click();
     await expect(card.getByText("Eligibility indicated")).toBeVisible();
     await expect(card.getByText("Mentions 1 must-have skills (Python)")).toBeVisible();
-    await expect(card.getByText("New", { exact: true })).toHaveCount(0);
+    await expect(card.getByText("New", { exact: true })).toBeVisible();
 
     // Explain match needs an AI key; without one it says so kindly.
     await card.locator("summary[aria-label='More actions']").click();
