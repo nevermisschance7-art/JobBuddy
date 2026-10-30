@@ -1,4 +1,4 @@
-import { fixedKeyFor, questionSimilarity } from "@jobbuddy/shared";
+import { fixedAnswerFor, fixedKeyFor, questionSimilarity } from "@jobbuddy/shared";
 import type { FillData } from "../types";
 
 // Reads an application form and fills it. Pure DOM code (no chrome.*), tested with jsdom.
@@ -165,6 +165,14 @@ export function classify(meta: {
   if (/legal (first and last |full )?name|full legal name|first and last name/.test(label))
     return "full_name";
   if (/first line of (your )?address|address line 1|street address/.test(label)) return "address";
+  // "Please enter your address:", "What is your home address?" (never sent to an AI).
+  if (
+    /^(please )?(enter|provide|add|give) (us )?(your )?(full |home |current |postal |residential )?address\b|^what is your (full |home |current |postal |residential )?address\b/.test(
+      label,
+    ) &&
+    !/e-?mail|ip address|web address/.test(label)
+  )
+    return "address";
   if (/post ?code|postal code|zip ?code/.test(label) && label.split(/\s+/).length <= 8)
     return "postal_code";
 
@@ -179,7 +187,8 @@ export function classify(meta: {
     if (/linked\s?in/.test(hints)) return "linkedin";
     if (/git\s?hub/.test(hints)) return "github";
     if (/portfolio|website|personal (site|url)|^url$|other website/.test(hints)) return "website";
-    if (/^(current )?location$|^location \(city\)$/.test(label)) return "location";
+    if (/^location \(city\)$|^(current )?city( of residence)?$/.test(label)) return "city";
+    if (/^(current )?location$/.test(label)) return "location";
     if (/^(city|town|ciudad|stadt|ort|ville|miasto|cidade)$/.test(label)) return "city";
     if (
       /^(street |home )?address( line 1)?$|^street$|^direcci[óo]n$|^(stra(ss|ß)e|adresse|adres)$/.test(
@@ -490,11 +499,13 @@ function knownValue(field: FormField, data: FillData): string | null {
       return p.github;
     case "website":
       return p.website;
-    case "location":
-      return (
-        data.fixedAnswers.location ??
-        ([p.city, p.country ?? p.countryCode].filter(Boolean).join(", ") || null)
-      );
+    case "location": {
+      // "City, Country" when known: a country alone makes place lists pick a random place.
+      const fixed = data.fixedAnswers.location?.trim();
+      if (fixed && fixed.includes(",")) return fixed;
+      const country = fixed || p.country || p.countryCode;
+      return [p.city, country].filter(Boolean).join(", ") || null;
+    }
     case "country":
       return p.country ?? null;
     case "city":
@@ -531,13 +542,26 @@ function knownValue(field: FormField, data: FillData): string | null {
     case "file":
       return null;
     case "question": {
+      const plain = field.label.toLowerCase();
+      // "If yes, tell us their names. Otherwise, please list N/A."
+      if (
+        /otherwise,? (please )?(list|write|enter|put|type|answer|say)?\s*["']?n\/?a\b/.test(plain)
+      )
+        return "N/A";
+      // "Are you 18 years of age or older?": yes when the CV shows years of work.
+      if (/\b(18|eighteen) (years )?(of age |years old )?or older\b|at least 18\b/.test(plain))
+        return p.adult ? "Yes" : null;
+      // "What is your current time zone?" (a list of zones): the user's own, else "Other".
+      if (/time ?zone/.test(plain) && (field.options || field.choices || isSelectLike(field))) {
+        return timeZoneAnswer(p.timeZone, choiceLabels(field));
+      }
       // Sensitive questions: only the user's fixed answers, never a drafted text.
       const key = fixedKeyFor(field.label);
       if (key === "right_to_work" && isYesNo(field)) {
         // "Do you have work authorization...?" with Yes / No: the yes/no fixed answer.
         return data.fixedAnswers.work_authorized ?? yesNoFrom(data.fixedAnswers.right_to_work);
       }
-      if (key) return data.fixedAnswers[key] ?? null;
+      if (key) return fixedAnswerFor(key, data.fixedAnswers) ?? null;
       let best: { answer: string; score: number } | null = null;
       for (const a of data.answers) {
         if (a.isCoverLetter) continue;
@@ -556,6 +580,48 @@ export function choiceLabels(field: FormField): string[] {
   const el = field.el;
   if (el.tagName === "SELECT") return [...(el as HTMLSelectElement).options].map((o) => o.text);
   return [];
+}
+
+function isSelectLike(field: FormField): boolean {
+  return field.el.tagName === "SELECT" || Boolean(field.combobox);
+}
+
+/**
+ * The user's time zone in the form's words: the listed option with the same GMT/UTC offset
+ * ("(GMT+00:00) London"), else "Other". Without a known list (custom dropdowns), the offset.
+ */
+export function timeZoneAnswer(
+  timeZone: string | null | undefined,
+  options: string[] = [],
+  now = new Date(),
+): string | null {
+  const other = () => options.find((o) => /^other\b/i.test(o.trim())) ?? null;
+  let offset: string;
+  try {
+    const part = new Intl.DateTimeFormat("en-GB", {
+      timeZone: timeZone ?? undefined,
+      timeZoneName: "longOffset",
+    })
+      .formatToParts(now)
+      .find((p) => p.type === "timeZoneName")?.value; // "GMT+01:00", or "GMT" for +00:00
+    offset = !part || part === "GMT" ? "+00:00" : part.replace(/^GMT/, "");
+  } catch {
+    return other();
+  }
+  const sign = offset[0] === "-" ? "-" : "+";
+  const hh = offset.slice(1, 3);
+  const mm = offset.slice(4, 6) || "00";
+  if (options.length === 0) return `GMT${sign}${hh}:${mm}`;
+  const hours = Number(hh);
+  const minutes = Number(mm);
+  // "(GMT+01:00)", "UTC+1", "GMT -5"; for +00:00 also a bare "GMT" or "UTC".
+  const same = (label: string) => {
+    for (const m of label.matchAll(/\b(?:gmt|utc)\s*([+-])\s*(\d{1,2})(?::?(\d{2}))?/gi)) {
+      if (m[1] === sign && Number(m[2]) === hours && Number(m[3] ?? 0) === minutes) return true;
+    }
+    return hours === 0 && minutes === 0 && /\b(?:gmt|utc)\b(?!\s*[+-]\s*\d)/i.test(label);
+  };
+  return options.find(same) ?? other();
 }
 
 function isYesNo(field: FormField): boolean {
@@ -627,16 +693,29 @@ function pickOne<T extends { label: string }>(options: T[], answer: string): T |
     options.find((o) => norm(o.label) === a) ??
     options.find((o) => norm(o.label).startsWith(`${a} `) || a.startsWith(`${norm(o.label)} `)) ??
     options.find((o) => norm(o.label).includes(a) && a.length > 3) ??
-    null
+    yesNoOption(options, a)
   );
+}
+
+const NEGATIVE = /\b(no|not|none|don ?t|do not|am not|have not|haven ?t)\b/;
+
+/** "No" for "I am not a protected veteran", "Yes" for "I identify as one of the
+ * veterans...": the one option that says (or doesn't say) no, besides the decline option. */
+function yesNoOption<T extends { label: string }>(options: T[], a: string): T | null {
+  if (a !== "yes" && a !== "no") return null;
+  const real = options.filter((o) => norm(o.label) && !DECLINE.test(norm(o.label)));
+  const negative = real.filter((o) => NEGATIVE.test(norm(o.label)));
+  const positive = real.filter((o) => !NEGATIVE.test(norm(o.label)));
+  const pick = a === "no" ? negative : positive;
+  return pick.length === 1 ? pick[0]! : null;
 }
 
 export type FillReport = {
   filled: number;
   missed: FormField[];
   resume: FormField | null;
-  /** Custom dropdowns with the value to pick, for fillComboboxes. */
-  dropdowns: { field: FormField; value: string }[];
+  /** Custom dropdowns with the value to pick, for fillComboboxes (zone: a time zone list). */
+  dropdowns: { field: FormField; value: string; zone?: string | null }[];
 };
 
 /** A real-looking click: pointer and mouse events, then click (for React handlers). */
@@ -720,14 +799,19 @@ export async function fillComboboxes(
   dropdowns: FillReport["dropdowns"],
   report: FillReport,
 ): Promise<void> {
-  for (const { field, value } of dropdowns) {
+  for (const { field, value, zone } of dropdowns) {
     const control = field.el as unknown as HTMLElement;
     const input = control.tagName === "INPUT" ? (control as HTMLInputElement) : null;
     click((input?.closest("[class*='control' i]") as HTMLElement) ?? control);
     control.focus();
     const first = value.split(",")[0]!.trim();
+    const place = field.kind === "city" || field.kind === "location";
     // Type the whole value; if that finds nothing, the first part ("Warsaw" of "Warsaw, Poland").
-    if (input) setNativeValue(input, value.length <= 40 ? value : first);
+    // Place lists: type the city only, they search by place name.
+    // Time zone lists: open the whole list (nothing typed) and pick the user's zone or Other.
+    if (input && zone === undefined) {
+      setNativeValue(input, place ? first : value.length <= 40 ? value : first);
+    }
 
     let picked: HTMLElement | null = null;
     for (let i = 0; i < 15 && !picked; i++) {
@@ -737,10 +821,20 @@ export async function fillComboboxes(
         if (input && i === 6 && input.value !== first) setNativeValue(input, first);
         continue;
       }
-      picked =
-        pickOption(options, value)?.el ??
-        options.find((o) => norm(o.label).includes(norm(first)))?.el ??
-        null;
+      if (zone !== undefined) {
+        const label = timeZoneAnswer(
+          zone,
+          options.map((o) => o.label),
+        );
+        picked = options.find((o) => o.label === label)?.el ?? null;
+        if (!picked && i > 4) break;
+        continue;
+      }
+      picked = place
+        ? placeOption(options, value)
+        : (pickOption(options, value)?.el ??
+          options.find((o) => norm(o.label).includes(norm(first)))?.el ??
+          null);
       if (!picked && i > 4) break;
     }
     if (picked) {
@@ -753,6 +847,30 @@ export async function fillComboboxes(
     }
     await wait(100);
   }
+}
+
+/**
+ * A place from a list of places: it must be the city itself ("Norwich, Norfolk, United
+ * Kingdom"), preferably in the right country. Never just any place in the country (that
+ * picked "Halley Research Station (United Kingdom), Antarctica" for "United Kingdom").
+ */
+export function placeOption(
+  options: { el: HTMLElement; label: string }[],
+  value: string,
+): HTMLElement | null {
+  const parts = value
+    .split(",")
+    .map((p) => norm(p))
+    .filter(Boolean);
+  const city = parts[0];
+  if (!city) return null;
+  const country = parts.length > 1 ? parts.at(-1)! : null;
+  const named = options.filter((o) => {
+    const label = norm(o.label);
+    return label === city || label.startsWith(`${city} `);
+  });
+  const inCountry = country ? named.find((o) => norm(o.label).includes(country)) : null;
+  return (inCountry ?? named[0])?.el ?? null;
 }
 
 /** Fills every field JobBuddy knows. Leaves non-empty fields alone. Returns what's left. */
@@ -805,7 +923,8 @@ function fillOne(f: FormField, data: FillData, report: FillReport): void {
   }
   if (f.combobox) {
     // Filled afterwards by fillComboboxes: it has to open the list and wait for options.
-    if (value) report.dropdowns.push({ field: f, value });
+    const zone = /time ?zone/i.test(f.label) ? (data.profile.timeZone ?? null) : undefined;
+    if (value) report.dropdowns.push({ field: f, value, ...(zone !== undefined ? { zone } : {}) });
     else report.missed.push(f);
     return;
   }

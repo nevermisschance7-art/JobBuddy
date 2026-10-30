@@ -22,6 +22,10 @@ export type FillProfile = {
   region?: string | null;
   /** Employers in the CV. */
   employers?: string[];
+  /** The CV shows several years of work, so "Are you 18 or older?" is Yes. */
+  adult?: boolean;
+  /** The user's time zone (IANA, e.g. "Europe/London"), for time zone dropdowns. */
+  timeZone?: string | null;
 };
 
 export type FillData = {

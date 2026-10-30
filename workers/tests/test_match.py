@@ -485,3 +485,20 @@ def test_main_stack_follows_the_skills_order_not_mention_counts():
     }
     stack = main_stack(cv_terms(cv))
     assert "php" in stack and "laravel" in stack and "sql" not in stack
+
+
+def test_remote_ad_that_says_us_only_counts_as_a_us_job():
+    from jobbuddy_workers.match.rules import location_fit, says_us_only
+
+    assert says_us_only("Candidates must reside in the United States.")
+    assert says_us_only("This role is open only to applicants located in the U.S.")
+    assert says_us_only("We hire from anywhere in the United States.")
+    assert not says_us_only("We work with clients in the United States and Europe.")
+    ad = job(
+        countries=[],
+        remote_regions=[],
+        remote_type="remote",
+        description_text="Fully remote. You must be located in the US to apply.",
+    )
+    assert location_fit(ad, ["GB"])[0] == "none"
+    assert location_fit(ad, ["GB"], ["US"])[0] == "remote_abroad"

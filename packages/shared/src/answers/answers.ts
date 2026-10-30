@@ -14,6 +14,12 @@ export type FixedKey =
   | "willing_to_relocate"
   | "location"
   | "pronouns"
+  | "gender"
+  | "transgender"
+  | "sexual_orientation"
+  | "ethnicity"
+  | "disability"
+  | "veteran"
   | "demographics"
   | "linkedin_url"
   | "github_url"
@@ -46,6 +52,22 @@ const FIXED_RULES: [FixedKey, RegExp][] = [
     /relocat|reubicaci[óo]n|traslad|umzug|umziehen|d[ée]m[ée]nag|relocaliza|przeprowadz/i,
   ],
   ["pronouns", /pronoun|pronombre|pronomen|pronom/i],
+  // Equal opportunities: one answer each; "demographics" is the fallback for the rest.
+  [
+    "transgender",
+    /transgender|\btrans\b|gender identity .{0,40}(same|differ)|(same|differ).{0,40}(assigned|registered) at birth/i,
+  ],
+  [
+    "sexual_orientation",
+    /sexual orientation|orientaci[óo]n sexual|orientation sexuelle|sexuelle orientierung|orientacja seksualna/i,
+  ],
+  ["gender", /\b(gender|sex)\b|g[ée]nero|geschlecht|\bsexe\b|\bp[łl]e[cć]/i],
+  [
+    "ethnicity",
+    /ethnic|\brace\b|racial|hispanic|latino|etnia|ethnie|herkunft|pochodzenie etniczne/i,
+  ],
+  ["disability", /disab|handicap|discapacidad|behinderung|niepe[łl]nosprawno/i],
+  ["veteran", /veteran|military service|armed forces|protected veteran/i],
   [
     "demographics",
     /\b(gender|sex|ethnic(ity)?|race|racial|disab(led|ility|ilities)|veteran|sexual orientation|transgender|religio(n|us)|age range|date of birth|hispanic|latino|g[ée]nero|geschlecht|sexe|p[łl]e[cć]|etnia|ethnie|herkunft|discapacidad|behinderung|handicap|niepe[łl]nosprawno[sś][cć]|geburtsdatum|fecha de nacimiento|date de naissance|data urodzenia)\b/i,
@@ -62,9 +84,29 @@ const FIXED_RULES: [FixedKey, RegExp][] = [
   ],
   [
     "location",
-    /where are you (currently |now )?(based|located|living)|current (location|city|country)|country of residence|which (city|country)|time ?zone|located in|reside in|based in|location .{0,30}(work|working|live) from|plan to (work|live) from|where will you (be )?(work|working) from|\byour (current )?location\b|d[óo]nde (vives|resides)|pa[ií]s de residencia|wohnort|lieu de r[ée]sidence|miejsce zamieszkania/i,
+    /where are you (currently |now )?(based|located|living)|current (location|city|country)|country of residence|which (city|country)|time ?zone|located in|reside in|based in|location .{0,30}(work|working|live) from|plan to (work|live) from|where (will|would|do|are) you (be )?(work|working|live|living|based)( from)?\b|\byour (current )?location\b|d[óo]nde (vives|resides)|pa[ií]s de residencia|wohnort|lieu de r[ée]sidence|miejsce zamieszkania/i,
   ],
 ];
+
+/** Equal-opportunity keys: when one isn't set, the general "demographics" answer is used. */
+export const DEMOGRAPHIC_KEYS: ReadonlySet<string> = new Set([
+  "gender",
+  "transgender",
+  "sexual_orientation",
+  "ethnicity",
+  "disability",
+  "veteran",
+]);
+
+/** The user's fixed answer for a key, with the "demographics" fallback. */
+export function fixedAnswerFor(
+  key: string,
+  answers: Record<string, string | undefined>,
+): string | undefined {
+  const own = answers[key]?.trim();
+  if (own) return own;
+  return DEMOGRAPHIC_KEYS.has(key) ? answers.demographics?.trim() || undefined : undefined;
+}
 
 /** The fixed answer this question needs, or null when it may be drafted. */
 export function fixedKeyFor(question: string): FixedKey | null {
@@ -229,7 +271,7 @@ export async function answerQuestions(
     // 1. Sensitive: the user's fixed answer only, never an AI.
     const key = isCoverLetter ? null : fixedKeyFor(q.text);
     if (key) {
-      const value = deps.fixedAnswers[key]?.trim();
+      const value = fixedAnswerFor(key, deps.fixedAnswers);
       out[index] = value
         ? { ...base, kind: "fixed", fixedKey: key, answer: value }
         : { ...base, kind: "missing_fixed", fixedKey: key, answer: "" };

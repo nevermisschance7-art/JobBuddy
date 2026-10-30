@@ -89,35 +89,38 @@ const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null
  * site), contact details and fixed answers still fill the basics.
  */
 export async function fillData(supabase: Supabase, userId: string, applicationId: string | null) {
-  const [{ data: app }, { data: cv }, { data: fixed }, { data: learned }] = await Promise.all([
-    applicationId
-      ? supabase
-          .from("applications")
-          .select("id, status, answers, tailored_cv_pdf, cv_approved_at")
-          .eq("id", applicationId)
-          .eq("user_id", userId)
-          .maybeSingle()
-      : Promise.resolve({ data: null }),
-    supabase
-      .from("cvs")
-      .select("resume_json")
-      .eq("user_id", userId)
-      .eq("confirmed", true)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
-    supabase
-      .from("fixed_answers")
-      .select("key, value")
-      .eq("user_id", userId)
-      .is("applies_to_country", null),
-    supabase
-      .from("learned_answers")
-      .select("question, answer")
-      .eq("user_id", userId)
-      .order("updated_at", { ascending: false })
-      .limit(300),
-  ]);
+  const [{ data: app }, { data: cv }, { data: fixed }, { data: learned }, { data: prof }] =
+    await Promise.all([
+      applicationId
+        ? supabase
+            .from("applications")
+            .select("id, status, answers, tailored_cv_pdf, cv_approved_at")
+            .eq("id", applicationId)
+            .eq("user_id", userId)
+            .maybeSingle()
+        : Promise.resolve({ data: null }),
+      supabase
+        .from("cvs")
+        .select("resume_json")
+        .eq("user_id", userId)
+        .eq("confirmed", true)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      supabase
+        .from("fixed_answers")
+        .select("key, value")
+        .eq("user_id", userId)
+        .is("applies_to_country", null),
+      supabase
+        .from("learned_answers")
+        .select("question, answer")
+        .eq("user_id", userId)
+        .order("updated_at", { ascending: false })
+        .limit(300),
+      supabase.from("profiles").select("time_zone").eq("user_id", userId).maybeSingle(),
+    ]);
+  const timeZone = prof?.time_zone;
   if (applicationId && !app) return null;
 
   const resume = resumeSchema.safeParse(cv?.resume_json);
@@ -173,6 +176,11 @@ export async function fillData(supabase: Supabase, userId: string, applicationId
       region: str(basics?.location?.region),
       /** Employers in the CV, to answer "Have you worked for us before?". */
       employers: work.map((w) => w.name),
+      /** Work started 4+ years ago: certainly 18 or older. */
+      adult: work.some(
+        (w) => w.startDate && Date.parse(w.startDate) < Date.now() - 4 * 365 * 86_400_000,
+      ),
+      timeZone: timeZone ?? null,
       currentCompany: str(current?.name),
       currentTitle: str(current?.position),
       headline: str(basics?.label) ?? str(current?.position),

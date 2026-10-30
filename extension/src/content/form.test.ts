@@ -11,6 +11,8 @@ import {
   isConfirmation,
   noticeToDate,
   pickOption,
+  placeOption,
+  timeZoneAnswer,
 } from "./form";
 
 // Shapes modelled on the real forms: Greenhouse (label + input in div.field), Lever
@@ -421,5 +423,101 @@ describe("BambooHR-style form", () => {
     expect(noticeToDate("2 weeks", now)).toBe("2026-11-12");
     expect(noticeToDate("Immediately", now)).toBe("2026-10-29");
     expect(noticeToDate("whenever", now)).toBeNull();
+  });
+});
+
+describe("questions answered in code, never by the AI", () => {
+  const base = (): FillData => ({
+    applicationId: "a",
+    status: "prepared",
+    profile: {
+      fullName: "Sam Tester",
+      firstName: "Sam",
+      lastName: "Tester",
+      email: "sam@example.com",
+      phone: null,
+      city: "Norwich",
+      countryCode: "GB",
+      linkedin: null,
+      github: null,
+      website: null,
+      country: "United Kingdom",
+      currentCompany: null,
+      currentTitle: null,
+      headline: null,
+      summary: null,
+      adult: true,
+      timeZone: "Europe/London",
+    },
+    fixedAnswers: {
+      location: "United Kingdom",
+      gender: "Male",
+      ethnicity: "White",
+      disability: "No",
+      demographics: "I prefer not to say",
+    },
+    answers: [],
+    learned: [],
+    cv: null,
+  });
+
+  it("picks the city itself from a list of places, never another place in the country", () => {
+    const place = (label: string) => ({ el: document.createElement("div"), label });
+    const options = [
+      place("Halley Research Station (United Kingdom), Antarctica"),
+      place("Norwich, Connecticut, United States"),
+      place("Norwich, Norfolk, England, United Kingdom"),
+    ];
+    expect(placeOption(options, "Norwich, United Kingdom")).toBe(options[2]!.el);
+    expect(placeOption(options.slice(0, 1), "Norwich, United Kingdom")).toBeNull();
+    expect(classify({ label: "Location (City)" })).toBe("city");
+  });
+
+  it("treats 'Please enter your address:' as the address, not a question", () => {
+    expect(classify({ label: "Please enter your address:" })).toBe("address");
+    expect(classify({ label: "Please enter your email address" })).not.toBe("address");
+  });
+
+  it("answers N/A, 18 or older and location questions from the user's data", () => {
+    document.body.innerHTML = `
+      <label for="n">If yes, please tell us their name(s). Otherwise, please list N/A.</label><input id="n">
+      <label for="a">Are you 18 years of age or older?</label>
+      <select id="a"><option value="">Select...</option><option>Yes</option><option>No</option></select>
+      <label for="w">Since this position would be remote, where would you be working from (Country, State, City)?</label><input id="w">`;
+    fillForm(collectFields(document), base());
+    expect((document.querySelector("#n") as HTMLInputElement).value).toBe("N/A");
+    expect((document.querySelector("#a") as HTMLSelectElement).selectedOptions[0]!.text).toBe(
+      "Yes",
+    );
+    expect((document.querySelector("#w") as HTMLInputElement).value).toBe("United Kingdom");
+  });
+
+  it("picks the user's time zone, else Other", () => {
+    const winter = new Date("2026-12-01T12:00:00Z");
+    const us = ["(GMT-05:00) Eastern Time (US & Canada)", "(GMT-08:00) Pacific Time", "Other"];
+    expect(timeZoneAnswer("Europe/London", us, winter)).toBe("Other");
+    expect(timeZoneAnswer("America/New_York", us, winter)).toBe(us[0]);
+    expect(
+      timeZoneAnswer("Europe/Warsaw", ["(GMT+01:00) Warsaw", "(GMT+00:00) London"], winter),
+    ).toBe("(GMT+01:00) Warsaw");
+    expect(timeZoneAnswer("Europe/London", ["GMT / UTC", "CET"], winter)).toBe("GMT / UTC");
+  });
+
+  it("answers each equal opportunities question on its own", () => {
+    document.body.innerHTML = `
+      <label for="g">Gender</label>
+      <select id="g"><option value="">Select</option><option>Female</option><option>Male</option><option>Decline to self-identify</option></select>
+      <label for="v">Veteran status</label>
+      <select id="v"><option value="">Select</option><option>I identify as one or more of the classifications of protected veteran</option><option>I am not a protected veteran</option><option>I don't wish to answer</option></select>
+      <label for="r">What is your religion?</label>
+      <select id="r"><option value="">Select</option><option>Christian</option><option>I prefer not to say</option></select>`;
+    const data = base();
+    data.fixedAnswers.veteran = "No";
+    fillForm(collectFields(document), data);
+    const picked = (id: string) =>
+      (document.querySelector(id) as HTMLSelectElement).selectedOptions[0]!.text;
+    expect(picked("#g")).toBe("Male");
+    expect(picked("#v")).toBe("I am not a protected veteran");
+    expect(picked("#r")).toBe("I prefer not to say");
   });
 });

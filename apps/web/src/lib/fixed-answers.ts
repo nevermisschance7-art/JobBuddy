@@ -54,10 +54,48 @@ export const FIXED_ANSWER_KEYS: FixedAnswerKey[] = [
     kind: "text",
   },
   { key: "pronouns", label: "Pronouns (optional)", kind: "text" },
+  // Equal opportunities: one answer per question. Forms word their options differently;
+  // the closest option is picked. Leave one empty to use the general answer below.
+  {
+    key: "gender",
+    label: "Equal opportunities: gender",
+    kind: "choice",
+    choices: ["Male", "Female", "Non-binary", "I prefer not to say"],
+  },
+  {
+    key: "ethnicity",
+    label: "Equal opportunities: ethnicity or race",
+    hint: "e.g. White, or I prefer not to say",
+    kind: "text",
+  },
+  {
+    key: "disability",
+    label: "Equal opportunities: do you have a disability?",
+    kind: "choice",
+    choices: ["No", "Yes", "I prefer not to say"],
+  },
+  {
+    key: "veteran",
+    label: "Equal opportunities: are you a (protected) veteran?",
+    kind: "choice",
+    choices: ["No", "Yes", "I prefer not to say"],
+  },
+  {
+    key: "sexual_orientation",
+    label: "Equal opportunities: sexual orientation",
+    hint: "e.g. Heterosexual, or I prefer not to say",
+    kind: "text",
+  },
+  {
+    key: "transgender",
+    label: "Equal opportunities: do you identify as transgender?",
+    kind: "choice",
+    choices: ["No", "Yes", "I prefer not to say"],
+  },
   {
     key: "demographics",
-    label: "Equal opportunities questions (gender, ethnicity, disability...)",
-    hint: "e.g. I prefer not to say",
+    label: "Any other equal opportunities question (religion, age...)",
+    hint: "e.g. I prefer not to say. Also used for the ones above that you leave empty.",
     kind: "text",
   },
   {

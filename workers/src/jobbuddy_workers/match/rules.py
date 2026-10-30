@@ -6,7 +6,7 @@ Unknown or unverified information never earns full points.
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime, timedelta
 from functools import lru_cache
 
@@ -130,11 +130,39 @@ def mentions(text: str, skill: str) -> bool:
 # ---------------------------------------------------------------- filters
 
 
+# A remote ad without stated limits whose text says it is for people in the US only.
+_US_ONLY = re.compile(
+    r"(must|need to|required to|should)\s+(currently\s+)?(be\s+)?"
+    r"(reside|live|be located|be based|located|based)"
+    r"\s+(with)?in\s+(the\s+)?(united states|u\.?s\.?a?\b)"
+    r"|\b(u\.?s\.?a?|united states)[- ]based\s+(candidates|applicants|employees)?\s*only"
+    r"|\b(open|available)\s+(only\s+)?to\s+(candidates|applicants|residents|people)\s+"
+    r"(located\s+|based\s+|living\s+)?(in|of)\s+(the\s+)?(united states|u\.?s\.?a?\b)"
+    r"|\b(u\.?s\.?a?|united states)\s+(residents|citizens|persons)\s+only"
+    r"|\bremote\s*[-(,:]\s*(u\.?s\.?a?|united states)\s*(only)?\s*\)?\s*$"
+    r"|\b(within|from anywhere in)\s+the\s+(continental\s+)?(united states|u\.?s\.?a?\b)"
+    r"|\bwhat state do you (legally\s+)?(reside|live)",
+    re.I | re.M,
+)
+
+
+def says_us_only(text: str) -> bool:
+    return bool(_US_ONLY.search(text))
+
+
 def location_fit(
     job: JobFacts, allowed: list[str], remote_extra: list[str] | None = None
 ) -> tuple[str, str]:
     """('country'|'region'|'open_remote'|'remote_abroad'|'none', reason)."""
     allowed_set = set(allowed)
+    if (
+        job.remote_type == "remote"
+        and not job.countries
+        and not job.remote_regions
+        and says_us_only(f"{job.title}\n{job.description_text}")
+    ):
+        # "Remote, limits not stated", but the text says US only: judge it as a US job.
+        job = replace(job, countries=["US"])
     hit = allowed_set & set(job.countries)
     if hit:
         return "country", f"Based in {', '.join(COUNTRIES.get(c, c) for c in sorted(hit))}"

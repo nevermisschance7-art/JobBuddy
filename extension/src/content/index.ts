@@ -396,8 +396,20 @@ async function fill(
   if (data.applicationId) sessionStorage.setItem(PENDING, data.applicationId);
   let next = 0;
 
+  // A form asking which US state you live in, or for US work authorisation, while the user
+  // lives elsewhere: probably a US-residents-only job. Say so before they spend time on it.
+  const usOnly =
+    data.profile.countryCode !== "US" &&
+    fields.some(
+      (f) =>
+        /which (u\.?s\.? )?state|state (do|did) you (legally )?(reside|live)|u\.?s\.? state|authori[sz]ed to work (for any employer )?in the (united states|u\.?s)/i.test(
+          f.label,
+        ) ||
+        (choiceLabels(f).includes("Alabama") && choiceLabels(f).includes("Wyoming")),
+    );
   render(
     `<p class="job">${esc(result.job?.title ?? pageInfo().title)}</p>
+     ${usOnly ? `<div class="row warn">⚠ This form asks about US states or US work authorisation. The job may be for US residents only.</div>` : ""}
      <div class="row ok">✓ ${report.filled} field${report.filled === 1 ? "" : "s"} filled</div>
      ${cvLine}
      ${byAi.length ? `<div class="row" style="color:#4f46e5">✎ ${byAi.length} answer${byAi.length === 1 ? "" : "s"} by AI, outlined in blue: please check</div>` : ""}
