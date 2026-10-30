@@ -84,6 +84,8 @@ export type Message =
       company?: string;
     }
   | { type: "open"; url: string }
-  | { type: "dismiss"; url: string; applicationId?: string; undo?: boolean };
+  | { type: "dismiss"; url: string; applicationId?: string; undo?: boolean }
+  /** Upload through a button that makes its file input only when clicked (Hibob). */
+  | { type: "upload-button"; marker: string; file: { fileName: string; base64: string } };
 
 export type Reply<T> = { ok: true; data: T } | { ok: false; error: string; signedOut?: boolean };

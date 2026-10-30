@@ -107,3 +107,33 @@ describe("every saved real form", () => {
     },
   );
 });
+
+// Hibob (careers.hibob.com), reported by a user: "Add file" buttons with no file input, a
+// date box with an "mm/dd/yyyy" picker, a salary spin button, a consent box.
+describe("Hibob form", () => {
+  it("finds the upload buttons, fills date and salary, ticks consent", () => {
+    load("hibob-nexusmods.html");
+    const fields = collectFields(document);
+    const resume = fields.find((f) => f.kind === "resume");
+    expect(resume?.uploadButton).toBe(true);
+    expect(resume?.required).toBe(true);
+    expect(fields.find((f) => f.kind === "cover_letter")?.uploadButton).toBe(true);
+    expect(fields.find((f) => f.label === "Desired salary")?.kind).not.toBe("phone");
+
+    const report = fillForm(fields, {
+      ...data,
+      fixedAnswers: {
+        ...data.fixedAnswers,
+        notice_period: "1 month",
+        salary_expectation: "£70,000 to £80,000",
+      },
+      coverLetter: { fileName: "Cover.pdf", base64: "JVBERi0=" },
+    });
+    expect(report.resume).toBe(resume);
+    const date = document.getElementById("/application/dateAvailable") as HTMLInputElement;
+    expect(date.value).toMatch(/^\d{2}\/\d{2}\/\d{4}$/);
+    const salary = document.getElementById("bsiss-/application/desiredSalary") as HTMLInputElement;
+    expect(salary.value).toBe("70000");
+    expect((document.getElementById("initialConsent") as HTMLInputElement).checked).toBe(true);
+  });
+});

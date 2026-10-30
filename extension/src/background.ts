@@ -128,6 +128,61 @@ chrome.notifications.onClicked.addListener((id) => {
       .catch(() => {});
 });
 
+// ---------------------------------------------------------------- upload buttons
+
+/**
+ * Some forms (Hibob) make their file input only when "Add file" is clicked, and then open
+ * the file window. Inside the page itself, this clicks the button and hands the file to the
+ * input the page creates, instead of opening the window. Never submits anything.
+ */
+async function uploadThroughButton(
+  message: Extract<Message, { type: "upload-button" }>,
+  sender: chrome.runtime.MessageSender,
+): Promise<boolean> {
+  const tabId = sender.tab?.id;
+  if (tabId === undefined) return false;
+  const [result] = await chrome.scripting.executeScript({
+    target: { tabId, frameIds: [sender.frameId ?? 0] },
+    world: "MAIN",
+    args: [message.marker, message.file.fileName, message.file.base64],
+    func: (marker: string, fileName: string, base64: string) =>
+      new Promise<boolean>((resolve) => {
+        const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+        const file = new File([bytes], fileName, { type: "application/pdf" });
+        const proto = HTMLInputElement.prototype;
+        const click = proto.click;
+        const picker = proto.showPicker;
+        let given = false;
+        const give = function (this: HTMLInputElement) {
+          if (this.type !== "file" || given) return click.call(this);
+          given = true;
+          const dt = new DataTransfer();
+          dt.items.add(file);
+          this.files = dt.files;
+          this.dispatchEvent(new Event("input", { bubbles: true }));
+          this.dispatchEvent(new Event("change", { bubbles: true }));
+        };
+        proto.click = give;
+        if (picker) proto.showPicker = give;
+        const restore = () => {
+          proto.click = click;
+          if (picker) proto.showPicker = picker;
+        };
+        const button = document.querySelector<HTMLElement>(`[data-jobbuddy-upload="${marker}"]`);
+        if (!button) {
+          restore();
+          return resolve(false);
+        }
+        button.click();
+        setTimeout(() => {
+          restore();
+          resolve(given);
+        }, 1500);
+      }),
+  });
+  return Boolean(result?.result);
+}
+
 // ---------------------------------------------------------------- content script requests
 
 async function handle(message: Message): Promise<unknown> {
@@ -161,8 +216,8 @@ async function handle(message: Message): Promise<unknown> {
 }
 
 chrome.runtime.onMessage.addListener(
-  (message: Message, _sender, sendResponse: (r: Reply<unknown>) => void) => {
-    handle(message)
+  (message: Message, sender, sendResponse: (r: Reply<unknown>) => void) => {
+    (message.type === "upload-button" ? uploadThroughButton(message, sender) : handle(message))
       .then((data) => sendResponse({ ok: true, data }))
       .catch((e: unknown) =>
         sendResponse({

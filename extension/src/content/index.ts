@@ -135,10 +135,17 @@ function steps(list: Step[], title: string): void {
 function pageInfo() {
   const og = (p: string) =>
     document.querySelector<HTMLMetaElement>(`meta[property="og:${p}"]`)?.content?.trim();
+  // The job's title: the first that isn't a generic page name ("Careers", "Apply"...).
+  const generic = /^(careers?|jobs?|join us|apply|application|open (roles|positions)|home)$/i;
+  const candidates = [
+    ...document.querySelectorAll(
+      "[class*='job-title' i], [class*='job-ad-title' i], [class*='posting-title' i], [class*='position-title' i], [data-testid*='job-title' i], h1, [role='heading'][aria-level='1'], [role='heading'], h2",
+    ),
+  ].map((el) => (el.textContent ?? "").replace(/\s+/g, " ").trim());
   const title =
-    (document.querySelector("h1")?.textContent ?? og("title") ?? document.title)
-      .trim()
-      .slice(0, 300) || "Job";
+    [...candidates, og("title") ?? "", document.title.trim()]
+      .find((t) => t.length > 2 && t.length < 150 && !generic.test(t))
+      ?.slice(0, 300) || "Job";
   const slug = location.pathname.split("/").filter(Boolean)[0] ?? "";
   const company =
     (
@@ -368,9 +375,9 @@ async function fill(
 
   let cvLine = "";
   if (report.resume) {
-    const attached = data.cv
-      ? attachFile(report.resume.el as HTMLInputElement, fileFrom(data.cv))
-      : false;
+    const attached = data.cv ? await attachTo(report.resume, data.cv) : false;
+    // A required upload that didn't work is a required field left, never "all filled".
+    if (!attached) report.missed.push(report.resume);
     cvLine = attached
       ? `<div class="row ok">✓ CV attached${extra.note ? ` <span class="muted">(${esc(extra.note)})</span>` : ""}</div>`
       : data.cv
@@ -378,10 +385,8 @@ async function fill(
         : `<div class="row warn">⚠ No CV yet${extra.cvError ? `: ${esc(extra.cvError)}` : ""}.</div>`;
   }
   if (report.coverLetter && data.coverLetter) {
-    const attached = attachFile(
-      report.coverLetter.el as HTMLInputElement,
-      fileFrom(data.coverLetter),
-    );
+    const attached = await attachTo(report.coverLetter, data.coverLetter);
+    if (!attached && report.coverLetter.required) report.missed.push(report.coverLetter);
     cvLine += attached
       ? `<div class="row ok">✓ Cover letter for this job attached</div>`
       : `<div class="row warn">⚠ Cover letter not attached. It's on the JobBuddy page for this job.</div>`;
@@ -473,6 +478,19 @@ async function fill(
       review: () => void send({ type: "open", url: result.reviewUrl! }),
     },
   );
+}
+
+/** Puts a file into an upload field, or through an upload button that makes its input when
+ * clicked (handled inside the page by the background script). */
+async function attachTo(
+  field: FormField,
+  file: { fileName: string; base64: string },
+): Promise<boolean> {
+  if (!field.uploadButton) return attachFile(field.el as HTMLInputElement, fileFrom(file));
+  const marker = Math.random().toString(36).slice(2);
+  (field.el as unknown as HTMLElement).setAttribute("data-jobbuddy-upload", marker);
+  const reply = await send<boolean>({ type: "upload-button", marker, file });
+  return reply.ok && reply.data === true;
 }
 
 // ---------------------------------------------------------------- learning from the user

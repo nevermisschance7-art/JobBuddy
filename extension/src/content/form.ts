@@ -50,6 +50,8 @@ export type FormField = {
   choices?: { el: HTMLElement; label: string }[];
   /** A custom dropdown (react-select and similar): typed into, then an option is clicked. */
   combobox?: boolean;
+  /** An upload button with no file input yet: the file is handed over when the page asks. */
+  uploadButton?: boolean;
   /** A rich text editor (contenteditable). */
   editable?: boolean;
   label: string;
@@ -163,7 +165,15 @@ export function classify(meta: {
   if (auto === "family-name") return "last_name";
   if (auto === "name") return "full_name";
   if (auto === "email" || meta.type === "email") return "email";
-  if (auto === "tel" || meta.type === "tel") return "phone";
+  // A "tel" input is a phone number unless its label says otherwise ("Desired salary" uses
+  // one for the number keypad).
+  if (
+    (auto === "tel" || meta.type === "tel") &&
+    !/salary|compensation|pay\b|rate|amount|years|number of|how many|zip|post ?code|postal/.test(
+      label,
+    )
+  )
+    return "phone";
 
   // Personal-detail questions written out in full ("What is your preferred name?").
   if (/preferred (first )?name|what should we call you|name you go by|nickname/.test(label))
@@ -426,6 +436,28 @@ function choiceGroups(doc: Document): FormField[] {
       label,
       kind: "question",
       required: isRequired(parent, label, raw) || around.includes("*"),
+    });
+  }
+
+  // Upload buttons whose file input doesn't exist yet ("+ Add file" on Hibob): the page makes
+  // it when clicked. What to upload comes from the box's heading ("Resume*", "Cover Letter").
+  for (const button of doc.querySelectorAll<HTMLElement>("button, [role='button']")) {
+    if (!UPLOAD_BUTTON.test(clean(button.textContent)) || !visible(button)) continue;
+    const box = button.parentElement?.parentElement?.parentElement;
+    if (box?.querySelector("input[type='file']")) continue; // a normal upload field, found above
+    const raw = nearbyHeading(button);
+    const label = clean(raw);
+    if (!label) continue;
+    const kind = classify({ label, type: "file" });
+    out.push({
+      el: button as unknown as Control,
+      label,
+      kind,
+      // Required by a "*" or by the heading's "required" class (Hibob draws the "*" in CSS).
+      required:
+        isRequired(button, label, raw) ||
+        Boolean(box?.querySelector(".required, [aria-required='true']")),
+      uploadButton: true,
     });
   }
   return out;
@@ -918,6 +950,11 @@ function fillOne(f: FormField, data: FillData, report: FillReport): void {
     report.resume ??= f;
     return;
   }
+  if (f.uploadButton) {
+    if (f.kind === "cover_letter" && data.coverLetter) report.coverLetter ??= f;
+    else report.missed.push(f); // a photo or portfolio upload: the user adds it
+    return;
+  }
   // File fields only ever get the CV (above); a browser refuses text in them.
   if (f.kind === "file") return; // other uploads (photo, portfolio): left alone
   if ((f.el as HTMLInputElement).type === "file") {
@@ -998,11 +1035,73 @@ function fillOne(f: FormField, data: FillData, report: FillReport): void {
       return;
     }
     setNativeValue(el, date);
+  } else if (isDateText(el as HTMLInputElement)) {
+    // A text box with a date picker ("mm/dd/yyyy"): the date in the box's own format.
+    const date = noticeToDate(value);
+    if (!date) {
+      report.missed.push(f);
+      return;
+    }
+    setNativeValue(el, formatDateLike(date, (el as HTMLInputElement).placeholder));
+    el.dispatchEvent(new (el.ownerDocument.defaultView ?? window).Event("blur", { bubbles: true }));
+  } else if (isNumberBox(el as HTMLInputElement)) {
+    // Number-only boxes (salary): the first amount, as digits.
+    const amount = firstAmount(value);
+    if (!amount) {
+      report.missed.push(f);
+      return;
+    }
+    setNativeValue(el, amount);
   } else {
     setNativeValue(el, value);
   }
   report.filled++;
 }
+
+/** "mm/dd/yyyy", "dd.mm.yyyy", "yyyy-mm-dd" in a placeholder: the date format a box wants. */
+const DATE_PLACEHOLDER = /^(dd|mm|yyyy)[./-](dd|mm)[./-](dd|mm|yyyy)$/i;
+
+export function isDateText(el: HTMLInputElement): boolean {
+  return DATE_PLACEHOLDER.test((el.placeholder ?? "").trim());
+}
+
+/** YYYY-MM-DD written the way the box's placeholder shows ("mm/dd/yyyy" -> "11/30/2026"). */
+export function formatDateLike(iso: string, placeholder: string): string {
+  const [y, m, d] = iso.split("-");
+  const sep = /[./-]/.exec(placeholder)?.[0] ?? "/";
+  return placeholder
+    .toLowerCase()
+    .split(/[./-]/)
+    .map((part) => (part === "yyyy" ? y : part === "mm" ? m : d))
+    .join(sep);
+}
+
+/** A number-only box (salary as a spin button, a tel or number input). */
+export function isNumberBox(el: HTMLInputElement): boolean {
+  return (
+    el.type === "number" ||
+    el.getAttribute("role") === "spinbutton" ||
+    el.getAttribute("inputmode") === "numeric" ||
+    el.getAttribute("inputmode") === "decimal"
+  );
+}
+
+/** The first amount in a text, as digits: "£70,000 to £80,000" -> "70000", "70k" -> "70000". */
+export function firstAmount(text: string): string | null {
+  const m = /(\d[\d,.\s]*)(\s*k\b)?/i.exec(text);
+  if (!m) return null;
+  let n = Number(m[1]!.replace(/[,\s]/g, "").replace(/\.(?=\d{3}\b)/g, ""));
+  if (!Number.isFinite(n)) return null;
+  if (m[2]) n *= 1000;
+  return String(Math.round(n));
+}
+
+/**
+ * Upload buttons with no file input yet ("+ Add file" on Hibob): the page makes the input
+ * only when clicked. Recognised by their text, with no file input in their box.
+ */
+export const UPLOAD_BUTTON =
+  /^\+?\s*(add|upload|attach|choose|select|browse)(\s+(a|your))?(\s+(file|files|document|resume|cv|cover letter))?$/i;
 
 /** Puts the CV file into a file input (DataTransfer), or drops it on a drop zone. */
 export function attachFile(input: HTMLInputElement, file: File): boolean {
