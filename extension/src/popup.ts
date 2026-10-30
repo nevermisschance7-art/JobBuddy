@@ -111,7 +111,7 @@ async function show(): Promise<void> {
       </div>
       ${alerts}
       <button id="fill" class="primary">⚡ Fill this page</button>
-      <p id="fill-status" class="muted center">Works on any application form. You always press Submit.</p>
+      <p id="fill-status" class="muted center">Works on any application form. Shortcut: Alt+A. You always press Submit.</p>
       <label class="switch"><input type="checkbox" id="every"> Work on every site
         <span class="muted">Spots the next page and the thank-you page on any job site. Chrome asks once.</span></label>
       <div class="links">

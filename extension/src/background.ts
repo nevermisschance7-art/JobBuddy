@@ -57,6 +57,24 @@ async function syncEverySite(): Promise<void> {
   }
 }
 chrome.permissions.onAdded.addListener(() => void syncEverySite());
+
+// Alt+A: load the filler into this tab (the shortcut grants access to it) and fill.
+chrome.commands.onCommand.addListener((command) => {
+  if (command !== "fill-application") return;
+  void (async () => {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab?.id || !/^https?:/.test(tab.url ?? "")) return;
+    try {
+      await chrome.scripting.executeScript({
+        target: { tabId: tab.id, allFrames: true },
+        files: ["content.js"],
+      });
+      await chrome.tabs.sendMessage(tab.id, { type: "fill-now" });
+    } catch {
+      // A page the extension can't work on (Chrome's own pages, the web store).
+    }
+  })();
+});
 chrome.permissions.onRemoved.addListener(() => void syncEverySite());
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === POLL) void poll();

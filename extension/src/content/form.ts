@@ -712,6 +712,8 @@ function yesNoOption<T extends { label: string }>(options: T[], a: string): T | 
 
 export type FillReport = {
   filled: number;
+  /** Fields filled with what the user typed on an earlier form (learned answers). */
+  fromLearned: number;
   missed: FormField[];
   resume: FormField | null;
   /** Custom dropdowns with the value to pick, for fillComboboxes (zone: a time zone list). */
@@ -875,7 +877,7 @@ export function placeOption(
 
 /** Fills every field JobBuddy knows. Leaves non-empty fields alone. Returns what's left. */
 export function fillForm(fields: FormField[], data: FillData): FillReport {
-  const report: FillReport = { filled: 0, missed: [], resume: null, dropdowns: [] };
+  const report: FillReport = { filled: 0, fromLearned: 0, missed: [], resume: null, dropdowns: [] };
   for (const f of fields) {
     // One odd field must never stop the rest of the form.
     try {
@@ -903,7 +905,9 @@ function fillOne(f: FormField, data: FillData, report: FillReport): void {
   if (f.choices?.some((c) => isChosen(c.el))) return;
   if (f.options?.some((o) => o.el.checked)) return;
   if (f.combobox && comboboxHasValue(f.el as unknown as HTMLElement)) return;
-  const value = valueFor(f, data);
+  const known = knownValue(f, data);
+  const value = known ?? learnedValue(f.label, data);
+  if (!known && value) report.fromLearned++;
   if (f.choices) {
     const choice = value ? pickOption(f.choices, value) : null;
     if (choice && !isChosen(choice.el)) {

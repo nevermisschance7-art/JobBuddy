@@ -107,6 +107,17 @@ function render(html: string, actions: Record<string, () => void> = {}): void {
   });
 }
 
+/** A line added under the box's current content (e.g. what was just learned). */
+function note(text: string): void {
+  if (minimized) return;
+  const body = shadow?.querySelector(".body");
+  if (!body) return;
+  const line = document.createElement("div");
+  line.className = "row ok";
+  line.textContent = text;
+  body.appendChild(line);
+}
+
 const esc = (s: string) =>
   s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
 
@@ -410,7 +421,7 @@ async function fill(
   render(
     `<p class="job">${esc(result.job?.title ?? pageInfo().title)}</p>
      ${usOnly ? `<div class="row warn">⚠ This form asks about US states or US work authorisation. The job may be for US residents only.</div>` : ""}
-     <div class="row ok">✓ ${report.filled} field${report.filled === 1 ? "" : "s"} filled</div>
+     <div class="row ok">✓ ${report.filled} field${report.filled === 1 ? "" : "s"} filled${report.fromLearned ? ` (${report.fromLearned} from answers you taught me)` : ""}</div>
      ${cvLine}
      ${byAi.length ? `<div class="row" style="color:#4f46e5">✎ ${byAi.length} answer${byAi.length === 1 ? "" : "s"} by AI, outlined in blue: please check</div>` : ""}
      ${required.length ? `<div class="row warn">⚠ ${required.length} required left for you, outlined in orange</div>` : `<div class="row ok">✓ Every required field is filled</div>`}
@@ -477,7 +488,16 @@ function learnFromUser(): void {
   if (items.length === 0) return;
   const done = new Set(items.map((i) => i.question));
   lastMissed = lastMissed.filter((f) => !done.has(f.label));
-  void send({ type: "learn", items });
+  void send({ type: "learn", items }).then((reply) => {
+    if (reply.ok) {
+      note(
+        `✓ Learned ${items.length} answer${items.length === 1 ? "" : "s"} for next time: ${items
+          .slice(0, 3)
+          .map((i) => i.question.slice(0, 40))
+          .join("; ")}${items.length > 3 ? "..." : ""}`,
+      );
+    }
+  });
 }
 
 const outlined = new Set<HTMLElement>();
@@ -523,7 +543,7 @@ async function intro(): Promise<void> {
     `<p class="job">${esc(result.job?.title ?? pageInfo().title)}</p>
      ${result.job ? `<p class="sub">${esc(result.job.company)}</p>` : ""}
      ${status}
-     <button class="main" data-act="go">⚡ Fill this application</button>
+     <button class="main" data-act="go">⚡ Fill this application <span style="opacity:.7;font-weight:400">(Alt+A)</span></button>
      <p class="muted">${app ? "I'll fill your details, answers and CV." : "I'll set up the application, make your CV for this job, draft the answers and fill the form."} You press Submit.</p>`,
     { go: () => void run() },
   );
@@ -629,6 +649,8 @@ function boot(): void {
   // "Fill this page" from the popup, on any site.
   chrome.runtime.onMessage.addListener((message: { type?: string }) => {
     if (message.type === "fill-here" && hasForm()) void intro();
+    // Alt+A: straight to filling, no extra click.
+    if (message.type === "fill-now" && hasForm() && !busy) void run();
   });
   // The next page of a form already being filled: carry on by itself.
   if (session()) whenFormAppears(() => void run());

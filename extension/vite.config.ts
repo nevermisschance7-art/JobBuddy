@@ -23,7 +23,7 @@ function manifest(appUrl: string): Plugin {
           {
             manifest_version: 3,
             name: "JobBuddy",
-            version: "0.3.0",
+            version: "0.4.0",
             description: "Job alerts and application autofill. You always press Submit yourself.",
             icons: { 16: "icon-16.png", 48: "icon-48.png", 128: "icon-128.png" },
             action: { default_popup: "popup.html", default_title: "JobBuddy" },
@@ -37,6 +37,14 @@ function manifest(appUrl: string): Plugin {
             // Only if the user turns on "Work on every site" in the popup (Chrome asks once):
             // then a form's next page and its thank-you page are seen on any site.
             optional_host_permissions: ["<all_urls>"],
+            // Alt+A on any application form: same as "Fill this application" (changeable at
+            // chrome://extensions/shortcuts).
+            commands: {
+              "fill-application": {
+                suggested_key: { default: "Alt+A" },
+                description: "Fill this application",
+              },
+            },
             content_scripts: [
               {
                 matches: atsMatches,
