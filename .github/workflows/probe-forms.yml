@@ -14,6 +14,9 @@ on:
       per_source:
         description: "Forms per source"
         default: "3"
+      urls:
+        description: "Only these form addresses (comma-separated), e.g. one a user reported"
+        default: ""
 
 permissions:
   contents: write
@@ -26,6 +29,7 @@ jobs:
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       PER_SOURCE: ${{ inputs.per_source || '3' }}
+      URLS: ${{ inputs.urls }}
     steps:
       - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v4
@@ -45,7 +49,22 @@ jobs:
         with:
           name: probe-forms
           path: probe-out
+      # Given addresses (a form a user reported): pushed to the probe-given branch to study,
+      # the saved test forms stay as they are.
+      - name: Publish the given forms
+        if: inputs.urls != ''
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          mkdir -p /tmp/given && cp -r probe-out/. /tmp/given/
+          git fetch origin probe-given || true
+          git switch --orphan probe-given-new
+          git rm -rq . 2>/dev/null || true
+          cp -r /tmp/given/. .
+          git add -A && git commit -qm "Probe of given forms"
+          git push -f origin HEAD:probe-given
       - name: Save the forms as test fixtures
+        if: inputs.urls == ''
         run: |
           mkdir -p extension/test/fixtures/real
           rm -f extension/test/fixtures/real/*.html
@@ -59,8 +78,10 @@ jobs:
             require('fs').writeFileSync('extension/test/fixtures/real/index.json', JSON.stringify(keep, null, 2) + '\n');
           "
       - name: The form code still handles them
+        if: inputs.urls == ''
         run: pnpm --filter extension exec vitest run src/content/real-forms.test.ts
       - name: Commit the forms
+        if: inputs.urls == ''
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
