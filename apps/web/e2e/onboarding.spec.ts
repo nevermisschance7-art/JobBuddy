@@ -159,14 +159,16 @@ test("sign up, onboard, edit settings, delete account", async ({ page }, info) =
     await page.getByRole("tab", { name: /Saved/ }).click();
     await expect(page.locator("article")).toHaveCount(1);
 
-    // Not for me: hide it with a reason, then restore it from Hidden.
-    await page.locator("article summary[aria-label='More actions']").click();
+    // Not for me: hidden at once with Undo (also Ctrl+Z); hide again, then restore from Hidden.
     await page.getByRole("button", { name: "Not for me" }).click();
-    await page.getByRole("button", { name: "Wrong level" }).click();
-    await expect(page.getByText(/seniority levels/)).toBeVisible();
-    await shot(page, "10c-not-for-me");
-    await page.getByRole("button", { name: "Hide this job" }).click();
     await expect(page.locator("article")).toHaveCount(0);
+    await shot(page, "10c-not-for-me");
+    await page.getByRole("button", { name: "Undo" }).click();
+    await expect(page.locator("article")).toHaveCount(1);
+    await page.getByRole("button", { name: "Not for me" }).click();
+    await expect(page.locator("article")).toHaveCount(0);
+    // Give the background save a moment before switching lists.
+    await page.waitForTimeout(1500);
     await page.getByRole("tab", { name: /Hidden/ }).click();
     await page.getByRole("button", { name: "Show again" }).click();
     await page.getByRole("tab", { name: /Best matches/ }).click();
