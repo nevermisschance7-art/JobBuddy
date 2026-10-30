@@ -144,7 +144,10 @@ async function handle(message: Message): Promise<unknown> {
     case "cv":
       return api("cv", { method: "POST", body: { applicationId: message.applicationId } });
     case "learn":
-      return api("learn", { method: "POST", body: { items: message.items } });
+      return api("learn", {
+        method: "POST",
+        body: { items: message.items, company: message.company },
+      });
     case "dismiss":
       return api("dismiss", {
         method: "POST",

@@ -77,7 +77,12 @@ export type Message =
   | { type: "prepare"; input: PrepareInput }
   | { type: "applied"; applicationId: string }
   | { type: "cv"; applicationId: string }
-  | { type: "learn"; items: { question: string; answer: string }[] }
+  | {
+      type: "learn";
+      /** ai: an AI answer the user changed (kept in answer memory, not learned answers). */
+      items: { question: string; answer: string; ai?: boolean }[];
+      company?: string;
+    }
   | { type: "open"; url: string }
   | { type: "dismiss"; url: string; applicationId?: string; undo?: boolean };
 

@@ -5,7 +5,8 @@ import { useActionState } from "react";
 import { NextField } from "@/components/next-field";
 import { TagInput } from "@/components/tag-input";
 import { Button } from "@/components/ui/button";
-import { Card, Field, FormMessage, Input, RequiredLegend, Select } from "@/components/ui/field";
+import { Combobox } from "@/components/ui/combobox";
+import { Card, Field, FormMessage, Input, RequiredLegend } from "@/components/ui/field";
 import { initialState } from "@/lib/action-state";
 import { saveFilters } from "@/lib/actions/onboarding";
 import { COUNTRY_OPTIONS, CURRENCIES } from "@/lib/countries";
@@ -152,18 +153,15 @@ export function FiltersForm({ filters, next }: { filters: Filters; next?: string
             />
           </Field>
           <Field label="Currency" htmlFor="currency">
-            <Select
+            <Combobox
               id="currency"
               name="salary_currency"
               defaultValue={filters.salary_currency ?? ""}
-            >
-              <option value="">Choose</option>
-              {CURRENCIES.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </Select>
+              options={[
+                { value: "", label: "Choose" },
+                ...CURRENCIES.map((c) => ({ value: c, label: c })),
+              ]}
+            />
           </Field>
         </div>
       </Card>

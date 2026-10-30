@@ -4,7 +4,8 @@ import { Bookmark, EyeOff, Inbox, RefreshCw, SlidersHorizontal, Sparkle } from "
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { MascotSays } from "@/components/mascot";
 import { Button } from "@/components/ui/button";
-import { Input, Select } from "@/components/ui/field";
+import { Combobox } from "@/components/ui/combobox";
+import { Input } from "@/components/ui/field";
 import {
   dismissMatch,
   loadMoreMatches,
@@ -285,59 +286,49 @@ export function JobsInbox({
           />
           <label className="flex flex-col gap-1 text-xs font-medium">
             Posted
-            <Select
-              aria-label="Freshness"
+            <Combobox
+              ariaLabel="Freshness"
               value={query.freshness}
-              onChange={(e) => set("freshness", e.target.value as MatchQuery["freshness"])}
-            >
-              <option value="any">Any time (7 days)</option>
-              <option value="new">Last 24 hours</option>
-              <option value="recent">Last 3 days</option>
-            </Select>
+              onChange={(v) => set("freshness", v as MatchQuery["freshness"])}
+              options={[
+                { value: "any", label: "Any time (7 days)" },
+                { value: "new", label: "Last 24 hours" },
+                { value: "recent", label: "Last 3 days" },
+              ]}
+            />
           </label>
           <label className="flex flex-col gap-1 text-xs font-medium">
             Tech fit
-            <Select
-              aria-label="Minimum score"
-              value={effectiveMin}
-              onChange={(e) => changeMin(Number(e.target.value))}
-            >
-              {[0, 10, 20, 30, 40, 50, 55, 60, 70, 80, 90].map((s) => (
-                <option key={s} value={s}>
-                  {s}+
-                </option>
-              ))}
-            </Select>
+            <Combobox
+              ariaLabel="Minimum score"
+              value={String(effectiveMin)}
+              onChange={(v) => changeMin(Number(v))}
+              options={[0, 10, 20, 30, 40, 50, 55, 60, 70, 80, 90].map((s) => ({
+                value: String(s),
+                label: `${s}+`,
+              }))}
+            />
           </label>
           <label className="flex flex-col gap-1 text-xs font-medium">
             Country
-            <Select
-              aria-label="Country"
+            <Combobox
+              ariaLabel="Country"
               value={query.country ?? ""}
-              onChange={(e) => set("country", e.target.value || undefined)}
-            >
-              <option value="">Any country</option>
-              {COUNTRY_OPTIONS.map((c) => (
-                <option key={c.value} value={c.value}>
-                  {c.label}
-                </option>
-              ))}
-            </Select>
+              onChange={(v) => set("country", v || undefined)}
+              options={[{ value: "", label: "Any country" }, ...COUNTRY_OPTIONS]}
+            />
           </label>
           <label className="flex flex-col gap-1 text-xs font-medium">
             Source
-            <Select
-              aria-label="Source"
+            <Combobox
+              ariaLabel="Source"
               value={query.source ?? ""}
-              onChange={(e) => set("source", (e.target.value || undefined) as MatchQuery["source"])}
-            >
-              <option value="">Any source</option>
-              {SOURCES.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </Select>
+              onChange={(v) => set("source", (v || undefined) as MatchQuery["source"])}
+              options={[
+                { value: "", label: "Any source" },
+                ...SOURCES.map((s) => ({ value: s, label: s })),
+              ]}
+            />
           </label>
           <Button
             variant="outline"

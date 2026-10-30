@@ -390,6 +390,7 @@ async function fill(
   // Required fields left: orange. Optional ones left: no outline (the form accepts them empty).
   // Answers written or picked by the AI: blue, to check.
   lastMissed = report.missed;
+  lastCompany = result.job?.company ?? pageInfo().company ?? "";
   const required = report.missed.filter((f) => f.required);
   const optional = report.missed.filter((f) => !f.required);
   const byAi = fields.filter(
@@ -409,6 +410,9 @@ async function fill(
               : questionSimilarity(f.label, a.question) >= 0.6),
         )),
   );
+  lastAi = byAi
+    .filter((f) => f.kind === "question")
+    .map((field) => ({ field, filled: currentAnswer(field) ?? "" }));
   clearOutlines();
   outline(
     required,
@@ -465,6 +469,9 @@ async function fill(
 
 /** Fields JobBuddy couldn't fill on this page; what the user types there is learned. */
 let lastMissed: FormField[] = [];
+/** AI-written answers on this page as filled, to notice when the user improves one. */
+let lastAi: { field: FormField; filled: string }[] = [];
+let lastCompany = "";
 
 /**
  * Saves what the user typed or picked in fields JobBuddy left empty (address line, post
@@ -497,18 +504,27 @@ function learnFromUser(): void {
     .filter((i) => i.question.length > 2 && i.answer && i.answer.length <= 300)
     .filter((i) => !looksLikeCode(i.answer) && !PLACEHOLDER.test(i.answer))
     .filter((i) => i.answer.toLowerCase() !== i.question.toLowerCase());
-  if (items.length === 0) return;
+  // AI answers the user changed before moving on: their version is kept for next time.
+  const edited = lastAi
+    .map(({ field, filled }) => ({
+      question: field.label,
+      answer: currentAnswer(field) ?? "",
+      filled,
+    }))
+    .filter((e) => e.answer.trim() && e.answer.trim() !== e.filled.trim())
+    .map(({ question, answer }) => ({ question, answer: answer.slice(0, 2000), ai: true }));
+  lastAi = lastAi.filter(({ field }) => !edited.some((e) => e.question === field.label));
+  if (items.length === 0 && edited.length === 0) return;
   const done = new Set(items.map((i) => i.question));
   lastMissed = lastMissed.filter((f) => !done.has(f.label));
-  void send({ type: "learn", items }).then((reply) => {
-    if (reply.ok) {
-      note(
-        `✓ Learned ${items.length} answer${items.length === 1 ? "" : "s"} for next time: ${items
-          .slice(0, 3)
-          .map((i) => i.question.slice(0, 40))
-          .join("; ")}${items.length > 3 ? "..." : ""}`,
-      );
-    }
+  void send({ type: "learn", items: [...items, ...edited], company: lastCompany }).then((reply) => {
+    if (!reply.ok || items.length === 0) return;
+    note(
+      `✓ Learned ${items.length} answer${items.length === 1 ? "" : "s"} for next time: ${items
+        .slice(0, 3)
+        .map((i) => i.question.slice(0, 40))
+        .join("; ")}${items.length > 3 ? "..." : ""}`,
+    );
   });
 }
 

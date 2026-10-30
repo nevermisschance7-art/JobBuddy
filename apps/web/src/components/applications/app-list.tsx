@@ -4,7 +4,8 @@ import { Check, ExternalLink, FileText, StickyNote } from "lucide-react";
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
-import { Select, Textarea } from "@/components/ui/field";
+import { Combobox } from "@/components/ui/combobox";
+import { Textarea } from "@/components/ui/field";
 import { moveApplication, saveNotes } from "@/lib/actions/applications";
 
 export type AppRow = {
@@ -124,19 +125,14 @@ function Row({ item }: { item: AppRow }) {
         >
           <StickyNote size={14} /> Notes{notes ? " ✓" : ""}
         </Button>
-        <Select
-          aria-label={`Status of ${item.jobs.title}`}
+        <Combobox
+          ariaLabel={`Status of ${item.jobs.title}`}
           value={status}
           disabled={pending}
-          className="ml-auto h-9 w-auto py-1 text-sm"
-          onChange={(e) => move(e.target.value)}
-        >
-          {Object.entries(STATUS_LABEL).map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </Select>
+          className="ml-auto w-44"
+          onChange={(v) => move(v)}
+          options={Object.entries(STATUS_LABEL).map(([value, label]) => ({ value, label }))}
+        />
       </div>
       {showNotes ? (
         <Textarea

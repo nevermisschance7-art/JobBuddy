@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { rememberAnswers } from "@/lib/answers";
 import { extensionUser, unauthorized } from "@/lib/extension/auth";
 
 // POST { items: [{ question, answer }] }: what the user typed into form fields JobBuddy
@@ -11,10 +12,13 @@ const body = z.object({
     .array(
       z.object({
         question: z.string().trim().min(2).max(500),
-        answer: z.string().trim().min(1).max(500),
+        answer: z.string().trim().min(1).max(2000),
+        /** An AI answer the user changed: goes to answer memory (reused for the same question). */
+        ai: z.boolean().optional(),
       }),
     )
     .max(40),
+  company: z.string().max(200).optional(),
 });
 
 export async function POST(request: Request) {
@@ -24,8 +28,15 @@ export async function POST(request: Request) {
   if (!parsed.success) return NextResponse.json({ error: "Bad request" }, { status: 400 });
   if (parsed.data.items.length === 0) return NextResponse.json({ saved: 0 });
 
+  const edited = parsed.data.items.filter((i) => i.ai);
+  if (edited.length > 0) {
+    await rememberAnswers(auth.supabase, auth.userId, parsed.data.company ?? "", edited);
+  }
+  const typed = parsed.data.items.filter((i) => !i.ai && i.answer.length <= 500);
+  if (typed.length === 0) return NextResponse.json({ saved: edited.length });
+
   const { error } = await auth.supabase.from("learned_answers").upsert(
-    parsed.data.items.map((i) => ({
+    typed.map((i) => ({
       user_id: auth.userId,
       question: i.question,
       answer: i.answer,

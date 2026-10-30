@@ -116,7 +116,10 @@ test("sign up, onboard, edit settings, delete account", async ({ page }, info) =
     // 5. Fixed answers
     await expect(page).toHaveURL(/\/onboarding\/answers$/);
     await page.getByLabel("Notice period").fill("1 month");
-    await page.getByLabel("Do you need visa sponsorship?").selectOption("No");
+    // Dropdowns are searchable: open, type, pick.
+    await page.getByLabel("Do you need visa sponsorship?").click();
+    await page.getByPlaceholder("Type to search").fill("no");
+    await page.getByRole("option", { name: "No", exact: true }).click();
     await shot(page, "07-answers");
     await page.getByRole("button", { name: "Save and continue" }).click();
 
@@ -256,8 +259,8 @@ test("sign up, onboard, edit settings, delete account", async ({ page }, info) =
     // Applications: it waits under "Ready to apply"; "I applied" moves it to Applied.
     await page.getByRole("link", { name: "Back to applications" }).click();
     await expect(page).toHaveURL(/\/applications$/);
-    const status = page.getByRole("combobox", { name: /^Status of / });
-    await expect(status).toHaveValue("prepared");
+    const status = page.getByRole("button", { name: /^Status of / });
+    await expect(status).toContainText(/ready/i);
     await page.getByRole("button", { name: "I applied" }).click();
     // It leaves "Ready to apply" and shows under "Applied".
     await expect(page.locator("li", { hasText: "E2E Backend Engineer" })).toHaveCount(0);

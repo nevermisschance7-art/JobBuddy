@@ -1,7 +1,7 @@
 import { jobKeyFromUrl, pageAddress, resumeSchema, type Json } from "@jobbuddy/shared";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { draftAnswers, pickChoices, type StoredAnswer } from "@/lib/answers";
+import { draftAnswers, pickChoices, rememberAnswers, type StoredAnswer } from "@/lib/answers";
 import { extensionUser, unauthorized } from "@/lib/extension/auth";
 import { findJobForUrl, type FoundJob } from "@/lib/extension/jobs";
 import { createAdminClient } from "@/lib/supabase/server";
@@ -149,6 +149,15 @@ export async function POST(request: Request) {
         .eq("user_id", userId);
       drafted = fresh.length;
       chosen = picked.length;
+      // Kept for next time: the same question on another form is answered without the AI.
+      await rememberAnswers(
+        supabase,
+        userId,
+        job.company_name,
+        all
+          .filter((a) => a.kind === "drafted" && !a.isCoverLetter)
+          .map((a) => ({ question: a.question, answer: a.answer })),
+      );
     }
   }
 

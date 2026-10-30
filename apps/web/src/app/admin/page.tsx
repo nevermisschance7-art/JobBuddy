@@ -1,4 +1,9 @@
-import { AdminPassword, AdminUsers, type AdminUserRow } from "@/components/admin/admin-users";
+import {
+  AdminPassword,
+  AdminTabGuard,
+  AdminUsers,
+  type AdminUserRow,
+} from "@/components/admin/admin-users";
 import { DailyColumns } from "@/components/charts/daily-columns";
 import { adminSignOut } from "@/lib/actions/admin";
 import { adminAccess } from "@/lib/admin";
@@ -57,7 +62,7 @@ export default async function AdminPage() {
     .sort((a, b) => b.joined.localeCompare(a.joined));
 
   return (
-    <>
+    <AdminTabGuard>
       <header className="border-border bg-card border-b">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3 sm:px-6">
           <span className="font-semibold">JobBuddy admin</span>
@@ -110,7 +115,7 @@ export default async function AdminPage() {
         </div>
         <AdminUsers users={users} />
       </main>
-    </>
+    </AdminTabGuard>
   );
 }
 

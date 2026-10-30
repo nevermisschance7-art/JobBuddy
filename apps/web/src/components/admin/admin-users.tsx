@@ -1,11 +1,11 @@
 "use client";
 
 import { Download } from "lucide-react";
-import { useActionState, useState, useTransition } from "react";
+import { useActionState, useEffect, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { FormMessage, Input } from "@/components/ui/field";
 import { initialState } from "@/lib/action-state";
-import { adminSignIn, adminUserAction, type AdminAction } from "@/lib/actions/admin";
+import { adminSignIn, adminSignOut, adminUserAction, type AdminAction } from "@/lib/actions/admin";
 
 export type AdminUserRow = {
   id: string;
@@ -17,10 +17,38 @@ export type AdminUserRow = {
   disabled: boolean;
 };
 
+const ADMIN_TAB = "jobbuddy-admin-tab";
+
+/**
+ * Shows the admin page only in the tab that entered the password. Any other tab (a new one,
+ * or the same link opened later) signs out and asks for the password again.
+ */
+export function AdminTabGuard({ children }: { children: React.ReactNode }) {
+  const [ok, setOk] = useState(false);
+  useEffect(() => {
+    let mine = false;
+    try {
+      mine = sessionStorage.getItem(ADMIN_TAB) === "1";
+    } catch {}
+    if (mine) setOk(true);
+    else void adminSignOut().then(() => window.location.reload());
+  }, []);
+  return ok ? <>{children}</> : null;
+}
+
 export function AdminPassword() {
   const [state, action, pending] = useActionState(adminSignIn, initialState);
   return (
-    <form action={action} className="flex max-w-sm flex-col gap-3">
+    <form
+      action={action}
+      // This tab entered the password: the page stays open here until the tab closes.
+      onSubmit={() => {
+        try {
+          sessionStorage.setItem(ADMIN_TAB, "1");
+        } catch {}
+      }}
+      className="flex max-w-sm flex-col gap-3"
+    >
       <label htmlFor="admin-password" className="text-sm font-medium">
         Admin password
       </label>

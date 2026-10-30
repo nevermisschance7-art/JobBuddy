@@ -23,22 +23,19 @@ export async function saveDisplayName(
   return saved();
 }
 
-export async function saveTimeZone(_prev: ActionState, formData: FormData): Promise<ActionState> {
+/** Saves the time zone (picked from the list; saved at once, no button). */
+export async function setTimeZone(zone: string): Promise<{ error?: string }> {
   const { supabase, user } = await requireUser();
-  const zone = text(formData, "time_zone");
-  if (!zone) return failed("Pick a time zone from the list.");
   try {
     new Intl.DateTimeFormat("en", { timeZone: zone });
   } catch {
-    return failed("Pick a time zone from the list.");
+    return { error: "Unknown time zone." };
   }
   const { error } = await supabase
     .from("profiles")
     .update({ time_zone: zone })
     .eq("user_id", user.id);
-  if (error) return failed("Saving failed. Try again.");
-  revalidatePath("/settings");
-  return saved();
+  return error ? { error: "Saving failed." } : {};
 }
 
 /** Deletes the account, every personal row (cascade) and every stored file. */

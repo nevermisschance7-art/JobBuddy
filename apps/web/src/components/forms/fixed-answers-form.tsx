@@ -3,7 +3,8 @@
 import { useActionState } from "react";
 import { NextField } from "@/components/next-field";
 import { Button } from "@/components/ui/button";
-import { Card, Field, FormMessage, Input, Select } from "@/components/ui/field";
+import { Combobox } from "@/components/ui/combobox";
+import { Card, Field, FormMessage, Input } from "@/components/ui/field";
 import { initialState } from "@/lib/action-state";
 import { saveFixedAnswers } from "@/lib/actions/onboarding";
 import { FIXED_ANSWER_KEYS } from "@/lib/fixed-answers";
@@ -24,14 +25,15 @@ export function FixedAnswersForm({
         {FIXED_ANSWER_KEYS.map((q) => (
           <Field key={q.key} label={q.label} hint={q.hint} htmlFor={`fa-${q.key}`}>
             {q.kind === "choice" ? (
-              <Select id={`fa-${q.key}`} name={q.key} defaultValue={values[q.key] ?? ""}>
-                <option value="">Not set</option>
-                {q.choices?.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </Select>
+              <Combobox
+                id={`fa-${q.key}`}
+                name={q.key}
+                defaultValue={values[q.key] ?? ""}
+                options={[
+                  { value: "", label: "Not set" },
+                  ...(q.choices ?? []).map((c) => ({ value: c, label: c })),
+                ]}
+              />
             ) : (
               <Input
                 id={`fa-${q.key}`}
