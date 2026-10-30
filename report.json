@@ -1,0 +1,61 @@
+[
+  {
+    "source": "given",
+    "company": "",
+    "start": "https://nexusmods.careers.hibob.com/jobs/129868a8-4083-48bd-8799-42b992a1ed0d/apply",
+    "frames": [
+      {
+        "url": "https://nexusmods.careers.hibob.com/jobs/129868a8-4083-48bd-8799-42b992a1ed0d/apply",
+        "fields": [
+          {
+            "label": "First name",
+            "kind": "first_name",
+            "control": "input:text",
+            "required": true
+          },
+          {
+            "label": "Last name",
+            "kind": "last_name",
+            "control": "input:text",
+            "required": true
+          },
+          {
+            "label": "Email",
+            "kind": "email",
+            "control": "input:text",
+            "required": true
+          },
+          {
+            "label": "Phone",
+            "kind": "phone",
+            "control": "input:text",
+            "required": false
+          },
+          {
+            "label": "Date available",
+            "kind": "question",
+            "control": "input:text",
+            "required": false
+          },
+          {
+            "label": "Desired salary",
+            "kind": "phone",
+            "control": "input:tel",
+            "required": false
+          },
+          {
+            "label": "By checking this box, I consent to the use of my personal data in accordance with the privacy policies outlined above.",
+            "kind": "question",
+            "control": "group:checkbox",
+            "required": false
+          }
+        ],
+        "filled": 7,
+        "missed": [],
+        "resume": false
+      }
+    ],
+    "final": "https://nexusmods.careers.hibob.com/jobs/129868a8-4083-48bd-8799-42b992a1ed0d/apply",
+    "fixture": "given-1.html"
+  }
+]
