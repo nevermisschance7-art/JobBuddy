@@ -78,7 +78,13 @@ async function jobLinks() {
     return process.env.URLS.split(",")
       .map((u) => u.trim())
       .filter(Boolean)
-      .map((u) => ({ source: "given", apply_url: u, canonical_url: u, title: "", company_name: "" }));
+      .map((u) => ({
+        source: "given",
+        apply_url: u,
+        canonical_url: u,
+        title: "",
+        company_name: "",
+      }));
   }
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
