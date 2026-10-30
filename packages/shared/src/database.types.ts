@@ -101,6 +101,9 @@ export type Database = {
         Row: {
           answers: Json
           applied_at: string | null
+          cover_letter_docx: string | null
+          cover_letter_pdf: string | null
+          cover_letter_text: string | null
           created_at: string
           cv_approved_at: string | null
           id: string
@@ -119,6 +122,9 @@ export type Database = {
         Insert: {
           answers?: Json
           applied_at?: string | null
+          cover_letter_docx?: string | null
+          cover_letter_pdf?: string | null
+          cover_letter_text?: string | null
           created_at?: string
           cv_approved_at?: string | null
           id?: string
@@ -137,6 +143,9 @@ export type Database = {
         Update: {
           answers?: Json
           applied_at?: string | null
+          cover_letter_docx?: string | null
+          cover_letter_pdf?: string | null
+          cover_letter_text?: string | null
           created_at?: string
           cv_approved_at?: string | null
           id?: string
