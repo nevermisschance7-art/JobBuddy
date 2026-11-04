@@ -33,14 +33,14 @@ Return a plan as JSON, not a CV:
   "headline": "the candidate's headline for this job",
   "summary": "2 or 3 sentences",
   "skills": [{"name": "group name", "keywords": ["skill copied from the CV", ...]}],
-  "work": [{"job": 0, "bullets": [{"from": 3, "text": "bullet B3, reworded for this job"}]}],
+  "work": [{"job": 0, "bullets": [{"from": 3}, {"from": 0}]}],
   "projects": [0]
 }
 Rules:
 - headline: the role this job is for, in words the CV supports (e.g. "Senior PHP Engineer" when the CV shows senior PHP work), plus at most two of the job's main technologies that the CV has. Never a seniority, title or technology the CV doesn't show.
 - summary: why this candidate fits THIS job: the kind of role, years of experience if the CV dates show it, the CV skills that match what the job asks for, and one concrete result from the CV. Only facts from the CV.
 - skills: up to 6 groups and about 15 to 25 keywords, copied exactly from the CV's skills, the ones this job asks for first. Leave out skills unrelated to this job.
-- work: include EVERY job (J0, J1, ...). For each, choose its most relevant bullets for this job, most relevant first: up to ${BULLETS_RECENT} for J0 and J1, up to ${BULLETS_OLDER} for the others. "from" is the bullet's number. Reword each in the job's language where the CV supports it, keeping every fact, number and technology exactly as in the original. Never merge two bullets, never add a fact, result or number. A job with no bullets gets "bullets": [].
+- work: include EVERY job (J0, J1, ...). For each, choose its most relevant bullets for this job, most relevant first: up to ${BULLETS_RECENT} for J0 and J1, up to ${BULLETS_OLDER} for the others. "from" is the bullet's number. Only pick and order them: the bullets are used word for word, so don't rewrite them. A job with no bullets gets "bullets": [].
 - projects: the numbers of the 0 to 2 projects most relevant to this job.
 Style: plain, short, human. Strong verbs, no buzzwords, no em dashes, no "I".
 Placeholders like {{NAME}} stand for real values: copy them exactly where they belong.`;

@@ -1,11 +1,12 @@
 // Tailoring a CV for one job, as a plan the code applies to the confirmed CV.
 //
 // The AI never returns a whole CV (it played safe and copied everything). It returns a plan:
-// a headline, a summary, which skills to show, which bullets of each job to keep (by number)
-// and how to word them, and which projects to keep. The code builds the CV from the plan and
-// the original, so employers, titles, dates and skills can only come from the CV; the truth
-// checker then checks every reworded line. Without an AI, ruleTailor orders and trims by the
-// job's technologies.
+// a headline, a summary, which skills to show, which bullets of each job to keep and in what
+// order (by number), and which projects to keep. The code builds the CV from the plan and the
+// original, so employers, titles, dates, skills and bullet wording all come from the CV (the
+// owner's choice: a strong CV's sentences are kept word for word); the truth checker then
+// checks the headline and summary. Without an AI, ruleTailor orders and trims by the job's
+// technologies.
 
 import { z } from "zod";
 import type { Resume } from "../resume";
@@ -30,7 +31,10 @@ export const tailorPlanSchema = z.object({
     .array(
       z.object({
         job: z.number().int(),
-        bullets: z.array(z.object({ from: z.number().int(), text: z.string().max(400) })).max(12),
+        // "text" is ignored: bullets keep the CV's own wording (the owner's choice).
+        bullets: z
+          .array(z.object({ from: z.number().int(), text: z.string().max(400).optional() }))
+          .max(12),
       }),
     )
     .default([]),
@@ -162,7 +166,10 @@ export function applyPlan(cv: Resume, plan: TailorPlan, jobTitle: string, jobTex
     const seen = new Set<number>();
     const bullets: string[] = [];
     for (const b of entry?.bullets ?? []) {
-      const text = plain(b.text);
+      // The CV's own sentence, word for word: a strong CV's wording is kept.
+      const text = (
+        b.from >= 0 && b.from < w.highlights.length ? w.highlights[b.from]! : ""
+      ).trim();
       if (b.from < 0 || b.from >= w.highlights.length || seen.has(b.from) || !text) continue;
       seen.add(b.from);
       bullets.push(text);

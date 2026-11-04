@@ -90,8 +90,9 @@ describe("tailoring plan", () => {
     expect(out.skills.flatMap((g) => g.keywords)).toEqual([
       "PHP", "Symfony", "Laravel", "SQL", "Azure", "Terraform", "Docker", "Python", "AWS",
     ]); // prettier-ignore
+    // The CV's own wording, in the plan's order; the AI's rewording is not used.
     expect(out.work[0]!.highlights).toEqual([
-      "Built PHP and Symfony payment APIs",
+      "Built payment APIs in PHP and Symfony",
       "Cut p95 latency from 900 ms to 250 ms",
     ]);
     // Every job stays: one the plan skipped gets its most relevant bullets by rule.
@@ -100,14 +101,13 @@ describe("tailoring plan", () => {
     expect(out.projects.map((p) => p.name)).toEqual(["queue-watch"]);
   });
 
-  it("keeps every fact check: a reworded bullet with a new number is removed", () => {
+  it("never takes the AI's wording for a bullet", () => {
     const plan = tailorPlanSchema.parse({
       skills: [{ name: "All", keywords: cv.skills.flatMap((g) => g.keywords) }],
       work: [{ job: 0, bullets: [{ from: 2, text: "Moved 60 services to Azure" }] }],
     });
-    const { resume, report } = checkTailoredCv(cv, applyPlan(cv, plan, job.title, job.text));
-    expect(resume.work[0]!.highlights).toEqual([]);
-    expect(report.removed.some((r) => r.item.includes("60 services"))).toBe(true);
+    const { resume } = checkTailoredCv(cv, applyPlan(cv, plan, job.title, job.text));
+    expect(resume.work[0]!.highlights).toEqual(["Moved 6 services to Azure"]);
   });
 
   it("without an AI, puts the job's technologies first and trims the weakest bullets", () => {
