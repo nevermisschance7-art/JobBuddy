@@ -40,7 +40,7 @@ it.skipIf(!username)(
     const cv = (
       await (
         await fetch(
-          `${url}/rest/v1/cvs?user_id=eq.${profile.user_id}&original_file=not.is.null&select=id,original_file,resume_json&order=created_at.desc&limit=1`,
+          `${url}/rest/v1/cvs?user_id=eq.${profile.user_id}&original_file=not.is.null&select=id,original_file,resume_json,confirmed&order=created_at.desc&limit=1`,
           { headers: h },
         )
       ).json()
@@ -66,7 +66,8 @@ it.skipIf(!username)(
     const save = await fetch(`${url}/rest/v1/cvs?id=eq.${cv.id}`, {
       method: "PATCH",
       headers: { ...h, "content-type": "application/json" },
-      body: JSON.stringify({ resume_json: resume, confirmed: true, embedding: null }),
+      // A new upload stays unconfirmed: the user checks the fields and confirms in Settings.
+      body: JSON.stringify({ resume_json: resume, confirmed: cv.confirmed, embedding: null }),
     });
     expect(save.ok).toBe(true);
     console.log("Saved. The next matcher run rescores every job for this user.");
