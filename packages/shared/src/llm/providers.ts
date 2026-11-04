@@ -115,7 +115,12 @@ export const gemini: LlmProvider = {
 function openAiCompatible(
   name: ProviderName,
   baseUrl: string,
-  opts: { jsonMode: boolean; extraHeaders?: Record<string, string> },
+  opts: {
+    jsonMode: boolean;
+    extraHeaders?: Record<string, string>;
+    /** Extra request fields for some models (e.g. a shorter "thinking" budget). */
+    extraBody?: (model: string) => Record<string, unknown>;
+  },
 ): LlmProvider {
   return {
     name,
@@ -132,6 +137,7 @@ function openAiCompatible(
           temperature: req.temperature,
           max_tokens: req.maxOutputTokens,
           ...(req.json && opts.jsonMode ? { response_format: { type: "json_object" } } : {}),
+          ...opts.extraBody?.(req.model),
         },
         req.timeoutMs,
       );
@@ -168,7 +174,12 @@ function openAiCompatible(
   };
 }
 
-export const groq = openAiCompatible("groq", "https://api.groq.com/openai/v1", { jsonMode: true });
+// gpt-oss "thinks" before answering; on a whole CV that used the time and the answer space
+// (timeouts, empty answers). Short thinking answers in a few seconds.
+export const groq = openAiCompatible("groq", "https://api.groq.com/openai/v1", {
+  jsonMode: true,
+  extraBody: (model) => (model.startsWith("openai/gpt-oss") ? { reasoning_effort: "low" } : {}),
+});
 
 // Free tiers with their own limits: more room when Gemini and Groq are busy.
 export const cerebras = openAiCompatible("cerebras", "https://api.cerebras.ai/v1", {

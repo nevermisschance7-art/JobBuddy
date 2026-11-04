@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { resumeSchema } from "../resume";
 import { checkTailoredCv } from "./truth";
-import { applyPlan, numberedCv, ruleTailor, tailorPlanSchema } from "./tailor-plan";
+import {
+  applyPlan,
+  numberedCv,
+  ruleTailor,
+  strongCertificates,
+  tailorPlanSchema,
+} from "./tailor-plan";
 
 const cv = resumeSchema.parse({
   basics: { name: "Sam Tester", label: "Backend Engineer", summary: "Backend engineer." },
@@ -120,5 +126,34 @@ describe("tailoring plan", () => {
     const plan = tailorPlanSchema.parse({ headline: "Senior Go Engineer, Kubernetes" });
     const { resume } = checkTailoredCv(cv, applyPlan(cv, plan, job.title, job.text));
     expect(resume.basics.label).toBe("Backend Engineer");
+  });
+});
+
+describe("certificates", () => {
+  const iuri = [
+    { name: "Microsoft Azure: From Zero to Hero", issuer: "Udemy", date: "2026-07" },
+    { name: "Apache Kafka Fundamentals Accreditation", issuer: "Confluent", date: "2025" },
+    { name: "Setting Data in Motion with Confluent Cloud", issuer: "Confluent", date: "2025" },
+    { name: "Azure API Management Masterclass", issuer: "Udemy", date: "2025-06" },
+    { name: "Intro to Test & Behavior Driven Development", issuer: "IBM", date: "2024-11" },
+    { name: "Introduction to Dashboards", issuer: "Datadog", date: "2024-07" },
+    { name: "Version Control", issuer: "Meta", date: "2023-04" },
+    { name: "Programming in Python", issuer: "Meta", date: "2022-11" },
+    { name: "Information Security", issuer: "Engage in Learning", date: "2022-03" },
+  ];
+  it("keeps only recognised certifications, never courses", () => {
+    const kept = strongCertificates(iuri, "Senior Backend Engineer", "Kafka and Azure services.");
+    expect(kept.map((c) => c.issuer)).toEqual(["Confluent", "Confluent"]);
+  });
+  it("shows at most 3, the job's technologies first", () => {
+    const many = [
+      { name: "AWS Certified Developer", issuer: "Amazon", date: "2023" },
+      { name: "Microsoft Certified: Azure Developer Associate", issuer: "Microsoft", date: "2024" },
+      { name: "Certified Kubernetes Administrator", issuer: "CNCF", date: "2022" },
+      { name: "Google Cloud Professional Cloud Developer", issuer: "Google", date: "2025" },
+    ];
+    const kept = strongCertificates(many, "Azure Engineer", "Azure and Kubernetes.");
+    expect(kept).toHaveLength(3);
+    expect(kept[0]!.issuer).toBe("Microsoft");
   });
 });

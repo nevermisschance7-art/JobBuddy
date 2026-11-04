@@ -127,6 +127,9 @@ class OpenAiCompatible:
         }
         if req.json and self.json_mode:
             body["response_format"] = {"type": "json_object"}
+        # gpt-oss "thinks" first; short thinking answers in time (same as the TS router).
+        if self.name == "groq" and req.model.startswith("openai/gpt-oss"):
+            body["reasoning_effort"] = "low"
         res = _post(
             f"{self.base_url}/chat/completions",
             {"Authorization": f"Bearer {api_key}", **self.extra_headers},

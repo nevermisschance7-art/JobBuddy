@@ -7,6 +7,7 @@ import {
   LlmError,
   LlmOutputError,
   LlmRouter,
+  resetProviderHealth,
   nextPacificMidnight,
   parseDuration,
   parseLooseJson,
@@ -73,6 +74,7 @@ const CONFIG: ModelsConfig = {
 };
 
 function setup(keys: Partial<Record<ProviderName, Partial<ProviderKey>>>, shared = {}) {
+  resetProviderHealth();
   const fakes = {
     gemini: new FakeProvider("gemini"),
     groq: new FakeProvider("groq"),
@@ -311,6 +313,20 @@ describe("provider helpers", () => {
 });
 
 describe("LlmRouter time sharing", () => {
+  it("tries a provider that just timed out last, for the next calls", async () => {
+    const { router, fakes } = setup({ gemini: {} }, { groq: "shared-groq" });
+    fakes.gemini.queue(new LlmError("server", "503 high demand"), new LlmError("server", "503"));
+    fakes.groq.queue('{"title":"A","years":1}', '{"title":"B","years":2}');
+    await router.generateJson("t", schema, "p", "u1");
+    const geminiCalls = fakes.gemini.requests.length;
+    await expect(router.generateJson("t", schema, "p", "u1")).resolves.toEqual({
+      title: "B",
+      years: 2,
+    });
+    // The second call went straight to Groq, not to the busy Gemini again.
+    expect(fakes.gemini.requests.length).toBe(geminiCalls);
+  });
+
   it("moves to the backup after a hang instead of retrying the slow provider", async () => {
     const { router, fakes } = setup({ gemini: {} }, { groq: "shared-groq" });
     // Gemini times out (as when Google's free tier is overloaded); Groq answers.

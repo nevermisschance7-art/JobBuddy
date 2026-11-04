@@ -73,6 +73,17 @@ const COOLDOWN_KINDS = new Set(["rate_limit", "quota"]);
 
 /** Shared keys that hit a limit rest here (per server instance), so the next call skips them. */
 const sharedCooling = new Map<string, Date>();
+/** Providers that just timed out or answered "busy": tried last for a few minutes, so the
+ * next calls go to one that works instead of waiting on the same overload again. */
+const shaky = new Map<ProviderName, number>();
+const SHAKY_MS = 3 * 60_000;
+const BUSY_KINDS = new Set(["server", "network"]);
+
+/** Forgets recent failures (tests start clean). */
+export function resetProviderHealth(): void {
+  shaky.clear();
+}
+
 /** Turns through the shared keys of a provider, so their per-minute limits add up. */
 let sharedTurn = 0;
 // Errors tied to one model (missing, overloaded, too slow, rejects an option): try the next model.
@@ -202,6 +213,8 @@ export class LlmRouter {
         queue.push({ provider: name, apiKey, coolingUntil: cooling, shared: true });
       }
     }
+    const isShaky = (p: ProviderName) => Date.now() - (shaky.get(p) ?? 0) < SHAKY_MS;
+    queue.sort((a, b) => Number(isShaky(a.provider)) - Number(isShaky(b.provider)));
     const usable = queue.filter((key) => {
       if (key.coolingUntil && key.coolingUntil > now) {
         attempts.push(`${key.provider} cooling down until ${key.coolingUntil.toISOString()}`);
@@ -231,7 +244,11 @@ export class LlmRouter {
         Math.min(deadline, Date.now() + share),
         others === 0,
       );
-      if (outcome.ok) return outcome.text;
+      if (outcome.ok) {
+        shaky.delete(name);
+        return outcome.text;
+      }
+      if (BUSY_KINDS.has(outcome.error.kind)) shaky.set(name, Date.now());
       attempts.push(`${name}: ${outcome.error.kind}`);
 
       if (key.shared) {

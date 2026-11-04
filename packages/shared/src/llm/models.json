@@ -9,7 +9,7 @@
     },
     "groq": {
       "enabled": true,
-      "models": ["openai/gpt-oss-120b"],
+      "models": ["openai/gpt-oss-120b", "openai/gpt-oss-20b"],
       "freeRequestsPerDay": 1000
     },
     "cerebras": {

@@ -247,6 +247,9 @@ ${a.answer}`);
     // The opinion question always gets an answer; story questions get one or are left empty.
     expect(answers[1]).toMatchObject({ kind: "drafted" });
     for (const a of answers) expect(isNonAnswer(a.answer), a.answer).toBe(false);
+    // No notes in brackets; questions about life outside work stay empty.
+    for (const a of answers) expect(a.answer).not.toMatch(/\[[^\]]{3,}\]/);
+    expect(answers[0]!.answer).toBe("");
   }, 180_000);
 
   it("picks choice answers only where the CV supports them", async () => {

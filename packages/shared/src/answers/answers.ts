@@ -321,7 +321,9 @@ export async function answerQuestions(
       maxWords: p.input.maxWords,
       ...(p.input.isCoverLetter ? { isCoverLetter: true } : {}),
     };
-    if (!text?.trim() || isNonAnswer(text)) {
+    // A reply that is only a note to the user ("[add your example]") counts as no answer: the
+    // field stays empty rather than holding brackets.
+    if (!text?.trim() || isNonAnswer(text) || /\[[^\]]{3,}\]/.test(text)) {
       out[p.index] = { ...base, kind: "failed", answer: "" };
       return;
     }

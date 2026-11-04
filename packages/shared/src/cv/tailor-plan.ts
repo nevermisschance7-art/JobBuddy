@@ -124,7 +124,8 @@ export function ruleTailor(cv: Resume, jobTitle: string, jobText: string): Resum
   const projects = byRelevance(cv.projects, (p) =>
     score(`${p.name} ${p.description ?? ""} ${p.highlights.join(" ")} ${p.keywords.join(" ")}`),
   ).slice(0, 3);
-  return { ...cv, skills, work, projects };
+  const certificates = strongCertificates(cv.certificates, jobTitle, jobText);
+  return { ...cv, skills, work, projects, certificates };
 }
 
 /**
@@ -187,5 +188,42 @@ export function applyPlan(cv: Resume, plan: TailorPlan, jobTitle: string, jobTex
     skills,
     work,
     projects,
+    certificates: strongCertificates(cv.certificates, jobTitle, jobText),
   };
+}
+
+// ---------------------------------------------------------------- certificates
+
+/** Issuers whose certifications employers recognise. */
+const STRONG_ISSUER =
+  /\b(microsoft|azure|aws|amazon|google|gcp|confluent|oracle|cncf|linux foundation|kubernetes|hashicorp|databricks|snowflake|salesforce|cisco|comptia|isc2|\(isc\)²|isaca|red hat|redhat|mongodb|elastic|scrum\.org|scrum alliance|pmi|axelos|itil|istqb|github|gitlab|atlassian|sap|ibm certified|zend|symfony|laravel)\b/i;
+
+/** Course-style titles: fine for learning, weak on a CV. */
+const WEAK_TITLE =
+  /\b(udemy|coursera|linkedin learning|skillshare|youtube)\b|\bintro(duction)?\b|from zero to hero|masterclass|for beginners|beginner|crash course|bootcamp|getting started|basics|101\b/i;
+
+/** At most this many certificates on a tailored CV. */
+export const MAX_CERTIFICATES = 3;
+
+/**
+ * The few certificates worth showing for this job: from a recognised issuer, not a course,
+ * the ones naming the job's technologies first, then the newest. None qualify: no section.
+ */
+export function strongCertificates(
+  certificates: Resume["certificates"],
+  jobTitle: string,
+  jobText: string,
+): Resume["certificates"] {
+  const jobTerms = termsIn(`${jobTitle}\n${jobText}`);
+  return certificates
+    .map((c, i) => {
+      const text = `${c.name} ${c.issuer ?? ""}`;
+      const strong = STRONG_ISSUER.test(text) && !WEAK_TITLE.test(text);
+      const relevant = [...termsIn(text)].filter((t) => jobTerms.has(t)).length;
+      return { c, i, strong, relevant, date: c.date ?? "" };
+    })
+    .filter((x) => x.strong)
+    .sort((a, b) => b.relevant - a.relevant || b.date.localeCompare(a.date) || a.i - b.i)
+    .slice(0, MAX_CERTIFICATES)
+    .map((x) => x.c);
 }
