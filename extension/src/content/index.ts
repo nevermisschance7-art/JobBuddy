@@ -618,7 +618,7 @@ async function intro(): Promise<void> {
     `<p class="job">${esc(result.job?.title ?? pageInfo().title)}</p>
      ${result.job ? `<p class="sub">${esc(result.job.company)}</p>` : ""}
      ${status}
-     <button class="main" data-act="go">⚡ Fill this application <span class="key">Alt+F</span></button>
+     <button class="main" data-act="go">⚡ Fill this application <span class="key">Alt+W</span></button>
      <div class="pair">
        <button class="second" data-act="apply">✓ Apply <span class="key">Alt+A</span></button>
        <button class="second" data-act="skip">👎 Not for me <span class="key">Alt+Q</span></button>

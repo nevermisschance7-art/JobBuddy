@@ -19,6 +19,7 @@ describe("classifyMail", () => {
       "next_step",
       "rejection",
       "received",
+      "job_alert",
       "other",
     ])
       expect(kinds.has(k as never)).toBe(true);

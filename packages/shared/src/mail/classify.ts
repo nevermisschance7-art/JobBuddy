@@ -2,7 +2,8 @@
 // Keyword rules only, no AI. The same RULES run in the user's Google Apps Script
 // (see script.ts, which embeds them), so there is one source for both.
 //
-// Order: job alerts and newsletters are "other" first; a mail with no hiring words at all is
+// Order: adverts and newsletters are "other", job recommendations and outreach "job_alert"
+// (own label in Gmail, no alert); a mail with no hiring words at all is
 // "other"; then rejection (it wins over positive words: "unfortunately we will not move forward
 // to the interview stage"), offer, assessment, interview, next step, receipt.
 // Positive rules are written for direct statements ("we'd like to schedule", "your availability"),
@@ -15,6 +16,7 @@ export const MAIL_CLASSES = [
   "next_step",
   "rejection",
   "received",
+  "job_alert",
   "other",
 ] as const;
 export type MailClass = (typeof MAIL_CLASSES)[number];
@@ -37,7 +39,13 @@ export const MAIL_ORDER = [
 
 /** Regex sources, all used case-insensitively. Plain strings so the Apps Script can embed them. */
 export const MAIL_RULES: Record<
-  "job_alert" | "hiring" | "strong_subject" | (typeof MAIL_ORDER)[number],
+  | "job_alert"
+  | "promo"
+  | "job_site"
+  | "own_application"
+  | "hiring"
+  | "strong_subject"
+  | (typeof MAIL_ORDER)[number],
   string[]
 > = {
   // Checked against the sender and subject only.
@@ -54,14 +62,30 @@ export const MAIL_RULES: Record<
     String.raw`\band \d+ more jobs?\b`,
     String.raw`\b\d+\+? new [\w ]{0,40}jobs?\b`,
     String.raw`\bjobs? (digest|newsletter|roundup)\b`,
-    String.raw`\bnewsletter\b`,
-    String.raw`\bweekly (digest|roundup|update)\b`,
     String.raw`\btop jobs\b`,
     String.raw`Stellenangebote|Jobangebote f`,
     String.raw`offres d'emploi`,
-    // Adverts from job sites (LinkedIn Premium trials and the like) are never news.
+    // Outreach about a new role ("Exciting opportunity at Wise"), not about an application.
+    String.raw`\bexciting (new )?(job )?opportunit`,
+    String.raw`\bopportunity (at|with|for) \w`,
+    String.raw`\b(new|open|exciting) (role|position|vacancy) (at|for|with)\b`,
+    String.raw`\b(are|would) you (be )?(open|interested) (to|in)\b`,
+    String.raw`\bfreelance (gig|work|jobs?|projects?)\b`,
+    String.raw`\bjob opportunit`,
+  ],
+  // Adverts and newsletters (LinkedIn Premium trials and the like): never news, no label.
+  promo: [
     String.raw`@(em|e|mail|news|info|marketing)\.linkedin\.com`,
     String.raw`\b(premium|free trial|your trial|upgrade (now|to)|subscription|webinar|% off|discount)\b`,
+    String.raw`\bnewsletter\b`,
+    String.raw`\bweekly (digest|roundup|update)\b`,
+  ],
+  // Job sites' own mail is a recommendation unless it is about the user's application.
+  job_site: [
+    String.raw`@([\w-]+\.)*(linkedin|indeed|glassdoor|otta|welcometothejungle|wellfound|angel|hired|ziprecruiter|monster|dice|stepstone|totaljobs|reed|cv-library|jobsite|xing|seek|naukri)\.(com|co|co\.uk|de|io)\b`,
+  ],
+  own_application: [
+    String.raw`\byour application\b|\bapplication (was|has been) (sent|viewed|submitted|received)\b|\byou applied\b|\binterview\b|\bschedul|\bassessment\b|\boffer\b`,
   ],
   // A receipt ("Thank you for applying") that only mentions a later test or call stays a
   // receipt, unless the subject itself says interview, schedule, test, offer or next step.
@@ -155,6 +179,7 @@ export const MAIL_RULES: Record<
     String.raw`\b(we('ve| have)? )?(successfully )?received your application\b`,
     String.raw`\bapplication (has been |was |is )?(received|submitted|sent|complete)\b`,
     String.raw`\bapplication confirmation\b`,
+    String.raw`\b(your )?application (was|has been) (viewed|sent)\b`,
     String.raw`\b(confirm|confirming|acknowledge) (the )?receipt\b`,
     String.raw`Bewerbung (ist )?(eingegangen|erhalten)|Eingangsbest(ä|ae)tigung|Dank f(ü|ue)r (Ihre|deine) Bewerbung`,
     String.raw`merci (pour|de) votre candidature|candidature (a bien été )?re(ç|c)ue`,
@@ -175,7 +200,11 @@ const any = (list: RegExp[], text: string) => list.some((r) => r.test(text));
 export function classifyMail({ from, subject, body }: MailInput): MailClass {
   const head = `${from}\n${subject}`;
   const text = `${subject}\n${body}`;
-  if (any(compiled.job_alert, head)) return "other";
+  if (any(compiled.promo, head)) return "other";
+  // Job recommendations get their own label (no star, no alert); a mail about the user's own
+  // application (LinkedIn sends both from one address) is read as usual.
+  const own = any(compiled.own_application, subject);
+  if (!own && (any(compiled.job_alert, head) || any(compiled.job_site, from))) return "job_alert";
   if (!any(compiled.hiring, `${from}\n${text}`)) return "other";
   for (const c of MAIL_ORDER) {
     if (!any(compiled[c], text)) continue;

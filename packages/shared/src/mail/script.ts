@@ -14,6 +14,7 @@ var LABELS = {
   good: "JobBuddy/Good news",
   rejected: "JobBuddy/Rejected",
   received: "JobBuddy/Received",
+  alerts: "JobBuddy/Job alerts",
   checked: "JobBuddy/Checked"
 };
 var MAX_THREADS = 100;
@@ -78,6 +79,10 @@ function check_() {
       var body = String(m.getPlainBody() || "").slice(0, 4000);
       var kind = classifyMail(from, subject, body);
       if (kind === "other") return;
+      if (kind === "job_alert") {
+        plan.kinds.job_alert = true;
+        return;
+      }
       plan.kinds[kind] = true;
       var match = matchApplication(companies, from, subject, body);
       if (GOOD_NEWS.indexOf(kind) >= 0) plan.star.push(m);
@@ -107,6 +112,7 @@ function check_() {
     }
     if (p.kinds.rejection) p.thread.addLabel(label_(LABELS.rejected));
     if (p.kinds.received) p.thread.addLabel(label_(LABELS.received));
+    if (p.kinds.job_alert) p.thread.addLabel(label_(LABELS.alerts));
     p.thread.addLabel(label_(LABELS.checked));
   });
   props.setProperty("lastRunAt", String(started));
@@ -135,7 +141,9 @@ function classifyMail(from, subject, body) {
   var r = rules_();
   var head = from + "\n" + subject;
   var text = subject + "\n" + body;
-  if (any_(r.job_alert, head)) return "other";
+  if (any_(r.promo, head)) return "other";
+  var own = any_(r.own_application, subject);
+  if (!own && (any_(r.job_alert, head) || any_(r.job_site, from))) return "job_alert";
   if (!any_(r.hiring, from + "\n" + text)) return "other";
   for (var i = 0; i < ORDER.length; i++) {
     var c = ORDER[i];

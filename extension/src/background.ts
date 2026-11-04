@@ -58,7 +58,7 @@ async function syncEverySite(): Promise<void> {
 }
 chrome.permissions.onAdded.addListener(() => void syncEverySite());
 
-// Alt+F / Alt+A / Alt+Q: load the filler into this tab (the shortcut grants access to it),
+// Alt+W / Alt+A / Alt+Q: load the filler into this tab (the shortcut grants access to it),
 // then fill, apply or hide the job.
 chrome.commands.onCommand.addListener((command) => {
   const type = {

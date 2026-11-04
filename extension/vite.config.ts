@@ -38,10 +38,10 @@ function manifest(appUrl: string): Plugin {
             // then a form's next page and its thank-you page are seen on any site.
             optional_host_permissions: ["<all_urls>"],
             // On any application form (changeable at chrome://extensions/shortcuts):
-            // Alt+F fill, Alt+A apply (presses the form's Submit), Alt+Q not for me.
+            // Alt+W fill, Alt+A apply (presses the form's Submit), Alt+Q not for me.
             commands: {
               "fill-application": {
-                suggested_key: { default: "Alt+F" },
+                suggested_key: { default: "Alt+W" },
                 description: "Fill this application",
               },
               "apply-application": {
