@@ -757,6 +757,7 @@ export type Database = {
           status: string
           updated_at: string
           user_id: string
+          viewed_at: string | null
         }
         Insert: {
           breakdown?: Json
@@ -772,6 +773,7 @@ export type Database = {
           status?: string
           updated_at?: string
           user_id: string
+          viewed_at?: string | null
         }
         Update: {
           breakdown?: Json
@@ -787,6 +789,7 @@ export type Database = {
           status?: string
           updated_at?: string
           user_id?: string
+          viewed_at?: string | null
         }
         Relationships: [
           {

@@ -1180,3 +1180,28 @@ export function noticeToDate(text: string, now = new Date()): string | null {
   else d.setUTCMonth(d.getUTCMonth() + n);
   return d.toISOString().slice(0, 10);
 }
+
+// ---------------------------------------------------------------- Apply
+
+const SUBMIT_TEXT =
+  /^(submit( (my |your )?application)?|apply( now)?|send( (my |your )?application)?|complete( (my )?application)?|finish( application)?|apply for this (job|position|role)|submit and apply|bewerben|absenden|postuler|envoyer|enviar( solicitud)?|postular|aplicar|wy(ś|s)lij( aplikacj(ę|e))?|aplikuj)$/i;
+
+/** The form's own Submit button (never JobBuddy's), preferring the form with the most fields. */
+export function findSubmitButton(doc: Document): HTMLElement | null {
+  const candidates = [
+    ...doc.querySelectorAll<HTMLElement>(
+      "button, input[type='submit'], [role='button'], a[role='button']",
+    ),
+  ].filter((el) => {
+    if (el.closest("#jobbuddy-box") || (el as HTMLButtonElement).disabled) return false;
+    if (!visible(el)) return false;
+    const text = `${el.textContent ?? ""} ${(el as HTMLInputElement).value ?? ""}`
+      .replace(/\s+/g, " ")
+      .trim();
+    return SUBMIT_TEXT.test(text) || (el as HTMLButtonElement).type === "submit";
+  });
+  const score = (el: HTMLElement) =>
+    (el.closest("form")?.querySelectorAll("input, textarea, select").length ?? 0) +
+    (SUBMIT_TEXT.test((el.textContent ?? "").trim()) ? 1000 : 0);
+  return candidates.sort((a, b) => score(b) - score(a))[0] ?? null;
+}

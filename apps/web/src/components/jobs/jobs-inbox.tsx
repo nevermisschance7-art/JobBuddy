@@ -17,7 +17,7 @@ import {
 import { COUNTRY_OPTIONS } from "@/lib/countries";
 import type { MatchCard, MatchCounts, MatchQuery } from "@/lib/matches";
 import { cn } from "@/lib/utils";
-import { companyKey, type AppliedBefore } from "@/lib/company";
+import { companyKey, sameJob, type AppliedBefore } from "@/lib/company";
 import { JobCard } from "./job-card";
 
 const SOURCES = [
@@ -35,7 +35,7 @@ type Props = {
   counts: MatchCounts;
   userTerms: string[];
   /** Companies applied to in the last 30 days (by companyKey), to warn before a second try. */
-  recentApplied: Record<string, AppliedBefore>;
+  recentApplied: Record<string, AppliedBefore[]>;
   /** When this user's matches were last refreshed (ISO), or null. */
   matchedAt: string | null;
   /** rescoring: CV or filters changed since the last scoring; running: a search is on now. */
@@ -433,7 +433,13 @@ export function JobsInbox({
                 key={m.id}
                 match={m}
                 userTerms={terms}
-                appliedBefore={recentApplied[companyKey(m.jobs.company_name)]}
+                appliedBefore={(recentApplied[companyKey(m.jobs.company_name)] ?? []).find((a) =>
+                  sameJob(a, {
+                    id: m.jobs.id,
+                    title: m.jobs.title,
+                    description: m.jobs.description_text,
+                  }),
+                )}
                 onSeen={onSeen}
                 onHide={onHide}
                 onGone={(jobId) => setItems((prev) => prev.filter((x) => x.jobs.id !== jobId))}

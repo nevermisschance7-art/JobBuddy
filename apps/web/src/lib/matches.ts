@@ -3,7 +3,7 @@ import { z } from "zod";
 import type { createClient } from "@/lib/supabase/server";
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
-import { companyKey, type AppliedBefore } from "@/lib/company";
+import { adWords, companyKey, type AppliedBefore } from "@/lib/company";
 
 export const PAGE_SIZE = 20;
 
@@ -49,6 +49,8 @@ export type MatchCard = {
   job_id: string;
   score: number;
   status: string;
+  /** When the user first opened or read this job (the "Viewed" badge). */
+  viewed_at: string | null;
   explanation: string | null;
   breakdown: {
     top_reasons?: string[];
@@ -90,7 +92,7 @@ export async function loadMatches(
 ): Promise<MatchCard[]> {
   let q = supabase
     .from("user_job_matches")
-    .select(`id,job_id,score,status,explanation,breakdown,jobs!inner(${JOB_COLUMNS})`)
+    .select(`id,job_id,score,status,viewed_at,explanation,breakdown,jobs!inner(${JOB_COLUMNS})`)
     .eq("user_id", userId)
     .eq("passed_filters", true)
     .is("jobs.closed_at", null)
@@ -166,25 +168,31 @@ export async function countMatches(
 export async function loadRecentApplied(
   supabase: Supabase,
   userId: string,
-): Promise<Record<string, AppliedBefore>> {
+): Promise<Record<string, AppliedBefore[]>> {
   const since = new Date(Date.now() - 30 * 86_400_000).toISOString();
   const { data } = await supabase
     .from("applications")
-    .select("applied_at, jobs!inner(id, title, company_name)")
+    .select("applied_at, jobs!inner(id, title, company_name, description_text)")
     .eq("user_id", userId)
     .gte("applied_at", since)
     .order("applied_at", { ascending: false })
-    .limit(500);
-  const out: Record<string, AppliedBefore> = {};
+    .limit(300);
+  const out: Record<string, AppliedBefore[]> = {};
   for (const a of data ?? []) {
-    const job = a.jobs as unknown as { id: string; title: string; company_name: string };
+    const job = a.jobs as unknown as {
+      id: string;
+      title: string;
+      company_name: string;
+      description_text: string;
+    };
     const key = companyKey(job.company_name);
-    if (key && a.applied_at && !out[key])
-      out[key] = {
-        jobId: job.id,
-        title: job.title.replace(/\s+/g, " ").trim(),
-        appliedAt: a.applied_at,
-      };
+    if (!key || !a.applied_at) continue;
+    (out[key] ??= []).push({
+      jobId: job.id,
+      title: job.title.replace(/\s+/g, " ").trim(),
+      appliedAt: a.applied_at,
+      words: adWords(job.description_text ?? ""),
+    });
   }
   return out;
 }

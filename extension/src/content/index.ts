@@ -3,11 +3,13 @@ import type { FillData, LookupResult, Message, PrepareResult, Reply } from "../t
 import {
   attachFile,
   choiceLabels,
+  click,
   collectFields,
   currentAnswer,
   PLACEHOLDER,
   fillComboboxes,
   fillForm,
+  findSubmitButton,
   isConfirmation,
   type FormField,
 } from "./form";
@@ -15,7 +17,8 @@ import {
 // Runs on Greenhouse, Lever, Ashby, Workable and SmartRecruiters pages (also inside iframes
 // embedded on company sites), and on any page when the user presses "Fill this page" in the
 // popup. One button does it all: prepares the application, makes the CV, drafts answers,
-// fills the form. Rule: JobBuddy never clicks Submit. The user always does.
+// fills the form. Rule: JobBuddy presses the form's Submit only when the user asks (Apply or
+// Alt+A), and only when no required field is empty; never by itself.
 
 declare global {
   interface Window {
@@ -75,6 +78,8 @@ const STYLE = `<style>
   .ok{color:#16794a}.warn{color:#b45309}
   .muted{color:#6b6b80;font-size:12px;margin-top:10px}
   a{color:#4f46e5}
+  .pair{display:flex;gap:8px}.pair button.second{flex:1}
+  .key{opacity:.6;font-weight:400;font-size:11px;margin-left:4px}
   .mini{display:flex;align-items:center;gap:8px;padding:8px 12px;cursor:pointer;font:600 13px system-ui,sans-serif}
 </style>`;
 
@@ -105,6 +110,12 @@ function render(html: string, actions: Record<string, () => void> = {}): void {
       } else actions[act]?.();
     });
   });
+}
+
+/** A message in the box: added under what it shows, or in a fresh box when it's closed. */
+function say(text: string): void {
+  if (shadow?.querySelector(".body") && host?.isConnected && !minimized) note(text);
+  else render(`<div class="row warn">${esc(text)}</div>`);
 }
 
 /** A line added under the box's current content (e.g. what was just learned). */
@@ -461,9 +472,15 @@ async function fill(
      ${optional.length ? `<div class="row muted">○ ${optional.length} optional left empty (fine to skip)</div>` : ""}
      ${extra.draftError ? `<div class="row warn">⚠ Couldn't draft answers: ${esc(extra.draftError)}</div>` : ""}
      ${required.length ? `<button class="main" data-act="next">Show me the next required one</button>` : ""}
-     <p class="muted">Check everything, then press Submit yourself. I never submit for you.
+     <div class="pair">
+       <button class="second" data-act="apply">✓ Apply <span class="key">Alt+A</span></button>
+       <button class="second" data-act="skip">👎 Not for me <span class="key">Alt+Q</span></button>
+     </div>
+     <p class="muted">Check everything, then press Apply (Alt+A) or the form's own Submit. I never submit by myself.
        ${result.reviewUrl ? `<br><a href="#" data-act="review">CV and answers on JobBuddy</a>` : ""}</p>`,
     {
+      apply: applyNow,
+      skip: () => void notForMe(data.applicationId ?? undefined),
       next: () => {
         const f = required[next++ % required.length];
         if (!f) return;
@@ -601,10 +618,17 @@ async function intro(): Promise<void> {
     `<p class="job">${esc(result.job?.title ?? pageInfo().title)}</p>
      ${result.job ? `<p class="sub">${esc(result.job.company)}</p>` : ""}
      ${status}
-     <button class="main" data-act="go">⚡ Fill this application <span style="opacity:.7;font-weight:400">(Alt+A)</span></button>
-     <button class="second" data-act="skip">👎 Not for me</button>
+     <button class="main" data-act="go">⚡ Fill this application <span class="key">Alt+F</span></button>
+     <div class="pair">
+       <button class="second" data-act="apply">✓ Apply <span class="key">Alt+A</span></button>
+       <button class="second" data-act="skip">👎 Not for me <span class="key">Alt+Q</span></button>
+     </div>
      <p class="muted">${app ? "I'll fill your details, answers and CV." : "I'll set up the application, make your CV for this job, draft the answers and fill the form."} You press Submit.</p>`,
-    { go: () => void run(), skip: () => void notForMe(app?.applicationId ?? undefined) },
+    {
+      go: () => void run(),
+      apply: applyNow,
+      skip: () => void notForMe(app?.applicationId ?? undefined),
+    },
   );
 }
 
@@ -658,6 +682,57 @@ function formErrorsShown(): boolean {
   return invalid || alerts;
 }
 
+/** After Submit (the user's, or Apply): no form and no errors, or a thank-you page = applied. */
+function submitted(): void {
+  if (!sessionStorage.getItem(PENDING)) return;
+  let tries = 0;
+  const wait = window.setInterval(() => {
+    tries++;
+    if (isConfirmation(document, location.href) || (!hasForm() && !formErrorsShown())) {
+      clearInterval(wait);
+      markApplied();
+    } else if (formErrorsShown() || tries > 8) {
+      clearInterval(wait); // errors to fix, or still on the form: not applied yet
+    }
+  }, 1000);
+}
+
+// ---------------------------------------------------------------- Apply (Alt+A)
+
+/**
+ * Apply: presses the form's Submit, only on the user's keypress or click, and only when no
+ * required field is empty (those are outlined instead).
+ */
+function applyNow(): void {
+  if (busy) return;
+  const fields = collectFields(document);
+  const empty = fields.filter(
+    (f) =>
+      f.required &&
+      !f.uploadButton &&
+      ((f.el as HTMLInputElement).type === "file"
+        ? !(f.el as HTMLInputElement).files?.length
+        : !currentAnswer(f)),
+  );
+  if (empty.length > 0) {
+    clearOutlines();
+    outline(empty, "#f59e0b", "Required: please fill this before you apply.");
+    say(
+      `⚠ ${empty.length} required field${empty.length === 1 ? " is" : "s are"} still empty, outlined in orange. Fill ${empty.length === 1 ? "it" : "them"}, then press Apply again.`,
+    );
+    target(empty[0]!).scrollIntoView({ behavior: "smooth", block: "center" });
+    return;
+  }
+  const button = findSubmitButton(document);
+  if (!button) {
+    say("I couldn't find this form's submit button. Please press it yourself.");
+    return;
+  }
+  learnFromUser();
+  click(button);
+  submitted();
+}
+
 function watchForConfirmation(): void {
   let timer: number | undefined;
   const check = () => {
@@ -671,19 +746,6 @@ function watchForConfirmation(): void {
 
   // The user pressed Submit on a form JobBuddy filled. JobBuddy never presses it itself.
   // If the form goes away (or a thank-you page shows) with no error messages, it went through.
-  const submitted = () => {
-    if (!sessionStorage.getItem(PENDING)) return;
-    let tries = 0;
-    const wait = window.setInterval(() => {
-      tries++;
-      if (isConfirmation(document, location.href) || (!hasForm() && !formErrorsShown())) {
-        clearInterval(wait);
-        markApplied();
-      } else if (formErrorsShown() || tries > 8) {
-        clearInterval(wait); // errors to fix, or still on the form: not applied yet
-      }
-    }, 1000);
-  };
   document.addEventListener("submit", submitted, true);
   document.addEventListener("submit", learnFromUser, true);
   // Moving to the next page of a form (or submitting) is when the user's own answers count.
@@ -740,6 +802,11 @@ function boot(): void {
     if (message.type === "fill-here" && hasForm()) void intro();
     // Alt+A: straight to filling, no extra click.
     if (message.type === "fill-now" && hasForm() && !busy) void run();
+    // Shortcuts reach every frame: Apply acts where the form is, Not for me in the main page.
+    if (message.type === "apply-now" && hasForm()) applyNow();
+    if (message.type === "skip-now" && window === window.top) {
+      void notForMe(session() ?? undefined);
+    }
   });
   // The next page of a form already being filled: carry on by itself.
   if (session()) whenFormAppears(() => void run());

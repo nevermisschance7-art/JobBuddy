@@ -17,7 +17,7 @@ import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { moveApplication } from "@/lib/actions/applications";
-import { explainMatch, restoreMatch, setSaved } from "@/lib/actions/matches";
+import { explainMatch, markViewed, restoreMatch, setSaved } from "@/lib/actions/matches";
 import { quickApply } from "@/lib/actions/quick-apply";
 import {
   ELIGIBILITY_LABEL,
@@ -79,7 +79,7 @@ export function JobCard({
   onSeen,
 }: {
   match: MatchCard;
-  /** The user applied to this company in the last 30 days. */
+  /** The user applied to this same job (same company, role and ad) in the last 30 days. */
   appliedBefore?: AppliedBefore;
   /** Technologies in the user's CV (canonical, lower case), to highlight on the card. */
   userTerms: Set<string>;
@@ -92,6 +92,19 @@ export function JobCard({
 }) {
   const job = match.jobs;
   const [isNew, setIsNew] = useState(match.status === "new");
+  // Badge: New (never opened), Viewed (opened or read), Applied (Quick apply or the extension).
+  const [badge, setBadge] = useState<"new" | "viewed" | "applied">(
+    match.status === "preparing" || match.status === "applied"
+      ? "applied"
+      : match.viewed_at
+        ? "viewed"
+        : "new",
+  );
+  const viewed = () => {
+    if (badge !== "new") return;
+    setBadge("viewed");
+    void markViewed([job.id]);
+  };
   const [open, setOpen] = useState(false);
   const [saved, setSavedState] = useState(match.status === "saved");
   const [explanation, setExplanation] = useState(match.explanation);
@@ -125,6 +138,7 @@ export function JobCard({
 
   const runQuickApply = () => {
     seen();
+    setBadge("applied");
     setError(null);
     // Open the tab now (inside the click), so the browser doesn't block it as a popup.
     const tab = window.open("", "_blank");
@@ -158,17 +172,25 @@ export function JobCard({
       className={cn(
         "border-border bg-card group rounded-xl border p-4 transition-colors sm:p-5",
         "hover:border-primary/40",
-        isNew && "border-l-primary border-l-4",
+        badge === "new" && "border-l-primary border-l-4",
       )}
     >
       <div className="flex items-start gap-4">
         <div className="min-w-0 flex-1">
           <p className="text-muted-foreground flex flex-wrap items-center gap-x-2 text-xs">
-            {isNew ? (
+            {badge === "new" ? (
               <span className="bg-primary text-primary-foreground rounded-full px-2 py-0.5 font-semibold">
                 New
               </span>
-            ) : null}
+            ) : badge === "viewed" ? (
+              <span className="border-border text-muted-foreground rounded-full border px-2 py-0.5 font-semibold">
+                Viewed
+              </span>
+            ) : (
+              <span className="bg-success/15 text-success rounded-full px-2 py-0.5 font-semibold">
+                Applied
+              </span>
+            )}
             <span>{postedLabel(job.posted_at)}</span>
             <span aria-hidden>·</span>
             <span>{SOURCE_LABEL[job.source] ?? job.source}</span>
@@ -176,10 +198,13 @@ export function JobCard({
           <h3 className="mt-1 text-base font-semibold leading-snug sm:text-lg">
             <button
               type="button"
-              onClick={() => setOpen((o) => !o)}
+              onClick={() => {
+                setOpen((o) => !o);
+                viewed();
+              }}
               className={cn(
                 "text-left hover:underline",
-                isNew ? "text-primary" : "text-foreground",
+                badge === "new" ? "text-primary" : "text-foreground",
               )}
               aria-expanded={open}
             >
@@ -198,7 +223,7 @@ export function JobCard({
             <p className="bg-warning/20 mt-2 inline-block rounded-md px-2 py-0.5 text-xs">
               {appliedBefore.jobId === job.id
                 ? `You applied to this job on ${appliedOn(appliedBefore.appliedAt)}.`
-                : `A different job: you already applied to ${job.company_name} on ${appliedOn(appliedBefore.appliedAt)} for "${appliedBefore.title}".`}
+                : `Same job as one you applied to on ${appliedOn(appliedBefore.appliedAt)} (posted again or on another board).`}
             </p>
           ) : null}
         </div>
@@ -324,6 +349,7 @@ export function JobCard({
                   <MenuButton
                     onClick={() =>
                       startTransition(async () => {
+                        viewed();
                         const res = await explainMatch(job.id);
                         if (res.text) setExplanation(res.text);
                         else setError(res.error ?? "Something went wrong.");
@@ -333,11 +359,17 @@ export function JobCard({
                     <Sparkles size={14} /> {pending ? "Thinking..." : "Explain match"}
                   </MenuButton>
                 ) : null}
-                <MenuButton onClick={() => setOpen((o) => !o)}>
+                <MenuButton
+                  onClick={() => {
+                    setOpen((o) => !o);
+                    viewed();
+                  }}
+                >
                   <ChevronDown size={14} /> {open ? "Show less" : "Show full description"}
                 </MenuButton>
                 <a
                   href={job.apply_url}
+                  onClick={viewed}
                   target="_blank"
                   rel="noreferrer"
                   className="hover:bg-muted flex items-center gap-2 rounded-md px-2 py-1.5 text-sm"

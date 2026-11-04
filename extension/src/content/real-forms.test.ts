@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { beforeEach, describe, expect, it } from "vitest";
 import type { FillData } from "../types";
-import { collectFields, fillForm, type FieldKind } from "./form";
+import { collectFields, fillForm, findSubmitButton, type FieldKind } from "./form";
 
 // Real application forms saved by the "Probe forms" workflow (scripts removed). The form code
 // must keep finding the basics on each of them.
@@ -135,5 +135,25 @@ describe("Hibob form", () => {
     const salary = document.getElementById("bsiss-/application/desiredSalary") as HTMLInputElement;
     expect(salary.value).toBe("70000");
     expect((document.getElementById("initialConsent") as HTMLInputElement).checked).toBe(true);
+  });
+});
+
+describe("Apply finds the form's own Submit button", () => {
+  it("on Hibob", () => {
+    load("hibob-nexusmods.html");
+    expect(findSubmitButton(document)?.textContent?.trim()).toBe("Apply");
+  });
+  it("on every saved form that has one, never a JobBuddy button", () => {
+    const index = JSON.parse(readFileSync(`${dir}index.json`, "utf8")) as { fixture: string }[];
+    let found = 0;
+    for (const { fixture } of index) {
+      load(fixture);
+      const button = findSubmitButton(document);
+      if (button) {
+        found++;
+        expect(button.closest("#jobbuddy-box")).toBeNull();
+      }
+    }
+    expect(found).toBeGreaterThan(index.length / 2);
   });
 });

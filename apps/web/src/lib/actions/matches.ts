@@ -194,6 +194,18 @@ export async function prepareApplication(jobId: string): Promise<void> {
 }
 
 /** The user opened a job: it is no longer "New". */
+/** The user opened or read these jobs: the "Viewed" badge (first time only). */
+export async function markViewed(jobIds: string[]): Promise<void> {
+  if (jobIds.length === 0) return;
+  const { supabase, user } = await requireUser();
+  await supabase
+    .from("user_job_matches")
+    .update({ viewed_at: new Date().toISOString() })
+    .eq("user_id", user.id)
+    .is("viewed_at", null)
+    .in("job_id", jobIds.slice(0, 100));
+}
+
 export async function markSeen(jobIds: string[]): Promise<void> {
   if (jobIds.length === 0) return;
   const { supabase, user } = await requireUser();

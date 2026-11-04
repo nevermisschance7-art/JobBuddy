@@ -107,6 +107,13 @@ export async function POST(request: Request) {
     if (error || !created)
       return NextResponse.json({ error: "Couldn't start the application." }, { status: 500 });
     applicationId = created.id;
+    // The job on the board shows "Applied" (as after Quick apply).
+    await supabase
+      .from("user_job_matches")
+      .update({ status: "preparing" })
+      .eq("user_id", userId)
+      .eq("job_id", job.id)
+      .in("status", ["new", "seen", "saved"]);
   }
 
   let drafted = 0;
