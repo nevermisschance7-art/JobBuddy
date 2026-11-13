@@ -23,7 +23,7 @@ function manifest(appUrl: string): Plugin {
           {
             manifest_version: 3,
             name: "JobBuddy",
-            version: "0.6.0",
+            version: "0.6.1",
             description: "Job alerts and application autofill. You always press Submit yourself.",
             icons: { 16: "icon-16.png", 48: "icon-48.png", 128: "icon-128.png" },
             action: { default_popup: "popup.html", default_title: "JobBuddy" },
