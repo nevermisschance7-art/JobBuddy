@@ -259,6 +259,9 @@ _FAR_ROLES = {
     "mobile", "frontend", "qa", "security", "ml", "data", "business",
     "platform", "it", "embedded", "management",
 }  # fmt: skip
+# Still a different job beside one of the person's own ("QA & Backend", "Backend Engineering
+# Manager"). Platform, data, security... next to "Backend" is backend work in that area.
+_OTHER_JOB = {"mobile", "qa", "business", "it", "embedded", "management"}
 
 # A title that says the person builds software. Others ("Talent Scientist", "Producer",
 # "Analyst") can name Python and SQL and still not be a developer's job.
@@ -285,8 +288,10 @@ def technical(job: JobFacts, f: UserFilters) -> dict[str, object]:
     cv = f.cv_terms
     closeness = 85 * _closeness(job.similarity)
     job_roles = role_families(job.title)
-    # A far kind of role the person hasn't done, even beside one they have ("QA & Backend").
-    other_far = (job_roles - f.cv_roles) & _FAR_ROLES if f.cv_roles else set()
+    # A far kind of role the person hasn't done: on its own, or beside one they have when it
+    # makes it another job ("QA & Backend"; not "Backend, Platform").
+    new_roles = job_roles - f.cv_roles if f.cv_roles else set()
+    other_far = new_roles & (_OTHER_JOB if job_roles & f.cv_roles else _FAR_ROLES)
 
     if not cv or not weights:
         points = closeness

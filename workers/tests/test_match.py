@@ -510,6 +510,16 @@ def test_a_job_titled_with_another_language_scores_low_even_if_it_mentions_yours
     assert evaluate(both, tech_filters(), NOW).score > r.score
 
 
+def test_backend_jobs_in_an_area_are_still_backend_jobs():
+    text = "Python, Django, PostgreSQL, AWS and Docker."
+    back = evaluate(
+        job(id="b", title="Backend Engineer", description_text=text), tech_filters(), NOW
+    )
+    for title in ("Staff Backend Engineer - Platform", "Senior Backend Engineer, Data & Security"):
+        r = evaluate(job(id=title, title=title, description_text=text), tech_filters(), NOW)
+        assert r.score >= back.score * 0.9, (title, r.score, back.score)
+
+
 def test_a_full_stack_job_suits_a_backend_developer():
     text = "Python, Django, PostgreSQL, AWS and Docker."
     back = evaluate(
