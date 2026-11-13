@@ -488,6 +488,7 @@ def test_ops_it_and_qa_jobs_rank_below_a_backend_job_for_a_backend_developer():
         "Azure Intune Engineer",
         "Senior Ubuntu Embedded IoT System Engineer",
         "Engineering Manager - App Stores",
+        "Senior Technical Project Manager (Full Stack)",
     ):
         other = evaluate(job(id=title, title=title, description_text=text), tech_filters(), NOW)
         assert other.score <= backend * 0.65, (title, other.score, backend)

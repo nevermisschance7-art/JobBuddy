@@ -128,7 +128,7 @@ ROLE_FAMILIES = {
     r"|microsoft 365|\bm365\b",
     "embedded": r"embedded|firmware|\biot\b|hardware|fpga",
     "management": r"engineering manager|head of (engineering|development)|director"
-    r"|vp (of )?engineering",
+    r"|vp (of )?engineering|(project|product|program|programme|delivery) manager|scrum master",
     # Engineer titles that are sales, go-to-market or support work, not building software.
     "business": r"\bgtm\b|go.to.market|revops|revenue op|sales (engineer|ops|operations)"
     r"|solutions? (engineer|consultant)|pre.?sales|customer (success|support|engineer)"
