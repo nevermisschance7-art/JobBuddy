@@ -35,11 +35,14 @@ def cv_skills(resume: dict[str, Any]) -> list[str]:
 
 
 def cv_roles(resume: dict[str, Any]) -> set[str]:
-    """Kinds of role the person has held (backend, platform, data...), from their titles."""
+    """Kinds of role the person has held (backend, platform, data...), from their recent job
+    titles. The headline counts only without any: "Backend, Cloud & AI Systems" is how they
+    want to be seen, not jobs they have done."""
     from .tech import role_families
 
-    titles = [(resume.get("basics") or {}).get("label") or ""]
-    titles += [str(job.get("position") or "") for job in (resume.get("work") or [])[:6]]
+    titles = [str(job.get("position") or "") for job in (resume.get("work") or [])[:4]]
+    if not any(t.strip() for t in titles):
+        titles = [(resume.get("basics") or {}).get("label") or ""]
     out: set[str] = set()
     for title in titles:
         out |= role_families(title)

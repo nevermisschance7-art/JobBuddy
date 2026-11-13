@@ -116,10 +116,19 @@ ROLE_FAMILIES = {
     "fullstack": r"full.?stack",
     "mobile": r"mobile|ios|android|react native|flutter",
     "platform": r"platform|infrastructure|devops|sre|site reliability|cloud",
-    "data": r"data engineer|analytics engineer|etl|data platform",
-    "ml": r"machine learning|\bml\b|\bai\b|llm|data scien",
+    "data": r"data (engineer|platform|governance|quality|warehouse|analyst)|analytics engineer"
+    r"|\betl\b|geospatial|remote sensing|\bgis\b",
+    # "AI" alone is not here: most "AI engineer" jobs today build backend LLM features.
+    "ml": r"machine learning|\bml\b|data scien|deep learning|computer vision|\bnlp\b",
     "qa": r"\bqa\b|quality|test automation|sdet",
     "security": r"security|appsec|devsecops",
+    # IT administration and operations: devices, networks, monitoring desks.
+    "it": r"\bnoc\b|intune|sys.?admin|systems? administrator|help.?desk|service desk"
+    r"|desktop support|it support|network (engineer|infrastructure|administrator)|endpoint"
+    r"|microsoft 365|\bm365\b",
+    "embedded": r"embedded|firmware|\biot\b|hardware|fpga",
+    "management": r"engineering manager|head of (engineering|development)|director"
+    r"|vp (of )?engineering",
     # Engineer titles that are sales, go-to-market or support work, not building software.
     "business": r"\bgtm\b|go.to.market|revops|revenue op|sales (engineer|ops|operations)"
     r"|solutions? (engineer|consultant)|pre.?sales|customer (success|support|engineer)"

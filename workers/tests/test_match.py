@@ -465,6 +465,37 @@ def test_a_different_kind_of_role_scores_low_even_with_few_technologies():
     assert evaluate(ios, tech_filters(), NOW).score < 25
 
 
+def test_cv_roles_come_from_job_titles_not_the_headline():
+    from jobbuddy_workers.match.cv import cv_roles
+
+    cv = {
+        "basics": {"label": "Senior Software Engineer | Backend, Cloud & AI Systems"},
+        "work": [{"position": "Senior Software Engineer"}, {"position": "Backend Developer"}],
+    }
+    assert cv_roles(cv) == {"backend"}
+    assert cv_roles({"basics": {"label": "DevOps Engineer"}, "work": []}) == {"platform"}
+
+
+def test_ops_it_and_qa_jobs_rank_below_a_backend_job_for_a_backend_developer():
+    text = "Python, AWS, Docker, Terraform, CI/CD and PostgreSQL."
+    backend = evaluate(
+        job(id="b", title="Senior Backend Engineer", description_text=text), tech_filters(), NOW
+    ).score
+    for title in (
+        "DevOps Engineer (100% remote)",
+        "NOC Engineer / SRE",
+        "QA Engineer - Test Automation & AI",
+        "Azure Intune Engineer",
+        "Senior Ubuntu Embedded IoT System Engineer",
+        "Engineering Manager - App Stores",
+    ):
+        other = evaluate(job(id=title, title=title, description_text=text), tech_filters(), NOW)
+        assert other.score <= backend * 0.65, (title, other.score, backend)
+    # "AI" alone is not a different kind of job: AI engineers mostly build backend features.
+    ai = evaluate(job(id="a", title="AI Engineer", description_text=text), tech_filters(), NOW)
+    assert ai.score >= backend * 0.8
+
+
 def test_a_non_developer_title_scores_lower():
     dev = job(id="d", title="Python Engineer", description_text="Python and SQL.", similarity=0.5)
     other = job(

@@ -255,7 +255,10 @@ def _closeness(similarity: float) -> float:
 
 
 # Kinds of role far from each other: a mismatch here says the job is a different job.
-_FAR_ROLES = {"mobile", "frontend", "qa", "security", "ml", "data", "business"}
+_FAR_ROLES = {
+    "mobile", "frontend", "qa", "security", "ml", "data", "business",
+    "platform", "it", "embedded", "management",
+}  # fmt: skip
 
 # A title that says the person builds software. Others ("Talent Scientist", "Producer",
 # "Analyst") can name Python and SQL and still not be a developer's job.
@@ -282,6 +285,8 @@ def technical(job: JobFacts, f: UserFilters) -> dict[str, object]:
     cv = f.cv_terms
     closeness = 85 * _closeness(job.similarity)
     job_roles = role_families(job.title)
+    # A far kind of role the person hasn't done, even beside one they have ("QA & Backend").
+    other_far = (job_roles - f.cv_roles) & _FAR_ROLES if f.cv_roles else set()
 
     if not cv or not weights:
         points = closeness
@@ -302,7 +307,7 @@ def technical(job: JobFacts, f: UserFilters) -> dict[str, object]:
             stack_points = 0.0
         if not job_roles:
             role_points = 8.0  # a general engineering title
-        elif job_roles & f.cv_roles:
+        elif job_roles & f.cv_roles and not other_far:
             role_points = 15.0
         else:
             role_points = 0.0
@@ -318,8 +323,8 @@ def technical(job: JobFacts, f: UserFilters) -> dict[str, object]:
     if not _DEV_TITLE.search(job.title):
         points *= 0.6
         reason += "; not a developer title"
-    if job_roles and f.cv_roles and not job_roles & f.cv_roles:
-        points *= 0.6 if job_roles & _FAR_ROLES else 0.85
+    if job_roles and f.cv_roles and (other_far or not job_roles & f.cv_roles):
+        points *= 0.6 if other_far else 0.85
         reason += f"; a {'/'.join(sorted(job_roles))} role, unlike yours"
 
     # Must-have skills: any one of them is enough; an ad with none of them drops.
