@@ -83,7 +83,8 @@ export function JobDrawer({
   const tech = (match.breakdown.technical ?? {}) as TechDetail;
   const chip = (match.breakdown.eligibility?.chip ?? "unclear") as EligibilityChip;
   const salary = salaryLabel(job.salary_min, job.salary_max, job.salary_currency);
-  const reasons = match.breakdown.top_reasons ?? [];
+  // The tech fit sentence is already at the top of the panel: not again in this list.
+  const reasons = (match.breakdown.top_reasons ?? []).filter((r) => r !== tech.reason);
   const [explanation, setExplanation] = useState(match.explanation);
   const [explainError, setExplainError] = useState<string | null>(null);
   const [thinking, startThinking] = useTransition();
