@@ -541,6 +541,19 @@ def test_having_most_of_an_ads_technologies_is_a_full_match():
     assert evaluate(great, tech_filters(), NOW).score >= 95
 
 
+def test_tech_fit_keeps_its_parts_for_the_job_page():
+    r = evaluate(
+        job(title="Senior Backend Engineer", description_text="Python, Django, Kafka and Go."),
+        tech_filters(),
+        NOW,
+    )
+    t = r.breakdown["technical"]
+    assert t["stack"] == 25 and t["role"] == 15
+    assert 0 < t["technologies"] <= 60
+    assert "python" in t["have"] and "kafka" in t["missing"]
+    assert isinstance(t["lowered"], list)
+
+
 def test_a_non_developer_title_scores_lower():
     dev = job(id="d", title="Python Engineer", description_text="Python and SQL.", similarity=0.5)
     other = job(

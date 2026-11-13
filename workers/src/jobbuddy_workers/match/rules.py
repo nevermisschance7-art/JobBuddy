@@ -296,6 +296,10 @@ def technical(job: JobFacts, f: UserFilters) -> dict[str, object]:
     new_roles = job_roles - f.cv_roles if f.cv_roles else set()
     other_far = new_roles & (_OTHER_JOB if job_roles & f.cv_roles else _FAR_ROLES)
 
+    # For the job page: the three parts, the technologies, and why the total was lowered.
+    detail: dict[str, object] = {}
+    lowered: list[str] = []
+    trust = 1.0
     if not cv or not weights:
         points = closeness
         reason = "Few technologies named; scored by closeness to your CV"
@@ -327,7 +331,15 @@ def technical(job: JobFacts, f: UserFilters) -> dict[str, object]:
         else:
             role_points = 0.0
         # Nobody has every technology an ad lists: 80% of them earns the full 60 points.
-        tech_points = 60 * min(1.0, coverage / FULL_COVERAGE) + stack_points + role_points
+        coverage_points = 60 * min(1.0, coverage / FULL_COVERAGE)
+        tech_points = coverage_points + stack_points + role_points
+        detail = {
+            "technologies": round(coverage_points, 1),
+            "stack": stack_points,
+            "role": role_points,
+            "have": have,
+            "missing": sorted((t for t in weights if t not in cv), key=lambda t: -weights[t]),
+        }
         # An ad naming only a few technologies says little: trust the technology match less
         # and blend in the text closeness (full trust from about six required technologies).
         trust = min(1.0, sum(weights.values()) / 6)
@@ -338,13 +350,16 @@ def technical(job: JobFacts, f: UserFilters) -> dict[str, object]:
         if stack_points == 0 and other_stack:
             points *= 0.75
             reason += f"; a {'/'.join(other_stack)} job"
+            lowered.append(f"It is a {'/'.join(other_stack)} job")
 
     if not _DEV_TITLE.search(job.title):
         points *= 0.6
         reason += "; not a developer title"
+        lowered.append("The title is not a developer job")
     if job_roles and f.cv_roles and (other_far or not job_roles & f.cv_roles):
         points *= 0.6 if other_far else 0.85
         reason += f"; a {'/'.join(sorted(job_roles))} role, unlike yours"
+        lowered.append(f"A {'/'.join(sorted(job_roles))} role, unlike your recent jobs")
 
     # Must-have skills: any one of them is enough; an ad with none of them drops.
     if f.must_have_skills:
@@ -352,7 +367,12 @@ def technical(job: JobFacts, f: UserFilters) -> dict[str, object]:
         if not any(mentions(text, s) for s in f.must_have_skills):
             points *= 0.5
             reason += "; none of your must-have skills"
-    return _part(points, WEIGHTS["technical"], reason)
+            lowered.append("None of your must-have skills")
+    if detail and trust < 1:
+        lowered.append(
+            "The ad names few technologies, so it also counts how close it reads to your CV"
+        )
+    return {**_part(points, WEIGHTS["technical"], reason), **detail, "lowered": lowered}
 
 
 def seniority(job: JobFacts, f: UserFilters) -> dict[str, object]:
