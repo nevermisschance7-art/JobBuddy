@@ -490,7 +490,7 @@ export function JobsInbox({
           />
           <p className="text-muted-foreground text-xs">
             {query.view === "inbox"
-              ? `${total} jobs at this fit or higher`
+              ? `${total} ${total === 1 ? "job" : "jobs"} at this fit or higher`
               : "Applies to every list"}
           </p>
         </div>
@@ -726,7 +726,8 @@ export function JobsInbox({
             className="text-muted-foreground flex flex-wrap items-center justify-between gap-3 text-[13px]"
           >
             <span>
-              {first}–{Math.min(total, first + items.length - 1)} of {total} jobs
+              {first}–{Math.min(total, first + items.length - 1)} of {total}{" "}
+              {total === 1 ? "job" : "jobs"}
             </span>
             <div className="flex items-center gap-1">
               <button

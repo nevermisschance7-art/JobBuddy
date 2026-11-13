@@ -256,7 +256,7 @@ export function JobDrawer({
                   </div>
                   <div className="bg-muted/60 rounded-lg px-3 py-2">
                     <small className="text-muted-foreground block text-[11.5px]">Posted</small>
-                    {postedLabel(job.posted_at)}
+                    {postedLabel(job.posted_at).replace(/^Posted /, "")}
                   </div>
                   <div className="bg-muted/60 rounded-lg px-3 py-2">
                     <small className="text-muted-foreground block text-[11.5px]">Found on</small>
