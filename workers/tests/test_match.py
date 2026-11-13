@@ -472,7 +472,7 @@ def test_cv_roles_come_from_job_titles_not_the_headline():
         "basics": {"label": "Senior Software Engineer | Backend, Cloud & AI Systems"},
         "work": [{"position": "Senior Software Engineer"}, {"position": "Backend Developer"}],
     }
-    assert cv_roles(cv) == {"backend"}
+    assert cv_roles(cv) == {"backend", "fullstack"}
     assert cv_roles({"basics": {"label": "DevOps Engineer"}, "work": []}) == {"platform"}
 
 
@@ -507,6 +507,17 @@ def test_a_job_titled_with_another_language_scores_low_even_if_it_mentions_yours
     assert r.score < 45, r.breakdown["technical"]
     both = job(id="pg", title="Software Engineer - Python/Golang", description_text="Python, Go.")
     assert evaluate(both, tech_filters(), NOW).score > r.score
+
+
+def test_a_full_stack_job_suits_a_backend_developer():
+    text = "Python, Django, PostgreSQL, AWS and Docker."
+    back = evaluate(
+        job(id="b", title="Backend Engineer", description_text=text), tech_filters(), NOW
+    )
+    full = evaluate(
+        job(id="f", title="Full Stack Engineer", description_text=text), tech_filters(), NOW
+    )
+    assert full.score == back.score
 
 
 def test_a_non_developer_title_scores_lower():

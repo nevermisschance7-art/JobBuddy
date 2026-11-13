@@ -46,4 +46,9 @@ def cv_roles(resume: dict[str, Any]) -> set[str]:
     out: set[str] = set()
     for title in titles:
         out |= role_families(title)
+    # Full-stack is backend plus frontend: either side of it is the same kind of work.
+    if out & {"backend", "frontend"}:
+        out.add("fullstack")
+    if "fullstack" in out:
+        out.add("backend")
     return out

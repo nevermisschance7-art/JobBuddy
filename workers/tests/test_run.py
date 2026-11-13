@@ -167,6 +167,10 @@ def test_relevance_is_fresh_remote_tech_jobs_only():
     lemon = make_job("x", "7", posted_at=now)
     lemon.apply_url = "https://me.lemon.io/signup"
     assert drop_reason(lemon, now) == "marketplace"
+    # ...also when it posts under its own name with a job board's link.
+    named = make_job("x", "8", posted_at=now)
+    named.company_name = "Lemon.io"
+    assert drop_reason(named, now) == "marketplace"
 
 
 class FakeDetailSource(FakeEmployer):

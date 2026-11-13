@@ -70,7 +70,12 @@ def drop_reason(job: Job, now: datetime | None = None) -> str | None:
         return "not_tech"
     if job.remote_type != "remote":
         return "not_remote"
-    if _host_in(job.apply_url, MARKETPLACE_HOSTS) or _host_in(job.canonical_url, MARKETPLACE_HOSTS):
+    if (
+        _host_in(job.apply_url, MARKETPLACE_HOSTS)
+        or _host_in(job.canonical_url, MARKETPLACE_HOSTS)
+        # The marketplace posting under its own name on a job board.
+        or (job.company_name or "").strip().lower() in MARKETPLACE_HOSTS
+    ):
         return "marketplace"
     if job.posted_at is None:
         return "no_date"
