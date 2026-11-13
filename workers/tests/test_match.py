@@ -531,6 +531,16 @@ def test_a_full_stack_job_suits_a_backend_developer():
     assert full.score == back.score
 
 
+def test_having_most_of_an_ads_technologies_is_a_full_match():
+    # 5 of 6 required technologies (about 83%): the technology part is full, so the job
+    # can reach 100 with the main stack and the same kind of role.
+    great = job(
+        title="Senior Python Backend Engineer",
+        description_text="Python, Django, PostgreSQL, AWS, Docker and Kubernetes.",
+    )
+    assert evaluate(great, tech_filters(), NOW).score >= 95
+
+
 def test_a_non_developer_title_scores_lower():
     dev = job(id="d", title="Python Engineer", description_text="Python and SQL.", similarity=0.5)
     other = job(

@@ -254,6 +254,9 @@ def _closeness(similarity: float) -> float:
     return max(0.0, min(1.0, (similarity - SIM_FLOOR) / (SIM_FULL - SIM_FLOOR)))
 
 
+# Share of an ad's technologies that counts as having all of them.
+FULL_COVERAGE = 0.8
+
 # Kinds of role far from each other: a mismatch here says the job is a different job.
 _FAR_ROLES = {
     "mobile", "frontend", "qa", "security", "ml", "data", "business",
@@ -275,7 +278,7 @@ _DEV_TITLE = re.compile(
 def technical(job: JobFacts, f: UserFilters) -> dict[str, object]:
     """Tech fit only: the technologies the job asks for against the ones the CV shows.
 
-    60 points: share of the job's technologies the CV has (title 3x, required 1-2x,
+    60 points: share of the job's technologies the CV has, full at 80% (title 3x, required 1-2x,
                "nice to have" 0.4x).
     25 points: the person's main stack (their first languages and frameworks) is asked for.
     15 points: the kind of role (backend, platform, data...) matches their own titles.
@@ -323,7 +326,8 @@ def technical(job: JobFacts, f: UserFilters) -> dict[str, object]:
             role_points = 15.0
         else:
             role_points = 0.0
-        tech_points = 60 * coverage + stack_points + role_points
+        # Nobody has every technology an ad lists: 80% of them earns the full 60 points.
+        tech_points = 60 * min(1.0, coverage / FULL_COVERAGE) + stack_points + role_points
         # An ad naming only a few technologies says little: trust the technology match less
         # and blend in the text closeness (full trust from about six required technologies).
         trust = min(1.0, sum(weights.values()) / 6)
