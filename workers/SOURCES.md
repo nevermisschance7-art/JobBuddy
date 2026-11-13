@@ -38,8 +38,8 @@ They return only their newest pages, so absence proves nothing: their jobs close
 | Jobicy | Remote, worldwide | 2 h | `pubDate` | | Free API, `industry=dev`. Fixture from documented shape (blocked from dev network) |
 | Hacker News "Who is hiring" | Remote postings, worldwide | 2 h | comment `created_at` | | Monthly thread via the Algolia API; only comments that say remote |
 | Arbeitnow | Germany and EU | 2 h | `created_at` (epoch s) | | `remote` flag |
-| Adzuna | ~20 countries | 4 h | `created` | | Needs key. `salary_is_predicted = 1` salaries are ignored |
-| Reed | UK only | 4 h | `date` (dd/mm/yyyy) | `expirationDate` | Needs key. Only runs if someone wants GB jobs |
+| Adzuna | ~20 countries | 4 h | `created` | | Needs key. Remote IT jobs of the last 7 days (`what=remote`), up to 4 pages of 50 per wanted country. `salary_is_predicted = 1` salaries are ignored |
+| Reed | UK only | 4 h | `date` (dd/mm/yyyy) | `expirationDate` | Needs key. Only runs if someone wants GB jobs. 13 "remote ..." searches (`REED_SEARCHES`), up to 300 results each |
 | Jooble | ~70 countries | 6 h | none | `updated` | Needs key. Every Jooble job is "Date unknown" (confirmed on the live API) |
 
 

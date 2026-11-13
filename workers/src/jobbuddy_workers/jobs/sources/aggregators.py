@@ -203,6 +203,7 @@ class Arbeitnow:
 # About 20 countries. Needs ADZUNA_APP_ID and ADZUNA_APP_KEY.
 
 ADZUNA_COUNTRIES = ("gb us at au be br ca ch de es fr in it mx nl nz pl sg za").split()
+ADZUNA_PAGES = 4
 
 
 class Adzuna:
@@ -218,22 +219,28 @@ class Adzuna:
         for cc in ADZUNA_COUNTRIES:
             if ctx.wanted_countries and cc.upper() not in ctx.wanted_countries:
                 continue
-            data = http.get_json(
-                f"https://api.adzuna.com/v1/api/jobs/{cc}/search/1",
-                params={
-                    "app_id": ctx.env["ADZUNA_APP_ID"],
-                    "app_key": ctx.env["ADZUNA_APP_KEY"],
-                    "results_per_page": 50,
-                    "category": "it-jobs",
-                    "max_days_old": 3,
-                    "sort_by": "date",
-                    "content-type": "application/json",
-                },
-            )
-            out += [
-                RawJob(self.name, str(j["id"]), {**j, "_country": cc.upper()})
-                for j in data.get("results", [])
-            ]
+            # Remote IT jobs of the last week, newest first, a few pages (free tier: about
+            # 250 requests a day, so 6 runs x 4 pages x a few countries fits).
+            for page in range(1, ADZUNA_PAGES + 1):
+                data = http.get_json(
+                    f"https://api.adzuna.com/v1/api/jobs/{cc}/search/{page}",
+                    params={
+                        "app_id": ctx.env["ADZUNA_APP_ID"],
+                        "app_key": ctx.env["ADZUNA_APP_KEY"],
+                        "results_per_page": 50,
+                        "category": "it-jobs",
+                        "what": "remote",
+                        "max_days_old": 7,
+                        "sort_by": "date",
+                        "content-type": "application/json",
+                    },
+                )
+                results = data.get("results", [])
+                out += [
+                    RawJob(self.name, str(j["id"]), {**j, "_country": cc.upper()}) for j in results
+                ]
+                if len(results) < 50:
+                    break
         return out
 
     def normalise(self, raw: RawJob) -> Job | None:
@@ -271,6 +278,15 @@ class Adzuna:
 # ---------------------------------------------------------------- Reed (UK only, needs a key)
 
 
+REED_SEARCHES = (
+    "remote software engineer", "remote software developer", "remote developer",
+    "remote backend", "remote full stack", "remote frontend", "remote data engineer",
+    "remote devops", "remote python", "remote php", "remote javascript", "remote java",
+    "remote .net",
+)  # fmt: skip
+REED_MAX_PER_SEARCH = 300
+
+
 class Reed:
     name = "reed"
     kind = "aggregator"
@@ -283,13 +299,22 @@ class Reed:
 
     def fetch(self, http: Http, ctx: FetchContext) -> list[RawJob]:
         out: list[RawJob] = []
-        for keywords in ("software developer", "software engineer", "data engineer", "devops"):
-            data = http.get_json(
-                "https://www.reed.co.uk/api/1.0/search",
-                params={"keywords": keywords, "resultsToTake": 100},
-                auth=(ctx.env["REED_API_KEY"], ""),
-            )
-            out += [RawJob(self.name, str(j["jobId"]), j) for j in data.get("results", [])]
+        seen: set[str] = set()
+        # Remote searches only: plain "software developer" is mostly office jobs.
+        for keywords in REED_SEARCHES:
+            for skip in range(0, REED_MAX_PER_SEARCH, 100):
+                data = http.get_json(
+                    "https://www.reed.co.uk/api/1.0/search",
+                    params={"keywords": keywords, "resultsToTake": 100, "resultsToSkip": skip},
+                    auth=(ctx.env["REED_API_KEY"], ""),
+                )
+                results = data.get("results", [])
+                for j in results:
+                    if str(j["jobId"]) not in seen:
+                        seen.add(str(j["jobId"]))
+                        out.append(RawJob(self.name, str(j["jobId"]), j))
+                if len(results) < 100:
+                    break
         return out
 
     def normalise(self, raw: RawJob) -> Job | None:
