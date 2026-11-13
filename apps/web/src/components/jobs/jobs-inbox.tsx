@@ -33,14 +33,8 @@ import {
 import { quickApply } from "@/lib/actions/quick-apply";
 import { COUNTRY_OPTIONS } from "@/lib/countries";
 import { companyKey, sameJob, type AppliedBefore } from "@/lib/company";
-import {
-  PAGE_SIZE,
-  PAGE_SIZES,
-  type MatchCard,
-  type MatchCounts,
-  type MatchQuery,
-  type PageSize,
-} from "@/lib/matches";
+import { PAGE_SIZE, PAGE_SIZES, type PageSize } from "@/lib/board";
+import type { MatchCard, MatchCounts, MatchQuery } from "@/lib/matches";
 import { JOB_SOURCES } from "@/lib/sources";
 import { cn } from "@/lib/utils";
 import { JobDrawer } from "./job-drawer";

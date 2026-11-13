@@ -6,7 +6,8 @@ import { redirect } from "next/navigation";
 import { personalInfoFor, routerFor } from "@/lib/ai/router";
 import { requireUser } from "@/lib/data";
 import { DISMISS_REASONS, type DismissReason } from "@/lib/dismiss";
-import { loadMatches, matchQuerySchema, PAGE_SIZES, type MatchPage } from "@/lib/matches";
+import { PAGE_SIZES } from "@/lib/board";
+import { loadMatches, matchQuerySchema, type MatchPage } from "@/lib/matches";
 
 /** One page of the board (page numbers start at 1). */
 export async function loadMatchPage(

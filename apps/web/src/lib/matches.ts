@@ -1,4 +1,5 @@
 import "server-only";
+import { PAGE_SIZE } from "@/lib/board";
 import { JOB_SOURCES } from "@/lib/sources";
 import { z } from "zod";
 import type { createClient } from "@/lib/supabase/server";
@@ -6,10 +7,6 @@ import type { createClient } from "@/lib/supabase/server";
 type Supabase = Awaited<ReturnType<typeof createClient>>;
 import { adWords, companyKey, type AppliedBefore } from "@/lib/company";
 
-/** Jobs per page on the board: the user picks one. */
-export const PAGE_SIZES = [25, 50, 100] as const;
-export type PageSize = (typeof PAGE_SIZES)[number];
-export const PAGE_SIZE: PageSize = 50;
 
 export { JOB_SOURCES };
 
