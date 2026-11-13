@@ -496,6 +496,19 @@ def test_ops_it_and_qa_jobs_rank_below_a_backend_job_for_a_backend_developer():
     assert ai.score >= backend * 0.8
 
 
+def test_a_job_titled_with_another_language_scores_low_even_if_it_mentions_yours():
+    go = job(
+        id="g",
+        title="Staff Software Engineer (Go/Golang)",
+        description_text="Go services. Python for tooling. OAuth.",
+        similarity=0.5,
+    )
+    r = evaluate(go, tech_filters(), NOW)
+    assert r.score < 45, r.breakdown["technical"]
+    both = job(id="pg", title="Software Engineer - Python/Golang", description_text="Python, Go.")
+    assert evaluate(both, tech_filters(), NOW).score > r.score
+
+
 def test_a_non_developer_title_scores_lower():
     dev = job(id="d", title="Python Engineer", description_text="Python and SQL.", similarity=0.5)
     other = job(

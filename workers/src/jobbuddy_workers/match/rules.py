@@ -12,7 +12,7 @@ from functools import lru_cache
 
 from ..geo import COUNTRIES, country_code, region_covers
 from ..jobs.normalize import norm_key
-from .tech import job_terms, main_stack, role_families
+from .tech import core_terms, job_terms, main_stack, role_families
 
 # The score is tech fit only (0-100). Location, remote, seniority and sponsorship are pass/fail
 # filters; their parts are kept in the breakdown as information for the job card, with the
@@ -295,9 +295,16 @@ def technical(job: JobFacts, f: UserFilters) -> dict[str, object]:
         have = sorted((t for t in weights if t in cv), key=lambda t: -weights[t])
         coverage = sum(weights[t] for t in have) / sum(weights.values())
         stack = main_stack(cv)
+        # The title names a language or framework the CV doesn't have ("Go Engineer"): the
+        # job is about that stack, whatever else the ad mentions.
+        other_stack = [
+            t for t, w in weights.items() if w >= 3 and t in core_terms() and t not in cv
+        ]
         # Full points when the job is about the stack (in the title, or most of its
         # technologies match); one shared language in a different kind of job gets less.
-        if any(weights.get(t, 0) >= 3 for t in stack) or (
+        if other_stack and not any(weights.get(t, 0) >= 3 for t in stack):
+            stack_points = 0.0
+        elif any(weights.get(t, 0) >= 3 for t in stack) or (
             coverage >= 0.5 and any(weights.get(t, 0) >= 1 for t in stack)
         ):
             stack_points = 25.0
@@ -319,6 +326,9 @@ def technical(job: JobFacts, f: UserFilters) -> dict[str, object]:
         reason = f"You have {len(have)} of the {len(weights)} technologies it asks for" + (
             f" ({', '.join(have[:4])})" if have else ""
         )
+        if stack_points == 0 and other_stack:
+            points *= 0.75
+            reason += f"; a {'/'.join(other_stack)} job"
 
     if not _DEV_TITLE.search(job.title):
         points *= 0.6
