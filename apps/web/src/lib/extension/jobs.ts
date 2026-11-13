@@ -7,6 +7,7 @@ import {
   type JobKey,
 } from "@jobbuddy/shared";
 import type { StoredAnswer } from "@/lib/answers-core";
+import { adWords, companyKey, sameJob } from "@/lib/company";
 import type { createClient } from "@/lib/supabase/server";
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
@@ -283,4 +284,78 @@ export async function fillData(supabase: Supabase, userId: string, applicationId
     coverLetter: letterFile,
     coverLetterText: app?.cover_letter_text ?? null,
   };
+}
+
+/** An earlier application to this job, shown before filling so nobody applies twice. */
+export type AppliedBefore = { appliedAt: string; title: string; company: string };
+
+/**
+ * Whether the user already applied (in the last 60 days) to the job behind this page: the
+ * same job, the same job posted again or on another board (same company, title and ad), or,
+ * for a page JobBuddy doesn't know, a page naming the company and the job's title.
+ */
+export async function findAppliedBefore(
+  supabase: Supabase,
+  userId: string,
+  job: FoundJob | null,
+  page: { url: string; title?: string; text?: string },
+): Promise<AppliedBefore | null> {
+  const since = new Date(Date.now() - 60 * 86_400_000).toISOString();
+  const { data } = await supabase
+    .from("applications")
+    .select(
+      "applied_at, jobs!inner(id, title, company_name, description_text, apply_url, canonical_url)",
+    )
+    .eq("user_id", userId)
+    .not("applied_at", "is", null)
+    .gte("applied_at", since)
+    .order("applied_at", { ascending: false })
+    .limit(500);
+  const squash = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "");
+  const here = page.url.split(/[?#]/)[0];
+  const onPage = squash(`${page.url} ${page.title ?? ""} ${(page.text ?? "").slice(0, 3000)}`);
+  const titleWords = (t: string) =>
+    new Set(
+      t
+        .toLowerCase()
+        .split(/[^a-z0-9+#]+/)
+        .filter((w) => w.length >= 2),
+    );
+  const pageWords = titleWords(`${page.title ?? ""} ${(page.text ?? "").slice(0, 600)}`);
+
+  for (const row of data ?? []) {
+    const j = row.jobs as unknown as FoundJob & { apply_url: string; canonical_url: string };
+    const hit = { appliedAt: row.applied_at!, title: j.title, company: j.company_name };
+    if (job) {
+      if (j.id === job.id) return hit;
+      if (
+        companyKey(j.company_name) === companyKey(job.company_name) &&
+        sameJob(
+          {
+            jobId: j.id,
+            title: j.title,
+            appliedAt: hit.appliedAt,
+            words: adWords(j.description_text),
+          },
+          { id: job.id, title: job.title, description: job.description_text },
+        )
+      ) {
+        return hit;
+      }
+      continue;
+    }
+    // A page JobBuddy doesn't know: the same address, or its company and the whole title.
+    if ([j.apply_url, j.canonical_url].some((u) => u && u.split(/[?#]/)[0] === here)) return hit;
+    const company = squash(companyKey(j.company_name));
+    const wanted = [...titleWords(j.title)];
+    if (
+      company.length >= 3 &&
+      onPage.includes(company) &&
+      wanted.length > 0 &&
+      wanted.every((w) => pageWords.has(w))
+    ) {
+      return hit;
+    }
+  }
+  return null;
 }

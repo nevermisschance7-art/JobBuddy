@@ -145,16 +145,30 @@ test("sign up, onboard, edit settings, delete account", async ({ page }, info) =
     await expect(card).toBeVisible();
     await expect(card.getByText("New", { exact: true })).toBeVisible();
     await shot(page, "10b-dashboard-match");
-    // Opening the job shows the details; its badge changes from New to Viewed.
+    // Opening the job shows its details panel; its badge changes from New to Viewed.
     await card.getByRole("button", { name: "E2E Backend Engineer" }).click();
-    await expect(card.getByText("Eligibility indicated")).toBeVisible();
-    await expect(card.getByText("Mentions 1 must-have skills (Python)")).toBeVisible();
+    const panel = page.getByRole("dialog");
+    await expect(panel.getByText("Eligibility indicated")).toBeVisible();
+    await expect(panel.getByText("Mentions 1 must-have skills (Python)")).toBeVisible();
     await expect(card.getByText("Viewed", { exact: true })).toBeVisible();
+    await shot(page, "10b2-job-details");
 
     // Explain match needs an AI key; without one it says so kindly.
-    await card.locator("summary[aria-label='More actions']").click();
-    await card.getByRole("button", { name: /Explain match/ }).click();
-    await expect(card.getByText(/need a working AI key/)).toBeVisible({ timeout: 30_000 });
+    await panel.getByRole("button", { name: /Explain with AI/ }).click();
+    await expect(panel.getByText(/need a working AI key/)).toBeVisible({ timeout: 30_000 });
+    await panel.getByRole("tab", { name: "Full description" }).click();
+    await panel.getByRole("button", { name: "Close" }).click();
+    await expect(panel).toHaveCount(0);
+
+    // The ⋯ menu has the same choices.
+    await card.getByRole("button", { name: "More" }).click();
+    await expect(page.getByRole("menuitem", { name: /Open job posting/ })).toBeVisible();
+    await page.keyboard.press("Escape");
+
+    // Cards layout, then back to the list.
+    await page.getByRole("button", { name: "Cards" }).click();
+    await shot(page, "10b3-dashboard-cards");
+    await page.getByRole("button", { name: "List" }).click();
 
     // Save, then find it in the Saved list.
     await card.getByRole("button", { name: "Save" }).click();
@@ -162,13 +176,18 @@ test("sign up, onboard, edit settings, delete account", async ({ page }, info) =
     await page.getByRole("tab", { name: /Saved/ }).click();
     await expect(page.locator("article")).toHaveCount(1);
 
-    // Not for me: hidden at once with Undo (also Ctrl+Z); hide again, then restore from Hidden.
-    await page.getByRole("button", { name: "Not for me" }).click();
+    // Not for me (in the ⋯ menu): hidden at once with Undo (also Ctrl+Z); hide again, then
+    // restore from Hidden.
+    const notForMe = async () => {
+      await page.locator("article").first().getByRole("button", { name: "More" }).click();
+      await page.getByRole("menuitem", { name: /Not for me/ }).click();
+    };
+    await notForMe();
     await expect(page.locator("article")).toHaveCount(0);
     await shot(page, "10c-not-for-me");
     await page.getByRole("button", { name: "Undo" }).click();
     await expect(page.locator("article")).toHaveCount(1);
-    await page.getByRole("button", { name: "Not for me" }).click();
+    await notForMe();
     await expect(page.locator("article")).toHaveCount(0);
     // Give the background save a moment before switching lists.
     await page.waitForTimeout(1500);

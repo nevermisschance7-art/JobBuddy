@@ -16,7 +16,7 @@ export default async function Dashboard() {
   if (!profile?.onboarded_at) redirect("/onboarding");
 
   const minScore = profile.min_score;
-  const [{ data: cv }, initial, counts, { filters }, recentApplied] = await Promise.all([
+  const [{ data: cv }, first, counts, { filters }, recentApplied] = await Promise.all([
     supabase
       .from("cvs")
       .select("resume_json, updated_at")
@@ -46,15 +46,8 @@ export default async function Dashboard() {
 
   return (
     <>
-      <AppHeader username={profile.username} />
-      <main className="mx-auto flex max-w-6xl flex-col gap-5 px-4 py-6 sm:px-6">
-        <div>
-          <h1 className="text-2xl font-semibold">Find work</h1>
-          <p className="text-muted-foreground text-sm">
-            Remote jobs posted in the last 7 days that pass your filters, best tech fit to your CV
-            first. Quick apply tailors your CV and opens the form; you always press Submit.
-          </p>
-        </div>
+      <AppHeader username={profile.username} wide />
+      <main className="mx-auto flex max-w-[1440px] flex-col gap-5 px-4 py-6 sm:px-6">
         {resume.success && resume.data.skills.every((g) => g.keywords.length === 0) ? (
           <MascotSays mood="thinking">
             Your CV has no skills listed, so your tech fit scores are weak.{" "}
@@ -65,7 +58,8 @@ export default async function Dashboard() {
           </MascotSays>
         ) : null}
         <JobsInbox
-          initial={initial}
+          initial={first.items}
+          initialTotal={first.total}
           minScore={minScore}
           hasCv={Boolean(cv)}
           counts={counts}

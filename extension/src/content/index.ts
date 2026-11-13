@@ -83,6 +83,8 @@ const STYLE = `<style>
   @keyframes spin{to{transform:rotate(360deg)}}
   .row{display:flex;align-items:center;gap:8px;padding:5px 0}
   .ok{color:#16794a}.warn{color:#b45309}
+  .applied{background:#fee2e2;color:#991b1b;border-radius:8px;padding:8px 10px;margin:0 0 8px;font-weight:600;line-height:1.35}
+  .applied span{font-weight:400;font-size:12px}
   .muted{color:#6b6b80;font-size:12px;margin-top:10px}
   a{color:#4f46e5}
   .pair{display:flex;gap:8px}.pair button.second{flex:1}
@@ -340,6 +342,24 @@ async function runSteps(): Promise<void> {
 
   let result = await lookup();
   if (!result) return;
+  // Already applied (seen before filling, e.g. from the shortcut): ask first.
+  if (result.appliedBefore && !fillAnyway) {
+    render(
+      `${appliedLine(result)}<p class="muted">Fill this form again anyway?</p>
+       <div class="pair">
+         <button class="second" data-act="fill">Fill anyway</button>
+         <button class="second" data-act="skip">👎 Not for me</button>
+       </div>`,
+      {
+        fill: () => {
+          fillAnyway = true;
+          void run();
+        },
+        skip: () => void notForMe(result?.application?.applicationId ?? undefined),
+      },
+    );
+    return;
+  }
   const firstFill = fillForm(collectFields(document), {
     ...(result.application ?? result.base),
     jobCompany: result.job?.company ?? pageInfo().company,
@@ -468,7 +488,7 @@ async function fill(
         (choiceLabels(f).includes("Alabama") && choiceLabels(f).includes("Wyoming")),
     );
   render(
-    `<p class="job">${esc(result.job?.title ?? pageInfo().title)}</p>
+    `${appliedLine(result)}<p class="job">${esc(result.job?.title ?? pageInfo().title)}</p>
      ${usOnly ? `<div class="row warn">⚠ This form asks about US states or US work authorisation. The job may be for US residents only.</div>` : ""}
      <div class="row ok">✓ ${report.filled} field${report.filled === 1 ? "" : "s"} filled${report.fromLearned ? ` (${report.fromLearned} from answers you taught me)` : ""}</div>
      ${cvLine}
@@ -612,11 +632,22 @@ function showError(reply: { error: string; signedOut?: boolean }): void {
 }
 
 let offered = false;
+/** The user chose to fill a job they already applied to: don't ask again in this tab. */
+let fillAnyway = false;
+
+/** "You already applied to this job on 11 Nov", for the top of the panel. */
+function appliedLine(result: LookupResult): string {
+  const a = result.appliedBefore;
+  if (!a) return "";
+  const day = new Date(a.appliedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  return `<div class="applied">⚠ You already applied to this job on ${esc(day)}<br><span>${esc(a.title)} at ${esc(a.company)}</span></div>`;
+}
 
 async function intro(): Promise<void> {
   offered = true;
   const result = await lookup();
   if (!result) return;
+  if (result.appliedBefore) fillAnyway = true; // the warning is on screen; Fill means it
   const app = result.application;
   const status = app
     ? `<span class="pill ok">Prepared${app.cv ? " · CV ready" : ""}</span>`

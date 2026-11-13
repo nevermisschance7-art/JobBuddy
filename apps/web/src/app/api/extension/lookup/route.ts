@@ -3,6 +3,7 @@ import { z } from "zod";
 import { extensionUser, unauthorized } from "@/lib/extension/auth";
 import {
   fillData,
+  findAppliedBefore,
   findJobForUrl,
   findRecentApplicationJob,
   type FoundJob,
@@ -12,7 +13,8 @@ import {
 // with what the extension needs to fill the form. With applicationId (the next page of a
 // multi-page form, whose address differs) that application is used directly.
 // { job: null } when the job isn't known yet; "base" always carries contact details and
-// fixed answers.
+// fixed answers. "appliedBefore": the user already applied to this job (or the same job posted
+// again) in the last 60 days, shown before filling.
 
 const body = z.object({
   url: z.string().url().max(2000),
@@ -22,7 +24,7 @@ const body = z.object({
   text: z.string().max(3000).optional(),
 });
 
-type JobInfo = Pick<FoundJob, "id" | "title" | "company_name">;
+type JobInfo = FoundJob;
 
 export async function POST(request: Request) {
   const auth = await extensionUser(request);
@@ -36,7 +38,7 @@ export async function POST(request: Request) {
   if (parsed.data.applicationId) {
     const { data } = await supabase
       .from("applications")
-      .select("id, jobs(id, title, company_name)")
+      .select("id, jobs(id, title, company_name, description_text)")
       .eq("id", parsed.data.applicationId)
       .eq("user_id", userId)
       .maybeSingle();
@@ -60,8 +62,12 @@ export async function POST(request: Request) {
     }
   }
 
-  const application = appId ? await fillData(supabase, userId, appId) : null;
+  const [application, appliedBefore] = await Promise.all([
+    appId ? fillData(supabase, userId, appId) : null,
+    findAppliedBefore(supabase, userId, job, parsed.data),
+  ]);
   return NextResponse.json({
+    appliedBefore,
     job: job ? { id: job.id, title: job.title, company: job.company_name } : null,
     application,
     // Contact details and fixed answers, for any form (also jobs not prepared yet).

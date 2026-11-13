@@ -51,6 +51,8 @@ export type LookupResult = {
   /** Contact details and fixed answers, for any form. */
   base: FillData;
   reviewUrl: string | null;
+  /** The user already applied to this job (or the same job posted again) lately. */
+  appliedBefore?: { appliedAt: string; title: string; company: string } | null;
 };
 
 export type PrepareInput = {

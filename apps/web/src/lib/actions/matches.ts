@@ -6,9 +6,14 @@ import { redirect } from "next/navigation";
 import { personalInfoFor, routerFor } from "@/lib/ai/router";
 import { requireUser } from "@/lib/data";
 import { DISMISS_REASONS, type DismissReason } from "@/lib/dismiss";
-import { loadMatches, matchQuerySchema, type MatchCard } from "@/lib/matches";
+import { loadMatches, matchQuerySchema, PAGE_SIZES, type MatchPage } from "@/lib/matches";
 
-export async function loadMoreMatches(rawQuery: unknown, offset: number): Promise<MatchCard[]> {
+/** One page of the board (page numbers start at 1). */
+export async function loadMatchPage(
+  rawQuery: unknown,
+  page: number,
+  size: number,
+): Promise<MatchPage> {
   const { supabase, user } = await requireUser();
   const query = matchQuerySchema.parse(rawQuery);
   const { data: profile } = await supabase
@@ -16,7 +21,9 @@ export async function loadMoreMatches(rawQuery: unknown, offset: number): Promis
     .select("min_score")
     .eq("user_id", user.id)
     .single();
-  return loadMatches(supabase, user.id, profile?.min_score ?? 55, query, Math.max(0, offset));
+  const limit = (PAGE_SIZES as readonly number[]).includes(size) ? size : PAGE_SIZES[1];
+  const offset = (Math.max(1, Math.floor(page)) - 1) * limit;
+  return loadMatches(supabase, user.id, profile?.min_score ?? 55, query, offset, limit);
 }
 
 export async function setSaved(jobId: string, saved: boolean): Promise<void> {

@@ -6,7 +6,10 @@ import type { createClient } from "@/lib/supabase/server";
 type Supabase = Awaited<ReturnType<typeof createClient>>;
 import { adWords, companyKey, type AppliedBefore } from "@/lib/company";
 
-export const PAGE_SIZE = 20;
+/** Jobs per page on the board: the user picks one. */
+export const PAGE_SIZES = [25, 50, 100] as const;
+export type PageSize = (typeof PAGE_SIZES)[number];
+export const PAGE_SIZE: PageSize = 50;
 
 export { JOB_SOURCES };
 
@@ -70,16 +73,22 @@ function clean(text: string | undefined): string | null {
   return t.length > 0 ? t : null;
 }
 
+export type MatchPage = { items: MatchCard[]; total: number };
+
+/** One page of the board, best tech fit first, with how many jobs the query has in all. */
 export async function loadMatches(
   supabase: Supabase,
   userId: string,
   defaultMin: number,
   query: MatchQuery,
   offset: number,
-): Promise<MatchCard[]> {
+  limit: number = PAGE_SIZE,
+): Promise<MatchPage> {
   let q = supabase
     .from("user_job_matches")
-    .select(`id,job_id,score,status,viewed_at,explanation,breakdown,jobs!inner(${JOB_COLUMNS})`)
+    .select(`id,job_id,score,status,viewed_at,explanation,breakdown,jobs!inner(${JOB_COLUMNS})`, {
+      count: "exact",
+    })
     .eq("user_id", userId)
     .eq("passed_filters", true)
     .is("jobs.closed_at", null)
@@ -99,7 +108,11 @@ export async function loadMatches(
   if (company) q = q.ilike("jobs.company_name", `%${company}%`);
   const search = clean(query.search);
   if (search) {
-    q = q.or(`title.ilike.%${search}%,company_name.ilike.%${search}%`, { referencedTable: "jobs" });
+    // Title, company or a technology the ad names.
+    q = q.or(
+      `title.ilike.%${search}%,company_name.ilike.%${search}%,description_text.ilike.%${search}%`,
+      { referencedTable: "jobs" },
+    );
   }
 
   const hoursAgo = (h: number) => new Date(Date.now() - h * 3_600_000).toISOString();
@@ -107,12 +120,12 @@ export async function loadMatches(
   else if (query.freshness === "recent") q = q.gte("jobs.posted_at", hoursAgo(72));
   else if (query.freshness === "week") q = q.gte("jobs.posted_at", hoursAgo(24 * 7));
 
-  const { data, error } = await q
+  const { data, error, count } = await q
     .order("score", { ascending: false })
     .order("id")
-    .range(offset, offset + PAGE_SIZE - 1);
+    .range(offset, offset + limit - 1);
   if (error) throw new Error(`Loading matches failed: ${error.message}`);
-  return (data ?? []) as unknown as MatchCard[];
+  return { items: (data ?? []) as unknown as MatchCard[], total: count ?? 0 };
 }
 
 export type MatchCounts = {
