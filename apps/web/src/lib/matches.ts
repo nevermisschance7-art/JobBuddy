@@ -7,7 +7,6 @@ import type { createClient } from "@/lib/supabase/server";
 type Supabase = Awaited<ReturnType<typeof createClient>>;
 import { adWords, companyKey, type AppliedBefore } from "@/lib/company";
 
-
 export { JOB_SOURCES };
 
 export const matchQuerySchema = z.object({
