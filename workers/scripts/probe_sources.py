@@ -129,10 +129,6 @@ def main(only: list[str]) -> None:
         "arbeitnow": lambda: probe_json(
             "arbeitnow", "https://www.arbeitnow.com/api/job-board-api", ["data"]
         ),
-        "weworkremotely": lambda: probe_rss(
-            "weworkremotely",
-            "https://weworkremotely.com/categories/remote-programming-jobs.rss",
-        ),
     }
     if os.environ.get("ADZUNA_APP_ID") and os.environ.get("ADZUNA_APP_KEY"):
         probes["adzuna"] = lambda: probe_json(

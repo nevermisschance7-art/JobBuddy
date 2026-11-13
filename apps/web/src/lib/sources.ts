@@ -1,0 +1,20 @@
+/** Every source the board can filter by (the same list the filter shows). */
+export const JOB_SOURCES = [
+  "greenhouse",
+  "lever",
+  "ashby",
+  "workable",
+  "smartrecruiters",
+  "teamtailor",
+  "workday",
+  "personio",
+  "recruitee",
+  "adzuna",
+  "reed",
+  "jooble",
+  "remotive",
+  "himalayas",
+  "arbeitnow",
+  "jobicy",
+  "hackernews",
+] as const;

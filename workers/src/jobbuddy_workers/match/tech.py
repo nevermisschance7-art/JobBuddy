@@ -120,6 +120,11 @@ ROLE_FAMILIES = {
     "ml": r"machine learning|\bml\b|\bai\b|llm|data scien",
     "qa": r"\bqa\b|quality|test automation|sdet",
     "security": r"security|appsec|devsecops",
+    # Engineer titles that are sales, go-to-market or support work, not building software.
+    "business": r"\bgtm\b|go.to.market|revops|revenue op|sales (engineer|ops|operations)"
+    r"|solutions? (engineer|consultant)|pre.?sales|customer (success|support|engineer)"
+    r"|support engineer|implementation (engineer|consultant|specialist)|growth engineer"
+    r"|marketing (engineer|ops|operations|technolog)",
 }
 
 

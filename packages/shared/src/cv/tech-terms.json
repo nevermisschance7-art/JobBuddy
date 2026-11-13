@@ -188,7 +188,27 @@
     "shopify",
     "wordpress",
     "unity",
-    "unreal"
+    "unreal",
+    "hubspot",
+    "clay",
+    "crm",
+    "marketo",
+    "apollo.io",
+    "zoominfo",
+    "pipedrive",
+    "zapier",
+    "n8n",
+    "salesloft",
+    "outreach.io",
+    "gong.io",
+    "lemlist",
+    "excel",
+    "google analytics",
+    "mixpanel",
+    "predictive modeling",
+    "feature engineering",
+    "machine learning",
+    "a/b testing"
   ],
   "synonyms": {
     "postgres": "postgresql",
@@ -210,6 +230,8 @@
     "mongo": "mongodb",
     "ms sql": "sql server",
     "mssql": "sql server",
-    "gh actions": "github actions"
+    "gh actions": "github actions",
+    "predictive modelling": "predictive modeling",
+    "clay.com": "clay"
   }
 }

@@ -174,3 +174,25 @@ export function recentApplicationScore(
   if (wanted.size > 0 && hits / wanted.size >= 0.6) score += 2;
   return score;
 }
+
+/**
+ * Freelance platforms: the extension never loads there, not even its idle listeners (their
+ * rules forbid scripts and automation on the site). Checked in the "every site" registration,
+ * the shortcuts, "Fill this page" and the script's first line.
+ */
+export const NEVER_HOSTS = [
+  "upwork.com",
+  "fiverr.com",
+  "freelancer.com",
+  "toptal.com",
+  "peopleperhour.com",
+  "guru.com",
+] as const;
+
+export function isNeverHost(hostname: string): boolean {
+  const h = hostname.toLowerCase().replace(/\.$/, "");
+  return NEVER_HOSTS.some((n) => h === n || h.endsWith(`.${n}`));
+}
+
+/** Match patterns for chrome.scripting excludeMatches. */
+export const NEVER_MATCHES = NEVER_HOSTS.flatMap((h) => [`*://${h}/*`, `*://*.${h}/*`]);

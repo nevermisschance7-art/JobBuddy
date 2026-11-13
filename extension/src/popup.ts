@@ -1,4 +1,4 @@
-import { alertMessage, type AlertEvent } from "@jobbuddy/shared";
+import { alertMessage, isNeverHost, type AlertEvent } from "@jobbuddy/shared";
 import { api, APP_URL, getSession, setSession, signIn, SignedOutError } from "./api";
 
 // Popup: sign in with your JobBuddy username; then today's numbers, unread alerts (opening the
@@ -65,6 +65,10 @@ async function fillThisPage(): Promise<void> {
     status.textContent = "Open an application form first, then press this again.";
     return;
   }
+  if (isNeverHost(new URL(tab.url!).hostname)) {
+    status.textContent = "JobBuddy never works on freelance platforms like Upwork.";
+    return;
+  }
   try {
     await chrome.scripting.executeScript({
       target: { tabId: tab.id, allFrames: true },
@@ -111,7 +115,7 @@ async function show(): Promise<void> {
       </div>
       ${alerts}
       <button id="fill" class="primary">⚡ Fill this page</button>
-      <p id="fill-status" class="muted center">Works on any application form. Alt+W fill, Alt+A apply, Alt+Q not for me.</p>
+      <p id="fill-status" class="muted center">Works on any application form. Ctrl+Shift+1 fill, Ctrl+Shift+2 apply, Ctrl+Shift+3 not for me.</p>
       <label class="switch"><input type="checkbox" id="every"> Work on every site
         <span class="muted">Spots the next page and the thank-you page on any job site. Chrome asks once.</span></label>
       <div class="links">

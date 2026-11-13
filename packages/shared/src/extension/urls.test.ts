@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isFormHost, jobKeyFromUrl, recentApplicationScore } from "./urls";
+import { isFormHost, isNeverHost, jobKeyFromUrl, recentApplicationScore } from "./urls";
 
 describe("jobKeyFromUrl", () => {
   it.each([
@@ -90,5 +90,22 @@ describe("recent application on another site", () => {
         whitetech,
       ),
     ).toBeLessThan(3);
+  });
+});
+
+describe("freelance platforms", () => {
+  it("are never touched, including their subdomains", () => {
+    for (const h of [
+      "upwork.com",
+      "www.upwork.com",
+      "community.upwork.com",
+      "fiverr.com",
+      "www.freelancer.com",
+    ]) {
+      expect(isNeverHost(h), h).toBe(true);
+    }
+    for (const h of ["jobs.smartrecruiters.com", "boards.greenhouse.io", "notupwork.com.example"]) {
+      expect(isNeverHost(h), h).toBe(false);
+    }
   });
 });

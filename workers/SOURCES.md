@@ -38,12 +38,10 @@ They return only their newest pages, so absence proves nothing: their jobs close
 | Jobicy | Remote, worldwide | 2 h | `pubDate` | | Free API, `industry=dev`. Fixture from documented shape (blocked from dev network) |
 | Hacker News "Who is hiring" | Remote postings, worldwide | 2 h | comment `created_at` | | Monthly thread via the Algolia API; only comments that say remote |
 | Arbeitnow | Germany and EU | 2 h | `created_at` (epoch s) | | `remote` flag |
-| We Work Remotely | Remote, worldwide | 4 h | RSS `pubDate` | | Title is "Company: Role". Fixture synthesised (blocked from dev network) |
 | Adzuna | ~20 countries | 4 h | `created` | | Needs key. `salary_is_predicted = 1` salaries are ignored |
 | Reed | UK only | 4 h | `date` (dd/mm/yyyy) | `expirationDate` | Needs key. Only runs if someone wants GB jobs |
 | Jooble | ~70 countries | 6 h | none | `updated` | Needs key. Every Jooble job is "Date unknown" (confirmed on the live API) |
 
-Only the We Work Remotely fixture is synthesised (the feed is blocked from the dev network); re-record it with `uv run python scripts/probe_sources.py weworkremotely`.
 
 ## What gets stored
 
@@ -60,4 +58,4 @@ Only the We Work Remotely fixture is synthesised (the feed is blocked from the d
 Clear User-Agent with a contact link, 3 retries with exponential backoff (honours `Retry-After`), 4 companies in parallel per system, aggregators one request at a time, robots.txt checked for feed and page URLs. No LinkedIn or Indeed.
 
 
-RemoteOK is not used: applying there needs a paid membership. Working Nomads is not used: its jobs led to Lemon.io, a freelance marketplace you must join and be vetted by, not to the employer. Jobs whose apply link goes to such a marketplace (`MARKETPLACE_HOSTS` in `jobs/run.py`) are dropped from every source. Only free, direct ways to apply are used.
+RemoteOK and We Work Remotely are not used: applying there needs a paid membership. Working Nomads is not used: its jobs led to Lemon.io, a freelance marketplace you must join and be vetted by, not to the employer. Jobs whose apply link goes to such a marketplace (`MARKETPLACE_HOSTS` in `jobs/run.py`) are dropped from every source. Only free, direct ways to apply are used.

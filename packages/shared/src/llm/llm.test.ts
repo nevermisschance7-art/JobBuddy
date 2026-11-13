@@ -73,7 +73,12 @@ const CONFIG: ModelsConfig = {
   tasks: { t: { temperature: 0, maxOutputTokens: 100 } },
 };
 
-function setup(keys: Partial<Record<ProviderName, Partial<ProviderKey>>>, shared = {}) {
+function setup(
+  keys: Partial<Record<ProviderName, Partial<ProviderKey>>>,
+  shared = {},
+  /** More of the user's keys (a second Gemini key...). */
+  more: (Partial<ProviderKey> & { provider: ProviderName })[] = [],
+) {
   resetProviderHealth();
   const fakes = {
     gemini: new FakeProvider("gemini"),
@@ -89,12 +94,14 @@ function setup(keys: Partial<Record<ProviderName, Partial<ProviderKey>>>, shared
   const alerts: string[] = [];
   const store: KeyStore = {
     async getKeys() {
-      return Object.entries(keys).map(([provider, k]) => ({
-        provider: provider as ProviderName,
-        apiKey: `${provider}-key`,
-        coolingUntil: null,
-        ...k,
-      }));
+      return Object.entries(keys)
+        .map(([provider, k]) => ({
+          provider: provider as ProviderName,
+          apiKey: `${provider}-key`,
+          coolingUntil: null,
+          ...k,
+        }))
+        .concat(more.map((k, i) => ({ apiKey: `more-${i}`, coolingUntil: null, ...k })));
     },
     async markCoolingDown(_u, provider, until) {
       cooled.push({ provider, until });
@@ -325,6 +332,21 @@ describe("LlmRouter time sharing", () => {
     });
     // The second call went straight to Groq, not to the busy Gemini again.
     expect(fakes.gemini.requests.length).toBe(geminiCalls);
+  });
+
+  it("skips the user's other keys of a provider that is overloaded, for the backup", async () => {
+    const { router, fakes } = setup({ gemini: {} }, { groq: "shared-groq" }, [
+      { provider: "gemini" },
+      { provider: "gemini" },
+    ]);
+    fakes.gemini.queue(new LlmError("server", "503 overloaded"), new LlmError("server", "503"));
+    fakes.groq.queue('{"title":"Dev","years":3}');
+    await expect(router.generateJson("t", schema, "p", "u1")).resolves.toEqual({
+      title: "Dev",
+      years: 3,
+    });
+    // One Gemini key tried (both models); its other keys would only be overloaded too.
+    expect(new Set(fakes.gemini.requests.map((r) => r.apiKey))).toEqual(new Set(["gemini-key"]));
   });
 
   it("moves to the backup after a hang instead of retrying the slow provider", async () => {

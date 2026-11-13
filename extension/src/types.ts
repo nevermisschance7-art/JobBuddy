@@ -84,6 +84,8 @@ export type Message =
       company?: string;
     }
   | { type: "open"; url: string }
+  /** Closes the tab that sent it (after Not for me). */
+  | { type: "close-tab" }
   | { type: "dismiss"; url: string; applicationId?: string; undo?: boolean }
   /** Upload through a button that makes its file input only when clicked (Hibob). */
   | { type: "upload-button"; marker: string; file: { fileName: string; base64: string } };

@@ -255,7 +255,7 @@ def _closeness(similarity: float) -> float:
 
 
 # Kinds of role far from each other: a mismatch here says the job is a different job.
-_FAR_ROLES = {"mobile", "frontend", "qa", "security", "ml", "data"}
+_FAR_ROLES = {"mobile", "frontend", "qa", "security", "ml", "data", "business"}
 
 # A title that says the person builds software. Others ("Talent Scientist", "Producer",
 # "Analyst") can name Python and SQL and still not be a developer's job.
@@ -290,10 +290,14 @@ def technical(job: JobFacts, f: UserFilters) -> dict[str, object]:
         have = sorted((t for t in weights if t in cv), key=lambda t: -weights[t])
         coverage = sum(weights[t] for t in have) / sum(weights.values())
         stack = main_stack(cv)
-        if any(weights.get(t, 0) >= 1 for t in stack):
+        # Full points when the job is about the stack (in the title, or most of its
+        # technologies match); one shared language in a different kind of job gets less.
+        if any(weights.get(t, 0) >= 3 for t in stack) or (
+            coverage >= 0.5 and any(weights.get(t, 0) >= 1 for t in stack)
+        ):
             stack_points = 25.0
         elif any(t in weights for t in stack):
-            stack_points = 12.0  # only as a "nice to have"
+            stack_points = 12.0
         else:
             stack_points = 0.0
         if not job_roles:

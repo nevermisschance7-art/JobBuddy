@@ -34,7 +34,7 @@ export const CALL_BUDGET_MS = 20_000;
 export const ATTEMPT_TIMEOUT_MS = 10_000;
 
 /** Attempts that failed only because the provider was slow or down, not because of a key. */
-const BUSY_ATTEMPT = /: (network|server|out of time)$/;
+const BUSY_ATTEMPT = /: (network|server|out of time|skipped \(busy\))$/;
 
 /** Every provider failed or was cooling down. The user gets a "needs fixing" alert. */
 export class AllProvidersFailedError extends Error {
@@ -223,9 +223,17 @@ export class LlmRouter {
       return true;
     });
 
+    // A provider that just answered "busy" or hung is busy for every key (Gemini's overload is
+    // per model, not per key): its other keys wait while another provider can still be tried.
+    const busy = new Set<ProviderName>();
+    const ahead = (from: number) => usable.slice(from).filter((k) => !busy.has(k.provider));
     for (let i = 0; i < usable.length; i++) {
       const key = usable[i]!;
       const name = key.provider;
+      if (busy.has(name) && ahead(i).length > 0) {
+        attempts.push(`${name}: skipped (busy)`);
+        continue;
+      }
       const left = deadline - Date.now();
       if (left < 1500) {
         attempts.push(`${name}: out of time`);
@@ -233,7 +241,7 @@ export class LlmRouter {
       }
       // Share the time with the backups still to come, so one slow provider (a busy free
       // Gemini) can't use it all; the last one gets whatever is left.
-      const others = usable.length - 1 - i;
+      const others = ahead(i + 1).length;
       const share = others > 0 ? Math.max(ATTEMPT_TIMEOUT_MS * 0.8, left / (others + 1)) : left;
       const outcome = await this.tryProvider(
         name,
@@ -248,7 +256,10 @@ export class LlmRouter {
         shaky.delete(name);
         return outcome.text;
       }
-      if (BUSY_KINDS.has(outcome.error.kind)) shaky.set(name, Date.now());
+      if (BUSY_KINDS.has(outcome.error.kind)) {
+        shaky.set(name, Date.now());
+        busy.add(name);
+      }
       attempts.push(`${name}: ${outcome.error.kind}`);
 
       if (key.shared) {

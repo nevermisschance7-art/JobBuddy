@@ -5,6 +5,7 @@ import { AppList, type AppRow } from "@/components/applications/app-list";
 import { DailyColumns } from "@/components/charts/daily-columns";
 import { MascotSays } from "@/components/mascot";
 import { loadProfile } from "@/lib/data";
+import { dayStart, nextDay, reportRange } from "@/lib/report";
 import { cn } from "@/lib/utils";
 
 export const metadata = { title: "Applications · JobBuddy" };
@@ -24,7 +25,7 @@ const PAGE = 25;
 export default async function ApplicationsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string; q?: string; page?: string }>;
+  searchParams: Promise<{ tab?: string; q?: string; page?: string; from?: string; to?: string }>;
 }) {
   const params = await searchParams;
   const tab: Tab = TABS.some(([t]) => t === params.tab) ? (params.tab as Tab) : "ready";
@@ -35,6 +36,16 @@ export default async function ApplicationsPage({
     .slice(0, 80);
   const { supabase, user, profile } = await loadProfile();
   const { data: activity } = await supabase.rpc("my_daily_activity", { p_days: 10 });
+
+  // The report for a manager: jobs applied to in a range of the user's own days.
+  const zone = profile?.time_zone ?? null;
+  const range = reportRange(params.from, params.to, zone);
+  const { count: appliedInRange } = await supabase
+    .from("applications")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", user.id)
+    .gte("applied_at", dayStart(range.from, zone))
+    .lt("applied_at", dayStart(nextDay(range.to), zone));
 
   // Counts per tab, one small query each.
   const { data: statusRows } = await supabase
@@ -100,8 +111,8 @@ export default async function ApplicationsPage({
         <div>
           <h1 className="text-2xl font-semibold">Applications</h1>
           <p className="text-muted-foreground text-sm">
-            Everything you prepared or applied to. The extension marks a job applied when it sees
-            the employer&apos;s confirmation page.
+            Everything you prepared or applied to. The extension marks a job applied as soon as the
+            form is submitted (Apply or the form&apos;s own Submit) without errors.
           </p>
         </div>
 
@@ -119,6 +130,53 @@ export default async function ApplicationsPage({
             points={(activity ?? []).map((a) => ({ day: a.day, value: a.applied }))}
           />
         </div>
+
+        <section
+          aria-label="Applied jobs report"
+          className="border-border bg-card flex flex-wrap items-end gap-3 rounded-lg border p-4"
+        >
+          <div className="mr-auto">
+            <h2 className="text-sm font-semibold">Report</h2>
+            <p className="text-2xl font-semibold tabular-nums">
+              {appliedInRange ?? 0}{" "}
+              <span className="text-muted-foreground text-sm font-normal">
+                {appliedInRange === 1 ? "job" : "jobs"} applied to in these days
+              </span>
+            </p>
+          </div>
+          <form action="/applications" className="flex flex-wrap items-end gap-2">
+            <input type="hidden" name="tab" value={tab} />
+            <label className="flex flex-col gap-1 text-xs">
+              From
+              <input
+                type="date"
+                name="from"
+                defaultValue={range.from}
+                max={range.to}
+                className="border-border bg-background h-9 rounded-md border px-2 text-sm"
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-xs">
+              To
+              <input
+                type="date"
+                name="to"
+                defaultValue={range.to}
+                className="border-border bg-background h-9 rounded-md border px-2 text-sm"
+              />
+            </label>
+            <button className="border-border bg-card hover:bg-muted h-9 rounded-md border px-3 text-sm">
+              Show
+            </button>
+            <a
+              href={`/api/applications/report?from=${range.from}&to=${range.to}`}
+              download
+              className="bg-primary text-primary-foreground flex h-9 items-center rounded-md px-3 text-sm font-medium"
+            >
+              Download CSV
+            </a>
+          </form>
+        </section>
 
         <nav aria-label="Application status" className="border-border scroll-x flex gap-1 border-b">
           {TABS.map(([t, label]) => (

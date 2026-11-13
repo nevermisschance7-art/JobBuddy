@@ -1,4 +1,5 @@
 import "server-only";
+import { JOB_SOURCES } from "@/lib/sources";
 import { z } from "zod";
 import type { createClient } from "@/lib/supabase/server";
 
@@ -7,21 +8,7 @@ import { adWords, companyKey, type AppliedBefore } from "@/lib/company";
 
 export const PAGE_SIZE = 20;
 
-export const JOB_SOURCES = [
-  "greenhouse",
-  "lever",
-  "ashby",
-  "workable",
-  "smartrecruiters",
-  "teamtailor",
-  "adzuna",
-  "reed",
-  "jooble",
-  "remotive",
-  "himalayas",
-  "arbeitnow",
-  "weworkremotely",
-] as const;
+export { JOB_SOURCES };
 
 export const matchQuerySchema = z.object({
   view: z.enum(["inbox", "new", "saved", "hidden"]).default("inbox"),
@@ -102,7 +89,8 @@ export async function loadMatches(
   if (query.view === "new") q = q.eq("status", "new");
   else if (query.view === "saved") q = q.eq("status", "saved");
   else if (query.view === "hidden") q = q.eq("status", "dismissed");
-  else q = q.in("status", ["new", "seen", "preparing"]);
+  // Applied jobs (Quick apply or the extension) leave the board: only New and Viewed stay.
+  else q = q.in("status", ["new", "seen"]);
 
   if (query.remote !== "any") q = q.eq("jobs.remote_type", query.remote);
   if (query.country) q = q.contains("jobs.countries", [query.country]);
@@ -149,7 +137,7 @@ export async function countMatches(
       .eq("passed_filters", true)
       .is("jobs.closed_at", null);
   const [inbox, fresh, saved, hidden, below] = await Promise.all([
-    base().gte("score", minScore).in("status", ["new", "seen", "preparing"]),
+    base().gte("score", minScore).in("status", ["new", "seen"]),
     base().gte("score", minScore).eq("status", "new"),
     base().eq("status", "saved"),
     base().eq("status", "dismissed"),

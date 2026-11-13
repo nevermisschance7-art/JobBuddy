@@ -9,7 +9,6 @@ import pytest
 
 from jobbuddy_workers.jobs.model import RawJob
 from jobbuddy_workers.jobs.sources import AGGREGATOR_SOURCES, EMPLOYER_SOURCES
-from jobbuddy_workers.jobs.sources.aggregators import parse_rss
 from jobbuddy_workers.jobs.sources.employer import parse_personio_xml, parse_teamtailor_rss
 
 FIX = Path(__file__).parent / "fixtures" / "sources"
@@ -53,9 +52,6 @@ def raws_for(source):
         return [RawJob(source, j["guid"], j) for j in load("himalayas.json")["jobs"]]
     if source == "arbeitnow":
         return [RawJob(source, j["slug"], j) for j in load("arbeitnow.json")["data"]]
-    if source == "weworkremotely":
-        xml = (FIX / "weworkremotely.xml").read_text(encoding="utf-8")
-        return [RawJob(source, i["guid"], i) for i in parse_rss(xml)]
     if source == "adzuna":
         return [
             RawJob(source, j["id"], {**j, "_country": "DE"}) for j in load("adzuna.json")["results"]
@@ -179,18 +175,10 @@ def test_teamtailor_rss():
 
 
 def test_remote_boards_are_remote_with_regions():
-    for source in ("remotive", "himalayas", "weworkremotely"):
+    for source in ("remotive", "himalayas"):
         job = first(source)
         assert job.remote_type == "remote", source
         assert job.countries or job.remote_regions, source
-
-
-def test_wwr_splits_company_and_title_and_regions():
-    jobs = [norm("weworkremotely", r) for r in raws_for("weworkremotely")]
-    assert jobs[0].company_name == "Example Labs"
-    assert jobs[0].title == "Senior Full-Stack Engineer"
-    assert jobs[0].remote_regions == ["WORLDWIDE"]
-    assert jobs[1].remote_regions == ["EUROPE"]
 
 
 def test_adzuna_keeps_only_stated_salaries():

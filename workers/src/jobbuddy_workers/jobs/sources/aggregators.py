@@ -4,7 +4,6 @@ on its own schedule (every_hours) to stay inside free limits and terms."""
 from __future__ import annotations
 
 import re
-import xml.etree.ElementTree as ET
 from typing import Any
 
 from ...geo import COUNTRIES, country_code, parse_locations
@@ -16,7 +15,6 @@ from ..normalize import (
     from_dmy,
     from_epoch,
     from_iso,
-    from_rfc822,
     html_to_text,
     is_internship,
     is_tech_role,
@@ -199,59 +197,6 @@ class Arbeitnow:
             posted_at=from_epoch(j.get("created_at")),
             tags=j.get("tags") or [],
         )
-
-
-# ---------------------------------------------------------------- We Work Remotely (RSS)
-
-
-class WeWorkRemotely:
-    name = "weworkremotely"
-    kind = "aggregator"
-    every_hours = 4
-    FEEDS = [
-        "remote-full-stack-programming-jobs",
-        "remote-back-end-programming-jobs",
-        "remote-front-end-programming-jobs",
-        "remote-devops-sysadmin-jobs",
-    ]
-
-    def available(self, ctx: FetchContext) -> bool:
-        return True
-
-    def fetch(self, http: Http, ctx: FetchContext) -> list[RawJob]:
-        out: list[RawJob] = []
-        for feed in self.FEEDS:
-            xml = http.get_text(f"https://weworkremotely.com/categories/{feed}.rss")
-            out += [RawJob(self.name, i["guid"], i) for i in parse_rss(xml)]
-        return out
-
-    def normalise(self, raw: RawJob) -> Job | None:
-        j = raw.data
-        company, _, title = (j.get("title") or "").partition(": ")
-        if not title:
-            company, title = "", company
-        return _remote_job(
-            self.name,
-            raw,
-            title=title.strip(),
-            company=company.strip(),
-            url=j["link"],
-            apply_url=j["link"],
-            description=html_to_text(j.get("description")),
-            location=j.get("region"),
-            posted_at=from_rfc822(j.get("pubDate")),
-            employment=j.get("type"),
-        )
-
-
-def parse_rss(xml: str) -> list[dict[str, Any]]:
-    root = ET.fromstring(xml)
-    out = []
-    for item in root.iter("item"):
-        row = {child.tag.split("}")[-1]: (child.text or "").strip() for child in item}
-        row["guid"] = row.get("guid") or row.get("link", "")
-        out.append(row)
-    return out
 
 
 # ---------------------------------------------------------------- Adzuna
@@ -528,7 +473,6 @@ AGGREGATOR_SOURCES = {
         Remotive(),
         Himalayas(),
         Arbeitnow(),
-        WeWorkRemotely(),
         Jobicy(),
         HackerNews(),
         Adzuna(),

@@ -1,4 +1,10 @@
-import { fixedKeyFor, isFormHost, jobKeyFromUrl, questionSimilarity } from "@jobbuddy/shared";
+import {
+  fixedKeyFor,
+  isFormHost,
+  isNeverHost,
+  jobKeyFromUrl,
+  questionSimilarity,
+} from "@jobbuddy/shared";
 import type { FillData, LookupResult, Message, PrepareResult, Reply } from "../types";
 import {
   attachFile,
@@ -10,6 +16,7 @@ import {
   fillComboboxes,
   fillForm,
   findSubmitButton,
+  isSubmitText,
   isConfirmation,
   type FormField,
 } from "./form";
@@ -18,7 +25,7 @@ import {
 // embedded on company sites), and on any page when the user presses "Fill this page" in the
 // popup. One button does it all: prepares the application, makes the CV, drafts answers,
 // fills the form. Rule: JobBuddy presses the form's Submit only when the user asks (Apply or
-// Alt+A), and only when no required field is empty; never by itself.
+// Ctrl+Shift+2); never by itself.
 
 declare global {
   interface Window {
@@ -473,10 +480,10 @@ async function fill(
      ${extra.draftError ? `<div class="row warn">⚠ Couldn't draft answers: ${esc(extra.draftError)}</div>` : ""}
      ${required.length ? `<button class="main" data-act="next">Show me the next required one</button>` : ""}
      <div class="pair">
-       <button class="second" data-act="apply">✓ Apply <span class="key">Alt+A</span></button>
-       <button class="second" data-act="skip">👎 Not for me <span class="key">Alt+Q</span></button>
+       <button class="second" data-act="apply">✓ Apply <span class="key">Ctrl+Shift+2</span></button>
+       <button class="second" data-act="skip">👎 Not for me <span class="key">Ctrl+Shift+3</span></button>
      </div>
-     <p class="muted">Check everything, then press Apply (Alt+A) or the form's own Submit. I never submit by myself.
+     <p class="muted">Check everything, then press Apply (Ctrl+Shift+2) or the form's own Submit. I never submit by myself.
        ${result.reviewUrl ? `<br><a href="#" data-act="review">CV and answers on JobBuddy</a>` : ""}</p>`,
     {
       apply: applyNow,
@@ -618,10 +625,10 @@ async function intro(): Promise<void> {
     `<p class="job">${esc(result.job?.title ?? pageInfo().title)}</p>
      ${result.job ? `<p class="sub">${esc(result.job.company)}</p>` : ""}
      ${status}
-     <button class="main" data-act="go">⚡ Fill this application <span class="key">Alt+W</span></button>
+     <button class="main" data-act="go">⚡ Fill this application <span class="key">Ctrl+Shift+1</span></button>
      <div class="pair">
-       <button class="second" data-act="apply">✓ Apply <span class="key">Alt+A</span></button>
-       <button class="second" data-act="skip">👎 Not for me <span class="key">Alt+Q</span></button>
+       <button class="second" data-act="apply">✓ Apply <span class="key">Ctrl+Shift+2</span></button>
+       <button class="second" data-act="skip">👎 Not for me <span class="key">Ctrl+Shift+3</span></button>
      </div>
      <p class="muted">${app ? "I'll fill your details, answers and CV." : "I'll set up the application, make your CV for this job, draft the answers and fill the form."} You press Submit.</p>`,
     {
@@ -632,8 +639,11 @@ async function intro(): Promise<void> {
   );
 }
 
-/** "Not for me": hides this job from the JobBuddy list (Undo shows it again). */
-async function notForMe(applicationId?: string): Promise<void> {
+/**
+ * "Not for me": hides this job from the JobBuddy list (Undo shows it again). From the
+ * shortcut (Ctrl+Shift+3) the tab closes right after; Ctrl+Z on the board brings it back.
+ */
+async function notForMe(applicationId?: string, closeAfter = false): Promise<void> {
   const reply = await send<{ hidden: boolean; reason?: string }>({
     type: "dismiss",
     url: location.href,
@@ -641,6 +651,10 @@ async function notForMe(applicationId?: string): Promise<void> {
   });
   if (!reply.ok) return showError(reply);
   sessionStorage.removeItem(PENDING);
+  if (closeAfter) {
+    void send({ type: "close-tab" });
+    return;
+  }
   render(
     reply.data.hidden
       ? `<div class="row ok">✓ Hidden from your JobBuddy list. I won't show it again.</div>
@@ -653,23 +667,49 @@ async function notForMe(applicationId?: string): Promise<void> {
         void send({ type: "dismiss", url: location.href, applicationId, undo: true }).then(() =>
           intro(),
         ),
-      // Works for tabs JobBuddy opened (Quick apply); otherwise the box just closes.
-      closetab: () => {
-        window.close();
-        host?.remove();
-      },
+      closetab: () => void send({ type: "close-tab" }),
     },
   );
 }
 
 // ---------------------------------------------------------------- confirmation
 
-function markApplied(): void {
-  const id = sessionStorage.getItem(PENDING);
-  if (!id) return;
+let appliedMarked = false;
+
+/**
+ * Records this application as applied. Without an application from a fill in this tab, the
+ * job is looked up (or added) first, so a submitted form is never left unrecorded.
+ */
+async function markApplied(): Promise<void> {
+  if (appliedMarked) return;
+  appliedMarked = true;
+  let id = sessionStorage.getItem(PENDING);
+  if (!id) {
+    const info = pageInfo();
+    const prep = await send<PrepareResult>({
+      type: "prepare",
+      input: { url: location.href, ...info, questions: [], choices: [] },
+    });
+    id = prep.ok ? prep.data.applicationId : null;
+  }
   sessionStorage.removeItem(PENDING);
-  void send({ type: "applied", applicationId: id });
-  render(`<div class="row ok">✓ Nice one. Marked as applied in JobBuddy.</div>`);
+  if (!id) {
+    appliedMarked = false;
+    return;
+  }
+  const reply = await send({ type: "applied", applicationId: id });
+  if (reply.ok) say("✓ Marked as applied in JobBuddy.");
+  else appliedMarked = false;
+}
+
+/** A page where a submitted form is a job application: filled by JobBuddy in this tab, or
+ * on a known application system. Never a newsletter or contact form elsewhere. */
+function isApplicationPage(): boolean {
+  return (
+    Boolean(sessionStorage.getItem(PENDING)) ||
+    Boolean(jobKeyFromUrl(location.href)) ||
+    isFormHost(location.hostname)
+  );
 }
 
 /** Error messages a form shows when Submit didn't go through (visible ones only). */
@@ -682,47 +722,33 @@ function formErrorsShown(): boolean {
   return invalid || alerts;
 }
 
-/** After Submit (the user's, or Apply): no form and no errors, or a thank-you page = applied. */
+/**
+ * After a final Submit (the user's own, or Apply): a thank-you page, or 3 seconds without
+ * error messages, means it went through and is recorded as applied. Errors: not applied yet.
+ */
 function submitted(): void {
-  if (!sessionStorage.getItem(PENDING)) return;
+  if (!isApplicationPage()) return;
   let tries = 0;
   const wait = window.setInterval(() => {
     tries++;
-    if (isConfirmation(document, location.href) || (!hasForm() && !formErrorsShown())) {
+    if (isConfirmation(document, location.href)) {
       clearInterval(wait);
-      markApplied();
-    } else if (formErrorsShown() || tries > 8) {
-      clearInterval(wait); // errors to fix, or still on the form: not applied yet
+      void markApplied();
+    } else if (formErrorsShown()) {
+      clearInterval(wait); // errors to fix: not applied yet
+    } else if (tries >= 3) {
+      clearInterval(wait);
+      void markApplied();
     }
   }, 1000);
 }
 
-// ---------------------------------------------------------------- Apply (Alt+A)
+// ---------------------------------------------------------------- Apply (Ctrl+Shift+2)
 
-/**
- * Apply: presses the form's Submit, only on the user's keypress or click, and only when no
- * required field is empty (those are outlined instead).
- */
+/** Apply: presses the form's Submit, only on the user's keypress or click (the form itself
+ * says what's missing). */
 function applyNow(): void {
   if (busy) return;
-  const fields = collectFields(document);
-  const empty = fields.filter(
-    (f) =>
-      f.required &&
-      !f.uploadButton &&
-      ((f.el as HTMLInputElement).type === "file"
-        ? !(f.el as HTMLInputElement).files?.length
-        : !currentAnswer(f)),
-  );
-  if (empty.length > 0) {
-    clearOutlines();
-    outline(empty, "#f59e0b", "Required: please fill this before you apply.");
-    say(
-      `⚠ ${empty.length} required field${empty.length === 1 ? " is" : "s are"} still empty, outlined in orange. Fill ${empty.length === 1 ? "it" : "them"}, then press Apply again.`,
-    );
-    target(empty[0]!).scrollIntoView({ behavior: "smooth", block: "center" });
-    return;
-  }
   const button = findSubmitButton(document);
   if (!button) {
     say("I couldn't find this form's submit button. Please press it yourself.");
@@ -736,7 +762,8 @@ function applyNow(): void {
 function watchForConfirmation(): void {
   let timer: number | undefined;
   const check = () => {
-    if (sessionStorage.getItem(PENDING) && isConfirmation(document, location.href)) markApplied();
+    if (sessionStorage.getItem(PENDING) && isConfirmation(document, location.href))
+      void markApplied();
   };
   new MutationObserver(() => {
     clearTimeout(timer);
@@ -746,7 +773,16 @@ function watchForConfirmation(): void {
 
   // The user pressed Submit on a form JobBuddy filled. JobBuddy never presses it itself.
   // If the form goes away (or a thank-you page shows) with no error messages, it went through.
-  document.addEventListener("submit", submitted, true);
+  // A form submitted by a final button ("Submit", "Apply"); a "Next" step is not applying.
+  document.addEventListener(
+    "submit",
+    (e) => {
+      const by = (e as SubmitEvent).submitter as HTMLElement | null;
+      const text = `${by?.textContent ?? ""} ${(by as HTMLInputElement | null)?.value ?? ""}`;
+      if (e.isTrusted && by && isSubmitText(text)) submitted();
+    },
+    true,
+  );
   document.addEventListener("submit", learnFromUser, true);
   // Moving to the next page of a form (or submitting) is when the user's own answers count.
   document.addEventListener(
@@ -769,7 +805,7 @@ function watchForConfirmation(): void {
       );
       if (!button || !e.isTrusted) return; // only the user's own clicks
       const text = `${button.textContent ?? ""} ${(button as HTMLInputElement).value ?? ""}`;
-      if (/submit|send application|apply now|complete application|finish/i.test(text)) submitted();
+      if (isSubmitText(text)) submitted();
     },
     true,
   );
@@ -794,18 +830,20 @@ function whenFormAppears(then: () => void): void {
 }
 
 function boot(): void {
+  // Freelance platforms (Upwork, Fiverr...): nothing at all, not even listeners.
+  if (isNeverHost(location.hostname)) return;
   if (window.__jobbuddy) return;
   window.__jobbuddy = true;
   watchForConfirmation();
   // "Fill this page" from the popup, on any site.
   chrome.runtime.onMessage.addListener((message: { type?: string }) => {
     if (message.type === "fill-here" && hasForm()) void intro();
-    // Alt+A: straight to filling, no extra click.
+    // Ctrl+Shift+1: straight to filling, no extra click.
     if (message.type === "fill-now" && hasForm() && !busy) void run();
     // Shortcuts reach every frame: Apply acts where the form is, Not for me in the main page.
     if (message.type === "apply-now" && hasForm()) applyNow();
     if (message.type === "skip-now" && window === window.top) {
-      void notForMe(session() ?? undefined);
+      void notForMe(session() ?? undefined, true);
     }
   });
   // The next page of a form already being filled: carry on by itself.

@@ -88,6 +88,31 @@ export async function restoreMatch(jobId: string): Promise<void> {
     .eq("job_id", jobId);
 }
 
+/**
+ * Ctrl+Z on the board with nothing hidden there: shows again the job hidden last from the
+ * extension (Ctrl+Shift+3 closes that tab), if it was in the last 30 minutes.
+ */
+export async function restoreLastExtensionHide(): Promise<boolean> {
+  const { supabase, user } = await requireUser();
+  const since = new Date(Date.now() - 30 * 60_000).toISOString();
+  const { data } = await supabase
+    .from("user_job_matches")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("status", "dismissed")
+    .eq("dismissed_reason", "Not for me (from the extension)")
+    .gte("updated_at", since)
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!data) return false;
+  await supabase
+    .from("user_job_matches")
+    .update({ status: "seen", dismissed_reason: null })
+    .eq("id", data.id);
+  return true;
+}
+
 /** On-demand AI explanation, cached on the match. */
 export async function explainMatch(jobId: string): Promise<{ text?: string; error?: string }> {
   const { supabase, user } = await requireUser();

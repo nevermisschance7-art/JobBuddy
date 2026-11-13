@@ -18,7 +18,7 @@ export type SavedKey = {
 };
 export type KeyStatus = { provider: Provider; keys: SavedKey[] };
 
-const MAX_KEYS = 5;
+const MAX_KEYS = 10;
 
 const INFO: Record<Provider, { name: string; required: boolean; steps: React.ReactNode }> = {
   gemini: {

@@ -23,7 +23,7 @@ function manifest(appUrl: string): Plugin {
           {
             manifest_version: 3,
             name: "JobBuddy",
-            version: "0.5.0",
+            version: "0.6.0",
             description: "Job alerts and application autofill. You always press Submit yourself.",
             icons: { 16: "icon-16.png", 48: "icon-48.png", 128: "icon-128.png" },
             action: { default_popup: "popup.html", default_title: "JobBuddy" },
@@ -38,20 +38,20 @@ function manifest(appUrl: string): Plugin {
             // then a form's next page and its thank-you page are seen on any site.
             optional_host_permissions: ["<all_urls>"],
             // On any application form (changeable at chrome://extensions/shortcuts):
-            // Alt+W fill, Alt+A apply (presses the form's Submit), Alt+Q not for me.
+            // Ctrl+Shift+1 fill, Ctrl+Shift+2 apply (presses the form's Submit), Ctrl+Shift+3
+            // not for me (hides the job and closes the tab; Ctrl+Z on the board brings it back).
             commands: {
               "fill-application": {
-                suggested_key: { default: "Alt+W" },
+                suggested_key: { default: "Ctrl+Shift+1", mac: "Command+Shift+1" },
                 description: "Fill this application",
               },
               "apply-application": {
-                suggested_key: { default: "Alt+A" },
-                description:
-                  "Apply: press the form's Submit (only when no required field is empty)",
+                suggested_key: { default: "Ctrl+Shift+2", mac: "Command+Shift+2" },
+                description: "Apply: press the form's Submit",
               },
               "not-for-me": {
-                suggested_key: { default: "Alt+Q" },
-                description: "Not for me: hide this job",
+                suggested_key: { default: "Ctrl+Shift+3", mac: "Command+Shift+3" },
+                description: "Not for me: hide this job and close the tab",
               },
             },
             content_scripts: [

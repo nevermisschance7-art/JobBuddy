@@ -1186,6 +1186,11 @@ export function noticeToDate(text: string, now = new Date()): string | null {
 const SUBMIT_TEXT =
   /^(submit( (my |your )?application)?|apply( now)?|send( (my |your )?application)?|complete( (my )?application)?|finish( application)?|apply for this (job|position|role)|submit and apply|bewerben|absenden|postuler|envoyer|enviar( solicitud)?|postular|aplicar|wy(ś|s)lij( aplikacj(ę|e))?|aplikuj)$/i;
 
+/** Text of a final Submit button ("Submit application", "Apply"), never "Next". */
+export function isSubmitText(text: string): boolean {
+  return SUBMIT_TEXT.test(text.replace(/\s+/g, " ").trim());
+}
+
 /** The form's own Submit button (never JobBuddy's), preferring the form with the most fields. */
 export function findSubmitButton(doc: Document): HTMLElement | null {
   const candidates = [

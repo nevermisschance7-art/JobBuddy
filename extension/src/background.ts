@@ -5,6 +5,8 @@ import {
   type AlertEvent,
   type AlertSettings,
   type Tone,
+  isNeverHost,
+  NEVER_MATCHES,
 } from "@jobbuddy/shared";
 import { api, APP_URL, getSession, SignedOutError } from "./api";
 import type { Message, Reply } from "./types";
@@ -41,11 +43,18 @@ const ALL_URLS = { origins: ["<all_urls>"] };
 async function syncEverySite(): Promise<void> {
   const granted = await chrome.permissions.contains(ALL_URLS);
   const registered = await chrome.scripting.getRegisteredContentScripts({ ids: [EVERY_SITE] });
+  // Registered before freelance sites were excluded: register again with the exclusions.
+  if (registered.length > 0 && (registered[0]?.excludeMatches?.length ?? 0) === 0) {
+    await chrome.scripting.unregisterContentScripts({ ids: [EVERY_SITE] });
+    registered.length = 0;
+  }
   if (granted && registered.length === 0) {
     await chrome.scripting.registerContentScripts([
       {
         id: EVERY_SITE,
         matches: ["<all_urls>"],
+        // Never on freelance platforms (Upwork, Fiverr...): not even idle.
+        excludeMatches: NEVER_MATCHES,
         js: ["content.js"],
         allFrames: true,
         runAt: "document_idle",
@@ -58,8 +67,8 @@ async function syncEverySite(): Promise<void> {
 }
 chrome.permissions.onAdded.addListener(() => void syncEverySite());
 
-// Alt+W / Alt+A / Alt+Q: load the filler into this tab (the shortcut grants access to it),
-// then fill, apply or hide the job.
+// Ctrl+Shift+1 / 2 / 3: load the filler into this tab (the shortcut grants access to it),
+// then fill, apply or hide the job (hiding also closes the tab).
 chrome.commands.onCommand.addListener((command) => {
   const type = {
     "fill-application": "fill-now",
@@ -70,6 +79,7 @@ chrome.commands.onCommand.addListener((command) => {
   void (async () => {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if (!tab?.id || !/^https?:/.test(tab.url ?? "")) return;
+    if (isNeverHost(new URL(tab.url!).hostname)) return; // freelance platforms: never
     try {
       await chrome.scripting.executeScript({
         target: { tabId: tab.id, allFrames: true },
@@ -227,9 +237,20 @@ async function handle(message: Message): Promise<unknown> {
   }
 }
 
+/** Not for me: the job's tab is done with. Only the tab that asked is ever closed. */
+async function closeTab(sender: chrome.runtime.MessageSender): Promise<null> {
+  if (sender.tab?.id !== undefined) await chrome.tabs.remove(sender.tab.id);
+  return null;
+}
+
 chrome.runtime.onMessage.addListener(
   (message: Message, sender, sendResponse: (r: Reply<unknown>) => void) => {
-    (message.type === "upload-button" ? uploadThroughButton(message, sender) : handle(message))
+    (message.type === "upload-button"
+      ? uploadThroughButton(message, sender)
+      : message.type === "close-tab"
+        ? closeTab(sender)
+        : handle(message)
+    )
       .then((data) => sendResponse({ ok: true, data }))
       .catch((e: unknown) =>
         sendResponse({

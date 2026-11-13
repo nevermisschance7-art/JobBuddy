@@ -10,21 +10,20 @@ import {
   dismissMatch,
   loadMoreMatches,
   markSeen,
+  restoreLastExtensionHide,
   restoreMatch,
   saveMinScore,
   unskipCompany,
 } from "@/lib/actions/matches";
 import { COUNTRY_OPTIONS } from "@/lib/countries";
 import type { MatchCard, MatchCounts, MatchQuery } from "@/lib/matches";
+import { JOB_SOURCES } from "@/lib/sources";
 import { cn } from "@/lib/utils";
 import { companyKey, sameJob, type AppliedBefore } from "@/lib/company";
 import { JobCard } from "./job-card";
 
-const SOURCES = [
-  "greenhouse", "lever", "ashby", "workable", "smartrecruiters", "teamtailor", "workday",
-  "personio", "recruitee", "adzuna", "reed", "jooble", "remotive", "himalayas", "arbeitnow",
-  "weworkremotely", "jobicy", "hackernews",
-]; // prettier-ignore
+// The same list the server accepts, so every choice works.
+const SOURCES = JOB_SOURCES;
 
 const PAGE_SIZE = 20;
 
@@ -130,6 +129,7 @@ export function JobsInbox({
   itemsRef.current = items;
   const undoRef = useRef(undoStack);
   undoRef.current = undoStack;
+  const reloadRef = useRef<() => void>(() => {});
   const onHide = useCallback((jobId: string, company?: string) => {
     const key = company ? companyKey(company) : null;
     const gone = itemsRef.current
@@ -148,7 +148,13 @@ export function JobsInbox({
   }, []);
   const undo = useCallback(() => {
     const last = undoRef.current.at(-1);
-    if (!last) return;
+    if (!last) {
+      // Nothing hidden here: bring back the job hidden last from the extension.
+      void restoreLastExtensionHide().then((restored) => {
+        if (restored) reloadRef.current();
+      });
+      return;
+    }
     setUndoStack((stack) => stack.slice(0, -1));
     setItems((prev) => {
       const next = [...prev];
@@ -199,6 +205,8 @@ export function JobsInbox({
       }
     });
   }, []);
+
+  reloadRef.current = () => fetchPage(query, 0, true);
 
   // Refetch from the top whenever filters change (debounced for typing).
   useEffect(() => {
